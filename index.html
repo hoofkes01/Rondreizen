@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rondreisplanner</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --tekst:#1b2330; --zacht:#5d6877; --lijn:#dde1e7; --accent:#0b6bcb; --goed:#13803f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --card:#1b212a; --tekst:#e8ecf1; --zacht:#9aa5b4; --lijn:#2c3441; --accent:#5aa7f5; --goed:#4cc17b; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--tekst); font:16px/1.5 system-ui,sans-serif; }
+  main { max-width:900px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.5rem; margin:8px 0 4px; }
+  h2 { font-size:1.15rem; margin:0 0 12px; }
+  p.sub { color:var(--zacht); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--lijn); border-radius:10px; padding:16px; margin-bottom:16px; }
+  label { display:block; font-size:.85rem; color:var(--zacht); margin-bottom:2px; }
+  input, select, button { font:inherit; color:inherit; }
+  input, select { width:100%; padding:8px; border:1px solid var(--lijn); border-radius:6px; background:var(--bg); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:12px; }
+  button { padding:8px 14px; border:1px solid var(--lijn); border-radius:6px; background:var(--card); cursor:pointer; }
+  button.prim { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.link { border:0; background:none; color:var(--accent); padding:4px 8px; }
+  .rij { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  table { width:100%; border-collapse:collapse; font-size:.95rem; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--lijn); vertical-align:middle; }
+  th { color:var(--zacht); font-weight:600; font-size:.85rem; }
+  td input { padding:6px; }
+  td.bedrag input { width:90px; }
+  tr.laagste td { background:color-mix(in srgb, var(--goed) 14%, transparent); }
+  .badge { color:var(--goed); font-weight:600; font-size:.85rem; }
+  .noot { color:var(--zacht); font-size:.85rem; margin-top:10px; }
+  .scroll { overflow-x:auto; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Rondreisplanner</h1>
+  <p class="sub">Stap 1: de goedkoopste vlucht vinden. Voeg de etappes van je reis toe, zoek per etappe en noteer de laagste prijs.</p>
+
+  <section class="card">
+    <h2>Reisgegevens</h2>
+    <div class="grid">
+      <div><label for="volwassenen">Volwassenen</label><input id="volwassenen" type="number" min="1" max="9" value="2"></div>
+      <div><label for="klasse">Klasse</label>
+        <select id="klasse">
+          <option value="economy">Economy</option>
+          <option value="premiumeconomy">Premium economy</option>
+          <option value="business">Business</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Vluchten per etappe</h2>
+    <div class="scroll">
+      <table id="etappes">
+        <thead><tr><th>Van (luchthaven-code)</th><th>Naar (luchthaven-code)</th><th>Heen</th><th>Terug (leeg = enkele reis)</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="rij" style="margin-top:12px">
+      <button id="voegToe">+ Etappe toevoegen</button>
+    </div>
+    <p class="noot">Gebruik de 3-letterige code, bijvoorbeeld AMS, LIS, BKK, JFK. Bij een rondreis met open jaw (heen naar de ene stad, terug vanuit een andere) maak je twee enkele reizen.</p>
+  </section>
+
+  <section class="card">
+    <h2>Gevonden prijzen</h2>
+    <p class="sub" style="margin-bottom:8px">Noteer na het zoeken de prijs per aanbieder. De laagste per etappe wordt gemarkeerd.</p>
+    <div class="scroll">
+      <table id="prijzen">
+        <thead><tr><th>Etappe</th><th>Aanbieder</th><th>Prijs totaal (€)</th><th>Opmerking</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="rij" style="margin-top:12px">
+      <button id="voegPrijs">+ Prijs noteren</button>
+      <strong id="totaal"></strong>
+    </div>
+  </section>
+
+  <p class="noot">De pagina zoekt zelf geen prijzen: vliegmaatschappijen en zoeksites geven die niet vrij aan een losse webpagina. De knoppen openen de zoekresultaten bij Google Flights, Skyscanner en Momondo, met je gegevens al ingevuld. Alles wordt alleen in je eigen browser bewaard.</p>
+</main>
+
+<script>
+const OPSLAG = 'rondreisplanner-v1';
+let staat = { volwassenen: 2, klasse: 'economy', etappes: [], prijzen: [] };
+
+function laad() {
+  try { const s = JSON.parse(localStorage.getItem(OPSLAG)); if (s) staat = Object.assign(staat, s); } catch (e) {}
+  if (!staat.etappes.length) staat.etappes.push({ van:'AMS', naar:'', heen:'', terug:'' });
+}
+function bewaar() { try { localStorage.setItem(OPSLAG, JSON.stringify(staat)); } catch (e) {} }
+
+const code = v => (v || '').trim().toUpperCase();
+const yymmdd = d => d.slice(2,4) + d.slice(5,7) + d.slice(8,10);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function links(e) {
+  const van = code(e.van), naar = code(e.naar);
+  if (!/^[A-Z]{3}$/.test(van) || !/^[A-Z]{3}$/.test(naar) || !e.heen) return null;
+  const n = staat.volwassenen, k = staat.klasse;
+  const retour = e.terug && e.terug > e.heen;
+  const g = `Flights from ${van} to ${naar} on ${e.heen}` + (retour ? ` through ${e.terug}` : ' one way') + ` for ${n} adults`;
+  return [
+    ['Google Flights', 'https://www.google.com/travel/flights?hl=nl&curr=EUR&q=' + encodeURIComponent(g)],
+    ['Skyscanner', `https://www.skyscanner.nl/transport/vliegtickets/${van.toLowerCase()}/${naar.toLowerCase()}/${yymmdd(e.heen)}/` + (retour ? yymmdd(e.terug) + '/' : '') + `?adultsv2=${n}&cabinclass=${k}&rtn=${retour ? 1 : 0}`],
+    ['Momondo', `https://www.momondo.nl/flight-search/${van}-${naar}/${e.heen}/` + (retour ? e.terug + '/' : '') + `${n}adults`]
+  ];
+}
+
+function knoppenHtml(e) {
+  const l = links(e);
+  return l
+    ? l.map(([naam, url]) => `<a href="${esc(url)}" target="_blank" rel="noopener"><button class="link" type="button">${naam}</button></a>`).join('')
+    : '<span class="noot">Vul codes en heendatum in</span>';
+}
+
+function tekenEtappes() {
+  const tb = document.querySelector('#etappes tbody');
+  tb.innerHTML = staat.etappes.map((e, i) => {
+    const knoppen = knoppenHtml(e);
+    return `<tr data-i="${i}">
+      <td><input data-v="van" maxlength="3" value="${esc(e.van)}" aria-label="Van"></td>
+      <td><input data-v="naar" maxlength="3" value="${esc(e.naar)}" aria-label="Naar"></td>
+      <td><input data-v="heen" type="date" value="${esc(e.heen)}" aria-label="Heen"></td>
+      <td><input data-v="terug" type="date" value="${esc(e.terug)}" aria-label="Terug"></td>
+      <td><div class="rij"><span class="rij" data-links>${knoppen}</span><button class="link" data-del="${i}" type="button" aria-label="Verwijder etappe">✕</button></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function etappeNaam(i) {
+  const e = staat.etappes[i];
+  return e ? `${i + 1}. ${code(e.van) || '?'} → ${code(e.naar) || '?'}` : 'Onbekend';
+}
+
+function tekenPrijzen() {
+  const tb = document.querySelector('#prijzen tbody');
+  const laagste = {};
+  staat.prijzen.forEach(p => {
+    const b = parseFloat(p.bedrag);
+    if (b > 0 && (laagste[p.etappe] === undefined || b < laagste[p.etappe])) laagste[p.etappe] = b;
+  });
+  tb.innerHTML = staat.prijzen.map((p, i) => {
+    const b = parseFloat(p.bedrag);
+    const is = b > 0 && b === laagste[p.etappe];
+    const opties = staat.etappes.map((_, j) => `<option value="${j}" ${+p.etappe === j ? 'selected' : ''}>${esc(etappeNaam(j))}</option>`).join('');
+    return `<tr data-i="${i}" class="${is ? 'laagste' : ''}">
+      <td><select data-v="etappe">${opties}</select></td>
+      <td><input data-v="aanbieder" value="${esc(p.aanbieder)}" aria-label="Aanbieder"></td>
+      <td class="bedrag"><input data-v="bedrag" type="number" min="0" step="1" value="${esc(p.bedrag)}" aria-label="Prijs"> ${is ? '<span class="badge">laagste</span>' : ''}</td>
+      <td><input data-v="opmerking" value="${esc(p.opmerking)}" aria-label="Opmerking"></td>
+      <td><button class="link" data-delp="${i}" type="button" aria-label="Verwijder prijs">✕</button></td>
+    </tr>`;
+  }).join('');
+  const som = Object.values(laagste).reduce((a, b) => a + b, 0);
+  document.getElementById('totaal').textContent = som
+    ? 'Totaal laagste per etappe: € ' + Math.round(som).toLocaleString('nl-NL')
+    : '';
+}
+
+document.getElementById('volwassenen').addEventListener('input', ev => {
+  staat.volwassenen = Math.max(1, Math.min(9, parseInt(ev.target.value) || 1));
+  bewaar(); tekenEtappes();
+});
+document.getElementById('klasse').addEventListener('change', ev => { staat.klasse = ev.target.value; bewaar(); tekenEtappes(); });
+
+document.getElementById('voegToe').onclick = () => {
+  const laatste = staat.etappes[staat.etappes.length - 1];
+  staat.etappes.push({ van: laatste ? laatste.naar : '', naar:'', heen:'', terug:'' });
+  bewaar(); tekenEtappes(); tekenPrijzen();
+};
+document.getElementById('voegPrijs').onclick = () => {
+  staat.prijzen.push({ etappe: 0, aanbieder:'', bedrag:'', opmerking:'' });
+  bewaar(); tekenPrijzen();
+};
+
+document.querySelector('#etappes tbody').addEventListener('input', ev => {
+  const tr = ev.target.closest('tr'); if (!tr || !ev.target.dataset.v) return;
+  staat.etappes[+tr.dataset.i][ev.target.dataset.v] = ev.target.dataset.v === 'van' || ev.target.dataset.v === 'naar' ? code(ev.target.value) : ev.target.value;
+  bewaar();
+  tr.querySelector('[data-links]').innerHTML = knoppenHtml(staat.etappes[+tr.dataset.i]);
+  tekenPrijzen();
+});
+document.querySelector('#etappes tbody').addEventListener('click', ev => {
+  const d = ev.target.dataset.del; if (d === undefined) return;
+  const i = +d;
+  staat.etappes.splice(i, 1);
+  staat.prijzen = staat.prijzen.filter(p => +p.etappe !== i).map(p => ({ ...p, etappe: +p.etappe > i ? +p.etappe - 1 : +p.etappe }));
+  if (!staat.etappes.length) staat.etappes.push({ van:'', naar:'', heen:'', terug:'' });
+  bewaar(); tekenEtappes(); tekenPrijzen();
+});
+
+document.querySelector('#prijzen tbody').addEventListener('change', ev => {
+  const tr = ev.target.closest('tr'); if (!tr || !ev.target.dataset.v) return;
+  staat.prijzen[+tr.dataset.i][ev.target.dataset.v] = ev.target.value;
+  bewaar(); tekenPrijzen();
+});
+document.querySelector('#prijzen tbody').addEventListener('click', ev => {
+  const d = ev.target.dataset.delp; if (d === undefined) return;
+  staat.prijzen.splice(+d, 1); bewaar(); tekenPrijzen();
+});
+
+laad();
+document.getElementById('volwassenen').value = staat.volwassenen;
+document.getElementById('klasse').value = staat.klasse;
+tekenEtappes(); tekenPrijzen();
+</script>
+</body>
+</html>
