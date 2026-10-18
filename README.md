@@ -17,4 +17,4 @@ Zeg tegen Claude: "Lees CLAUDE.md en voer de ijking uit (eerste keer op de pc)."
 
 ## Zoeken
 
-    node scripts/plan.mjs --plaats=Lissabon --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09
+    node scripts/plan.mjs --plaats=Denver --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09

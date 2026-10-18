@@ -28,7 +28,7 @@ export function bestemmingenVoorPlaats(plaats, straal = 500, max = 15) {
     .sort((a, b) => (norm(a[1]).startsWith(n) ? 0 : 1) - (norm(b[1]).startsWith(n) ? 0 : 1));
   if (!treffers.length) throw new Error(`Geen luchthaven gevonden voor "${plaats}"`);
   const voorkeur = treffers[0];
-  const dichtbij = alle.map(l => ({ code: l[0], naam: l[1].split(' ')[0], land: l[2], km: Math.round(afstandKm(voorkeur, l)) }))
+  const dichtbij = alle.map(l => ({ code: l[0], naam: l[1], land: l[2], km: Math.round(afstandKm(voorkeur, l)) }))
     .filter(x => x.km <= straal).sort((a, b) => a.km - b.km).slice(0, max);
   return { voorkeur: voorkeur[0], bestemmingen: dichtbij };
 }

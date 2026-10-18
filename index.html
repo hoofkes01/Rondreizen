@@ -73,13 +73,15 @@
   </section>
 
   <section class="card verborgen" id="stap3">
-    <h2><span class="stap">3</span>Dezelfde data vergelijken</h2>
+    <h2><span class="stap">3</span>Vervolgcontrole op de gekozen data</h2>
     <div class="grid">
       <div><label for="heen">Heendatum (goedkoopste gevonden)</label><input id="heen" type="date"></div>
       <div><label for="terug">Terugdatum</label><input id="terug" type="date"></div>
+      <div><label for="straal2">Aankomst: straal in km rond de voorkeursluchthaven</label><input id="straal2" type="number" min="0" max="5000" value="1000"></div>
     </div>
+    <p class="noot" style="margin:0 0 8px">Pas als Frankfurt de goedkoopste data heeft opgeleverd: controleer dezelfde data vanaf alle vier de luchthavens (ook Frankfurt) naar alle aankomstluchthavens binnen deze straal.</p>
     <p class="fout" id="datumFout"></p>
-    <div class="scroll"><table id="routeTabel"><thead><tr><th>Bestemming</th><th>Eerst Frankfurt</th><th>Daarna dezelfde data</th></tr></thead><tbody></tbody></table></div>
+    <div class="scroll"><table id="routeTabel"><thead><tr><th>Aankomst</th><th>Frankfurt</th><th>Düsseldorf</th><th>Amsterdam</th><th>Brussel</th></tr></thead><tbody></tbody></table></div>
     <p class="noot">Skyscanner heeft geen koppelbare instelling voor bagage. Zet in de resultaten het bagagefilter op 1 ruimbagage per persoon (23 kg) en noteer hieronder de totaalprijs voor 2 personen inclusief koffers.</p>
   </section>
 
@@ -130,6 +132,13 @@ const LUCHTHAVENS = [
 ['JFK','New York JFK','Verenigde Staten',40.64,-73.78],['EWR','New York Newark','Verenigde Staten',40.69,-74.17],['BOS','Boston','Verenigde Staten',42.36,-71.01],['IAD','Washington','Verenigde Staten',38.95,-77.46],['MIA','Miami','Verenigde Staten',25.79,-80.29],
 ['MCO','Orlando','Verenigde Staten',28.43,-81.31],['ATL','Atlanta','Verenigde Staten',33.64,-84.43],['ORD','Chicago','Verenigde Staten',41.98,-87.90],['DFW','Dallas','Verenigde Staten',32.90,-97.04],['IAH','Houston','Verenigde Staten',29.98,-95.34],
 ['DEN','Denver','Verenigde Staten',39.86,-104.67],['LAX','Los Angeles','Verenigde Staten',33.94,-118.41],['SFO','San Francisco','Verenigde Staten',37.62,-122.38],['LAS','Las Vegas','Verenigde Staten',36.08,-115.15],['SEA','Seattle','Verenigde Staten',47.45,-122.31],['HNL','Honolulu Hawaii','Verenigde Staten',21.32,-157.92],
+['PHX','Phoenix','Verenigde Staten',33.43,-112.01],['SAN','San Diego','Verenigde Staten',32.73,-117.19],['SLC','Salt Lake City','Verenigde Staten',40.79,-111.98],['PDX','Portland','Verenigde Staten',45.59,-122.60],
+['SMF','Sacramento','Verenigde Staten',38.70,-121.59],['ABQ','Albuquerque','Verenigde Staten',35.04,-106.61],['AUS','Austin','Verenigde Staten',30.19,-97.67],['MSY','New Orleans','Verenigde Staten',29.99,-90.26],
+['BNA','Nashville','Verenigde Staten',36.12,-86.68],['CLT','Charlotte','Verenigde Staten',35.21,-80.94],['DTW','Detroit','Verenigde Staten',42.21,-83.35],['MSP','Minneapolis','Verenigde Staten',44.88,-93.22],
+['PHL','Philadelphia','Verenigde Staten',39.87,-75.24],['BWI','Baltimore','Verenigde Staten',39.18,-76.67],['TPA','Tampa','Verenigde Staten',27.98,-82.53],['FLL','Fort Lauderdale','Verenigde Staten',26.07,-80.15],
+['RDU','Raleigh Durham','Verenigde Staten',35.88,-78.79],['STL','St. Louis','Verenigde Staten',38.75,-90.37],['MCI','Kansas City','Verenigde Staten',39.30,-94.71],['CLE','Cleveland','Verenigde Staten',41.41,-81.85],
+['PIT','Pittsburgh','Verenigde Staten',40.49,-80.23],['CVG','Cincinnati','Verenigde Staten',39.05,-84.66],['ANC','Anchorage Alaska','Verenigde Staten',61.17,-149.99],['SAT','San Antonio','Verenigde Staten',29.53,-98.47],
+['OAK','Oakland','Verenigde Staten',37.72,-122.22],['SJC','San Jose','Verenigde Staten',37.36,-121.93],['BOI','Boise','Verenigde Staten',43.56,-116.22],['RNO','Reno','Verenigde Staten',39.50,-119.77],
 ['YYZ','Toronto','Canada',43.68,-79.63],['YVR','Vancouver','Canada',49.19,-123.18],['YUL','Montreal','Canada',45.47,-73.74],['MEX','Mexico-Stad Mexico City','Mexico',19.44,-99.07],['CUN','Cancun','Mexico',21.04,-86.87],['PUJ','Punta Cana','Dominicaanse Republiek',18.57,-68.36],
 ['HAV','Havana','Cuba',22.99,-82.41],['GRU','Sao Paulo','Brazilie',-23.43,-46.47],['GIG','Rio de Janeiro','Brazilie',-22.81,-43.25],['EZE','Buenos Aires','Argentinie',-34.82,-58.54],['SCL','Santiago','Chili',-33.39,-70.79],
 ['LIM','Lima','Peru',-12.02,-77.11],['CUZ','Cusco Machu Picchu','Peru',-13.54,-71.94],['BOG','Bogota','Colombia',4.70,-74.15],['PTY','Panama-Stad','Panama',9.07,-79.38],['SJO','San Jose Costa Rica','Costa Rica',9.99,-84.21],
@@ -140,7 +149,7 @@ const LUCHTHAVENS = [
 const VERTREK = ['FRA','DUS','AMS','BRU'];
 const VERTREKNAAM = { FRA:'Frankfurt', DUS:'Düsseldorf', AMS:'Amsterdam', BRU:'Brussel' };
 const OPSLAG = 'rondreisplanner-v2';
-let staat = { plaats:'', straal:500, voorkeur:'', gekozen:[], vanaf:'', tot:'', heen:'', terug:'', prijzen:[] };
+let staat = { plaats:'', straal:500, straal2:1000, voorkeur:'', gekozen:[], vanaf:'', tot:'', heen:'', terug:'', prijzen:[] };
 
 const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ');
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -151,7 +160,7 @@ const hav = (a, b) => {
   return 12742 * Math.asin(Math.sqrt(x));
 };
 const perCode = c => LUCHTHAVENS.find(l => l[0] === c);
-const label = l => `${l[1].split(' ')[0]} (${l[0]}), ${l[2]}`;
+const label = l => `${l[1]} (${l[0]}), ${l[2]}`;
 const yymmdd = d => d.slice(2,4) + d.slice(5,7) + d.slice(8,10);
 const dagen = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
 const plusDagen = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0,10); };
@@ -176,11 +185,16 @@ const maandCode = ym => ym.slice(2,4) + ym.slice(5,7);
 const volgendeMaand = ym => { const [j, m] = ym.split('-').map(Number); return m === 12 ? `${j + 1}-01` : `${j}-${String(m + 1).padStart(2,'0')}`; };
 
 function bestemmingen() { return staat.gekozen.map(perCode).filter(Boolean); }
+// aankomstluchthavens voor de vervolgcontrole: alles binnen straal2 van de voorkeursluchthaven
+function bestemmingen2() {
+  const vk = perCode(staat.voorkeur); if (!vk) return [];
+  return LUCHTHAVENS.map(l => [l, hav(vk, l)]).filter(([l, d]) => d <= staat.straal2).sort((a, b) => a[1] - b[1]).slice(0, 25).map(([l]) => l);
+}
 
 function tekenPlaats() {
   const lijst = zoekPlaats(staat.plaats);
   $('suggesties').innerHTML = LUCHTHAVENS.filter(l => zoekPlaats(staat.plaats).includes(l) && staat.plaats.length > 1).slice(0, 8)
-    .map(l => `<option value="${esc(l[1].split(' ')[0])}">${esc(label(l))}</option>`).join('');
+    .map(l => `<option value="${esc(l[1])}">${esc(label(l))}</option>`).join('');
   $('plaatsFout').textContent = staat.plaats.length > 1 && !lijst.length ? 'Geen luchthaven gevonden. Probeer een andere schrijfwijze, de luchthavencode of het land.' : '';
   $('voorkeurBlok').classList.toggle('verborgen', !lijst.length);
   if (!lijst.length) { $('stap2').classList.add('verborgen'); $('stap3').classList.add('verborgen'); $('stap4').classList.add('verborgen'); return; }
@@ -212,10 +226,10 @@ function tekenRoutes() {
   const tb = $('routeTabel').querySelector('tbody');
   const d = staat.heen && staat.terug ? dagen(staat.heen, staat.terug) : null;
   $('datumFout').textContent = d !== null && (d < 21 || d > 25) ? `Let op: dit is ${d} dagen, de reis moet 21 tot 25 dagen duren.` : '';
-  if (!staat.heen || !staat.terug || d <= 0) { tb.innerHTML = '<tr><td colspan="3" class="noot">Vul de heen- en terugdatum in om de zoeklinks te maken.</td></tr>'; return; }
-  tb.innerHTML = bestemmingen().map(b => {
-    const link = van => `<a class="knop" target="_blank" rel="noopener" href="${esc(skyscanner(van, b[0], staat))}">${VERTREKNAAM[van]}</a>`;
-    return `<tr><td>${esc(label(b))}</td><td>${link('FRA')}</td><td><div class="rij">${VERTREK.slice(1).map(link).join('')}</div></td></tr>`;
+  if (!staat.heen || !staat.terug || d <= 0) { tb.innerHTML = '<tr><td colspan="5" class="noot">Vul de heen- en terugdatum in om de zoeklinks te maken.</td></tr>'; return; }
+  tb.innerHTML = bestemmingen2().map(b => {
+    const link = van => `<a class="knop" target="_blank" rel="noopener" href="${esc(skyscanner(van, b[0], staat))}">Zoek</a>`;
+    return `<tr><td>${esc(label(b))}</td>${VERTREK.map(v => `<td>${link(v)}</td>`).join('')}</tr>`;
   }).join('');
 }
 
@@ -245,7 +259,7 @@ function beoordeel() {
 }
 
 function tekenPrijzen() {
-  const dests = bestemmingen();
+  const dests = bestemmingen2();
   const { status, beste } = beoordeel();
   const bestIdx = new Set(Object.values(beste).map(x => x.i));
   $('prijzen').querySelector('tbody').innerHTML = staat.prijzen.map((p, i) => {
@@ -272,6 +286,7 @@ function tekenPrijzen() {
 // events
 $('plaats').addEventListener('input', e => { staat.plaats = e.target.value; staat.gekozen = null; tekenPlaats(); });
 $('straal').addEventListener('change', e => { staat.straal = Math.max(0, parseInt(e.target.value) || 0); staat.gekozen = null; tekenPlaats(); });
+$('straal2').addEventListener('change', e => { staat.straal2 = Math.max(0, parseInt(e.target.value) || 0); bewaar(); tekenRoutes(); tekenPrijzen(); });
 $('voorkeur').addEventListener('change', e => { staat.voorkeur = e.target.value; staat.gekozen = null; tekenPlaats(); });
 $('alternatieven').addEventListener('change', () => {
   staat.gekozen = [...$('alternatieven').querySelectorAll('input:checked')].map(i => i.value);
@@ -286,7 +301,7 @@ $('heen').addEventListener('change', e => {
 });
 $('terug').addEventListener('change', e => { staat.terug = e.target.value; bewaar(); tekenRoutes(); });
 $('voegPrijs').onclick = () => {
-  const b = bestemmingen()[0];
+  const b = bestemmingen2()[0];
   staat.prijzen.push({ bestemming: b ? b[0] : '', vertrek:'FRA', direct:'ja', bedrag:'', uren:'', opmerking:'' });
   bewaar(); tekenPrijzen();
 };
@@ -300,7 +315,7 @@ $('prijzen').querySelector('tbody').addEventListener('click', e => {
 });
 
 laad();
-$('plaats').value = staat.plaats; $('straal').value = staat.straal;
+$('plaats').value = staat.plaats; $('straal').value = staat.straal; $('straal2').value = staat.straal2;
 $('vanaf').value = staat.vanaf; $('tot').value = staat.tot; $('heen').value = staat.heen; $('terug').value = staat.terug;
 tekenPlaats();
 </script>

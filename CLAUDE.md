@@ -7,20 +7,24 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
 - Altijd 2 volwassenen, per persoon 1 koffer van 23 kg (prijs dus incl. ruimbagage).
 - Reisduur 21 tot 25 dagen.
 - Vertrek alleen vanaf Frankfurt (FRA), Düsseldorf (DUS), Amsterdam (AMS), Brussel (BRU).
-- Plaatsnaam opgegeven: zoek ook alle luchthavens binnen 500 km van de voorkeursluchthaven.
-- Volgorde: eerst alles vanaf FRA. Is daar de goedkoopste combinatie van data/bestemming gevonden,
-  controleer dan voor exact dezelfde data en bestemming DUS, AMS en BRU.
+- Twee fasen, in deze volgorde (andere vertrekluchthavens pas in fase 2):
+  1. Fase 1, alleen Frankfurt: plaatsnaam opgegeven = voorkeursluchthaven plus alle luchthavens binnen 500 km. Gebruik de
+     maand-/prijskalender van Skyscanner om goedkope dagen te vinden en zoek dan 2 à 3 datumparen. Uitkomst: de goedkoopste data.
+  2. Fase 2, pas op die data: zoek vanaf alle vier de vertrekluchthavens (ook Frankfurt) naar alle aankomstluchthavens binnen
+     1000 km van de voorkeursluchthaven. Reden: de rondreis kan op meerdere plekken beginnen (eerste reis: USA).
 - Rechtstreeks heeft voorkeur. Overstap alleen als reistijd max 15 uur EN totaalprijs minstens
   200 lager (100 p.p.) dan de goedkoopste rechtstreekse vlucht naar dezelfde bestemming.
   Zonder rechtstreekse vlucht: overstap tot 15 uur toegestaan.
-- Zoek slim: gebruik de maand-/prijskalender van Skyscanner om goedkope dagen te vinden vóór je
-  exacte datumcombinaties opent.
+- Open vraag aan gebruiker: bij een rondreis kan heen naar A en terug vanuit B (open jaw) goedkoper of praktischer zijn dan
+  heen en terug op dezelfde luchthaven. De scripts zoeken nu alleen heen en terug op dezelfde luchthaven.
+- Let op omvang fase 2: 4 vertrekpunten x aankomstluchthavens = veel pagina's (standaard max 20 aankomsten = 80 pagina's).
+  Meld het aantal vooraf aan de gebruiker; het script doet dat ook (--max2 beperkt het aantal).
 
 ## Bestanden
 - index.html: de planner (luchthavens, links, prijsregels). Alles in één bestand, geen build.
 - scripts/lib.mjs: luchthavens (leest LUCHTHAVENS uit index.html), straal, URL, uitlezen, regels.
 - scripts/zoek.mjs: één zoekopdracht (VAN NAAR HEEN TERUG) → resultaten/*.json, .txt, .png.
-- scripts/plan.mjs: de volledige routine (Frankfurt eerst, daarna DUS/AMS/BRU voor de winnaar).
+- scripts/plan.mjs: de volledige routine in twee fasen (fase 1 alleen Frankfurt; fase 2 alle vertrekpunten x aankomsten binnen 1000 km).
 - scripts/browser.mjs: zichtbare Chrome met vast profiel (.browser-profiel); gebruiker doet de robotcontrole.
 - scripts/test.mjs: test alles wat zonder Skyscanner kan (`npm test`).
 
@@ -31,8 +35,8 @@ Gebruik voor het routinewerk (scripts draaien, resultaten ophalen) een lichter m
 het zwaardere model alleen voor de eindkeuze en bij fouten.
 1. Vraag plaats(en) en vertrekperiode. Zoek de goedkope dagen via de Skyscanner-maandkalender
    (link uit index.html, stap 2) en kies 2 tot 3 datumparen van 21 tot 25 dagen.
-2. `node scripts/plan.mjs --plaats=Lissabon --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09`
-   (optioneel `--straal=500`, `--prijs=pp|totaal`). De gebruiker rondt de robotcontrole zelf af en
+2. `node scripts/plan.mjs --plaats=Denver --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09`
+   (optioneel `--straal=500`, `--straal2=1000`, `--max2=20`, `--prijs=pp|totaal`). De gebruiker rondt de robotcontrole zelf af en
    controleert het bagagefilter (1 ruimbagage 23 kg p.p.); omzeil die controle nooit.
 3. Rapporteer per bestemming de beste keuze volgens de regels, met link, en noem wat je niet kon verifiëren.
 

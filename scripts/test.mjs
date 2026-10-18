@@ -8,6 +8,11 @@ assert.deepEqual(lis.bestemmingen.map(b => b.code).slice(0, 3), ['LIS', 'FAO', '
 assert.equal(dagenTussen('2027-03-10', '2027-04-02'), 23);
 assert.match(zoekUrl('FRA', 'LIS', '2027-03-10', '2027-04-02'), /fra\/lis\/270310\/270402\/\?adultsv2=2/);
 
+const den = bestemmingenVoorPlaats('Denver', 1000);
+assert.equal(den.voorkeur, 'DEN');
+for (const c of ['SLC', 'ABQ']) assert.ok(den.bestemmingen.some(b => b.code === c), c + ' hoort binnen 1000 km van Denver');
+assert.ok(!den.bestemmingen.some(b => b.code === 'LAX'), 'LAX ligt buiten 1000 km van Denver');
+
 // regels: overstap 12u en 250 goedkoper -> wint; 16u -> afgekeurd; 150 goedkoper -> afgekeurd
 const a = [
   { totaal: 900, uren: 2.5, direct: true }, { totaal: 650, uren: 12, direct: false },
