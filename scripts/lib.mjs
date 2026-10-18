@@ -45,13 +45,16 @@ const getal = s => parseInt(String(s).replace(/\./g, ''), 10);
 export function leesAanbod(tekst, { prijsBasis = 'pp', personen = 2 } = {}) {
   const regels = tekst.split('\n').map(r => r.trim()).filter(Boolean);
   const uit = [];
+  let vorige = -1;
   regels.forEach((r, i) => {
     const p = r.match(/^€\s?([\d.]{2,7})(?!\d)/) || r.match(/€\s?([\d.]{2,7})\s*$/);
     if (!p) return;
     const prijs = getal(p[1]); if (!(prijs >= 30)) return;
-    const blok = regels.slice(Math.max(0, i - 14), i + 3).join(' | ');
-    const dur = blok.match(/(\d{1,2})\s*(?:u|uur|h)\.?(?:\s*(\d{1,2})(?:\s*(?:min|m))?)?(?!\d)/i);
-    const uren = dur ? Math.round((+dur[1] + (dur[2] ? +dur[2] / 60 : 0)) * 10) / 10 : null;
+    const blok = regels.slice(Math.max(vorige + 1, i - 25), i + 1).join(' | ');
+    vorige = i;
+    const duren = [...blok.matchAll(/(\d{1,2})\s*(?:u|uur|h)\.?(?:\s*(\d{1,2})(?:\s*(?:min|m))?)?(?!\d)/gi)]
+      .map(d => Math.round((+d[1] + (d[2] ? +d[2] / 60 : 0)) * 10) / 10);
+    const uren = duren.length ? Math.max(...duren) : null; // langste vliegtijd van heen en terug (conservatief)
     const direct = /\b(directe? vlucht|rechtstreeks|direct)\b/i.test(blok) && !/\d\s*(tussenstop|stop|overstap)/i.test(blok);
     uit.push({ totaal: prijsBasis === 'pp' ? prijs * personen : prijs, uren, direct, ruw: blok.slice(0, 200) });
   });
@@ -59,22 +62,22 @@ export function leesAanbod(tekst, { prijsBasis = 'pp', personen = 2 } = {}) {
   return uit.filter(o => { const k = `${o.totaal}|${o.uren}|${o.direct}`; if (gezien.has(k)) return false; gezien.add(k); return true; });
 }
 
-// Jouw regel: rechtstreeks heeft voorkeur; overstap alleen bij max 15 uur EN minstens 200 (100 p.p.) goedkoper.
-export function kiesBeste(aanbod, { maxUren = 15, minBesparing = 200 } = {}) {
-  const directe = aanbod.filter(o => o.direct).sort((a, b) => a.totaal - b.totaal);
-  const basis = directe[0]?.totaal ?? null;
+// Jouw regels: vliegtijd maximaal 14 uur per enkele reis (ook rechtstreeks). Rechtstreeks heeft voorkeur;
+// overstap alleen als minstens 200 (100 p.p.) goedkoper dan de goedkoopste rechtstreekse vlucht naar dezelfde bestemming.
+export function kiesBeste(aanbod, { maxUren = 14, minBesparing = 200 } = {}) {
   const afgekeurd = [], geldig = [];
   aanbod.forEach(o => {
-    if (o.direct) return geldig.push(o);
-    if (!(o.uren > 0)) return afgekeurd.push({ ...o, reden: 'reistijd onbekend' });
-    if (o.uren > maxUren) return afgekeurd.push({ ...o, reden: `langer dan ${maxUren} uur` });
-    if (basis !== null && o.totaal > basis - minBesparing) return afgekeurd.push({ ...o, reden: `minder dan ${minBesparing} goedkoper dan rechtstreeks` });
+    if (o.uren > maxUren) return afgekeurd.push({ ...o, reden: `vliegtijd ${o.uren} uur is meer dan ${maxUren} uur` });
+    if (!o.direct && !(o.uren > 0)) return afgekeurd.push({ ...o, reden: 'reistijd onbekend' });
     geldig.push(o);
   });
-  const goedkoopstIndirect = geldig.filter(o => !o.direct).sort((a, b) => a.totaal - b.totaal)[0];
-  const goedkoopstDirect = geldig.filter(o => o.direct).sort((a, b) => a.totaal - b.totaal)[0];
-  const beste = goedkoopstIndirect && (!goedkoopstDirect || goedkoopstIndirect.totaal <= basis - minBesparing) ? goedkoopstIndirect : goedkoopstDirect;
-  return { beste: beste ?? null, afgekeurd };
+  const basis = geldig.filter(o => o.direct).sort((a, c) => a.totaal - c.totaal)[0]?.totaal ?? null;
+  const directe = geldig.filter(o => o.direct).sort((a, c) => a.totaal - c.totaal);
+  const indirect = geldig.filter(o => !o.direct).sort((a, c) => a.totaal - c.totaal);
+  indirect.filter(o => basis !== null && o.totaal > basis - minBesparing)
+    .forEach(o => afgekeurd.push({ ...o, reden: `minder dan ${minBesparing} goedkoper dan rechtstreeks` }));
+  const bruikbaar = indirect.filter(o => basis === null || o.totaal <= basis - minBesparing);
+  return { beste: bruikbaar[0] ?? directe[0] ?? null, afgekeurd };
 }
 
 export const euro = n => '€ ' + Math.round(n).toLocaleString('nl-NL');

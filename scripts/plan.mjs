@@ -61,7 +61,27 @@ const rang = alle.filter(r => r.beste).sort((a, b) => a.beste.totaal - b.beste.t
 const km = Object.fromEntries(fase2.bestemmingen.map(b => [b.code, b.km]));
 console.log('\nTop 10 (zelfde data):');
 rang.slice(0, 10).forEach((r, i) => console.log(`${i === 0 ? '→' : ' '} ${r.van}→${r.naar} (${km[r.naar]} km van ${fase1.voorkeur}): ${euro(r.beste.totaal)} ${r.beste.direct ? 'rechtstreeks' : `overstap, ${r.beste.uren} uur`}  ${r.url}`));
+// Prijsverschil per aankomstluchthaven en vertrekpunt, voor de gekozen data (t.o.v. Frankfurt en t.o.v. de goedkoopste)
+console.log('\nPrijsverschil per aankomst (Δ t.o.v. Frankfurt, * = goedkoopste vertrekpunt voor die aankomst):');
+const kop = ['Aankomst'.padEnd(26), ...VERTREK.map(x => x.padStart(18))].join('');
+console.log(kop);
+const tabel = [];
+for (const b of fase2.bestemmingen) {
+  const rij = Object.fromEntries(VERTREK.map(x => [x, alle.find(r => r.van === x && r.naar === b.code)?.beste ?? null]));
+  const prijzen = VERTREK.map(x => rij[x]?.totaal).filter(n => n > 0);
+  if (!prijzen.length) continue;
+  const laagste = Math.min(...prijzen), fraP = rij.FRA?.totaal;
+  const cel = x => {
+    const o = rij[x]; if (!o) return '-'.padStart(18);
+    const delta = x === 'FRA' || fraP == null ? '' : ` (${o.totaal - fraP >= 0 ? '+' : '-'}${euro(Math.abs(o.totaal - fraP)).slice(2)})`;
+    return `${o.totaal === laagste ? '*' : ' '}${euro(o.totaal)}${delta}${o.direct ? '' : ' ov'}`.padStart(18);
+  };
+  console.log(`${(b.naam + ' ' + b.code).slice(0, 25).padEnd(26)}${VERTREK.map(cel).join('')}`);
+  tabel.push({ aankomst: b.code, laagste, perVertrek: Object.fromEntries(VERTREK.map(x => [x, rij[x]?.totaal ?? null])) });
+}
+console.log('ov = met overstap');
+
 const zonder = alle.filter(r => !r.beste).map(r => `${r.van}→${r.naar}`);
 if (zonder.length) console.log(`\nGeen uitleesbaar resultaat voor: ${zonder.join(', ')}`);
-writeFileSync(`resultaten/uitkomst-${v.plaats}.json`, JSON.stringify({ plaats: v.plaats, straal1, straal2, fase1: fra, fase2: alle }, null, 2));
+writeFileSync(`resultaten/uitkomst-${v.plaats}.json`, JSON.stringify({ plaats: v.plaats, straal1, straal2, fase1: fra, fase2: alle, verschillen: tabel }, null, 2));
 await ctx.close();

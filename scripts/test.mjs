@@ -29,4 +29,9 @@ const tekst = `Heen\n06:35\nFRA\n2 u 50\nDirecte vlucht\n09:25\nLIS\n€ 412\nTe
 const l = leesAanbod(tekst);
 assert.equal(l.length, 2);
 assert.equal(l[0].totaal, 824); assert.equal(l[0].direct, true); assert.equal(l[0].uren, 2.8);
+// 14 uur geldt ook voor rechtstreeks; goedkoper bij overstap telt pas bij minstens 200 verschil
+assert.equal(kiesBeste([{ totaal: 500, uren: 15, direct: true }, { totaal: 900, uren: 10, direct: false }]).beste.totaal, 900);
+assert.equal(kiesBeste([{ totaal: 500, uren: 15, direct: true }]).beste, null);
+assert.equal(kiesBeste([{ totaal: 900, uren: 10, direct: true }, { totaal: 650, uren: 14, direct: false }]).beste.totaal, 650);
+assert.equal(kiesBeste([{ totaal: 900, uren: 10, direct: true }, { totaal: 650, uren: 14.5, direct: false }]).beste.totaal, 900);
 console.log('Alle tests geslaagd');

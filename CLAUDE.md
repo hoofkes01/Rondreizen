@@ -12,9 +12,11 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
      maand-/prijskalender van Skyscanner om goedkope dagen te vinden en zoek dan 2 à 3 datumparen. Uitkomst: de goedkoopste data.
   2. Fase 2, pas op die data: zoek vanaf alle vier de vertrekluchthavens (ook Frankfurt) naar alle aankomstluchthavens binnen
      1000 km van de voorkeursluchthaven. Reden: de rondreis kan op meerdere plekken beginnen (eerste reis: USA).
-- Rechtstreeks heeft voorkeur. Overstap alleen als reistijd max 15 uur EN totaalprijs minstens
-  200 lager (100 p.p.) dan de goedkoopste rechtstreekse vlucht naar dezelfde bestemming.
-  Zonder rechtstreekse vlucht: overstap tot 15 uur toegestaan.
+- Vliegtijd maximaal 14 uur per enkele reis (heen en terug apart; ook rechtstreeks). Rechtstreeks heeft voorkeur.
+  Overstap alleen als de totaalprijs minstens 200 lager (100 p.p.) is dan de goedkoopste rechtstreekse vlucht naar dezelfde
+  bestemming. Zonder rechtstreekse vlucht: goedkoopste overstap binnen 14 uur.
+- Toon voor de gekozen data altijd het prijsverschil tussen de vertrekluchthavens per aankomstluchthaven (t.o.v. Frankfurt en
+  t.o.v. de goedkoopste). De scripts en de planner doen dit.
 - Open vraag aan gebruiker: bij een rondreis kan heen naar A en terug vanuit B (open jaw) goedkoper of praktischer zijn dan
   heen en terug op dezelfde luchthaven. De scripts zoeken nu alleen heen en terug op dezelfde luchthaven.
 - Let op omvang fase 2: 4 vertrekpunten x aankomstluchthavens = veel pagina's (standaard max 20 aankomsten = 80 pagina's).

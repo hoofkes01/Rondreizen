@@ -89,12 +89,12 @@
     <h2><span class="stap">4</span>Gevonden prijzen en beste keuze</h2>
     <div class="scroll">
       <table id="prijzen">
-        <thead><tr><th>Bestemming</th><th>Vertrek</th><th>Type</th><th>Totaal 2 pers. incl. koffers (€)</th><th>Reistijd heen (uur)</th><th>Opmerking</th><th></th></tr></thead>
+        <thead><tr><th>Bestemming</th><th>Vertrek</th><th>Type</th><th>Totaal 2 pers. incl. koffers (€)</th><th>Langste enkele reis (uur, max 14)</th><th>Opmerking</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
     <div class="rij" style="margin-top:10px"><button id="voegPrijs" class="prim">+ Prijs noteren</button></div>
-    <p class="noot">Regel: rechtstreeks heeft de voorkeur. Een vlucht met overstap telt alleen mee als de reistijd maximaal 15 uur is en de totaalprijs minstens € 200 lager is (€ 100 per persoon) dan de goedkoopste rechtstreekse vlucht naar dezelfde bestemming. Is er geen rechtstreekse vlucht genoteerd, dan telt een overstapvlucht tot 15 uur.</p>
+    <p class="noot">Regel: de vliegtijd is maximaal 14 uur per enkele reis, ook bij rechtstreeks (vul de langste van heen en terug in). Rechtstreeks heeft de voorkeur. Een vlucht met overstap telt alleen mee als de totaalprijs minstens € 200 lager is (€ 100 per persoon) dan de goedkoopste rechtstreekse vlucht naar dezelfde bestemming. Is er geen rechtstreekse vlucht genoteerd, dan telt de goedkoopste overstapvlucht binnen 14 uur.</p>
     <div id="uitslag"></div>
   </section>
 
@@ -238,13 +238,13 @@ function beoordeel() {
   staat.prijzen.forEach((p, i) => { const b = parseFloat(p.bedrag); if (b > 0) (perB[p.bestemming] = perB[p.bestemming] || []).push({ ...p, b, uren: parseFloat(p.uren), i }); });
   const status = {}, beste = {};
   Object.entries(perB).forEach(([dest, lijst]) => {
-    const directe = lijst.filter(x => x.direct === 'ja').sort((a, c) => a.b - c.b);
+    const directe = lijst.filter(x => x.direct === 'ja' && !(x.uren > 14)).sort((a, c) => a.b - c.b);
     const basis = directe.length ? directe[0].b : null;
     const geldig = [];
     lijst.forEach(x => {
+      if (x.uren > 14) { status[x.i] = `Afgekeurd: vliegtijd ${x.uren} uur is meer dan 14 uur`; return; }
       if (x.direct === 'ja') { geldig.push(x); status[x.i] = 'ok'; return; }
       if (!(x.uren > 0)) { status[x.i] = 'Vul de reistijd in'; return; }
-      if (x.uren > 15) { status[x.i] = 'Afgekeurd: langer dan 15 uur'; return; }
       if (basis !== null && x.b > basis - 200) { status[x.i] = `Afgekeurd: slechts € ${Math.round(basis - x.b).toLocaleString('nl-NL')} goedkoper dan rechtstreeks (minimaal € 200)`; return; }
       geldig.push(x); status[x.i] = 'ok';
     });
@@ -276,11 +276,23 @@ function tekenPrijzen() {
       <td><input data-v="opmerking" value="${esc(p.opmerking)}" placeholder="data, maatschappij" aria-label="Opmerking">${melding}</td>
       <td><button class="link" data-del="${i}" type="button" aria-label="Verwijder">✕</button></td></tr>`;
   }).join('');
+  // prijsverschil per vertrekpunt voor elke aankomst (alleen geldige aanbiedingen), t.o.v. Frankfurt en de goedkoopste
+  const perAank = {};
+  staat.prijzen.forEach((p, i) => { const b = parseFloat(p.bedrag); if (status[i] === 'ok' && b > 0) { const r = (perAank[p.bestemming] = perAank[p.bestemming] || {}); if (!r[p.vertrek] || b < r[p.vertrek]) r[p.vertrek] = b; } });
+  const verschilRijen = Object.entries(perAank).filter(([, r]) => Object.keys(r).length > 1).map(([dest, r]) => {
+    const laag = Math.min(...Object.values(r)), fra = r.FRA;
+    const cel = v => { const x = r[v]; if (!x) return '<td>-</td>';
+      const d = fra && v !== 'FRA' ? ` <span class="noot">(${x - fra >= 0 ? '+' : '−'}€ ${Math.abs(Math.round(x - fra)).toLocaleString('nl-NL')} t.o.v. Frankfurt)</span>` : '';
+      return `<td>${x === laag ? '<strong>' : ''}€ ${Math.round(x).toLocaleString('nl-NL')}${x === laag ? '</strong>' : ''}${d}</td>`; };
+    return `<tr><td>${esc(label(perCode(dest)))}</td>${VERTREK.map(cel).join('')}</tr>`; });
+  const verschil = verschilRijen.length
+    ? '<h2 style="margin-top:16px">Prijsverschil per vertrekpunt (zelfde data)</h2><div class="scroll"><table><thead><tr><th>Aankomst</th>' + VERTREK.map(v => `<th>${VERTREKNAAM[v]}</th>`).join('') + '</tr></thead><tbody>' + verschilRijen.join('') + '</tbody></table></div><p class="noot">Vet = goedkoopste vertrekpunt voor die aankomst. Alleen aanbiedingen binnen de regels.</p>'
+    : '';
   const winnaars = Object.values(beste).sort((a, c) => a.b - c.b);
   $('uitslag').innerHTML = winnaars.length
     ? '<h2 style="margin-top:16px">Beste keuze per bestemming</h2><table><thead><tr><th>Bestemming</th><th>Vertrek</th><th>Type</th><th>Totaal 2 pers.</th></tr></thead><tbody>' +
-      winnaars.map(w => `<tr><td>${esc(label(perCode(w.bestemming)))}</td><td>${VERTREKNAAM[w.vertrek]}</td><td>${w.direct === 'ja' ? 'Rechtstreeks' : 'Overstap, ' + w.uren + ' uur'}</td><td><strong>€ ${Math.round(w.b).toLocaleString('nl-NL')}</strong></td></tr>`).join('') + '</tbody></table>'
-    : '';
+      winnaars.map(w => `<tr><td>${esc(label(perCode(w.bestemming)))}</td><td>${VERTREKNAAM[w.vertrek]}</td><td>${w.direct === 'ja' ? 'Rechtstreeks' : 'Overstap, ' + w.uren + ' uur'}</td><td><strong>€ ${Math.round(w.b).toLocaleString('nl-NL')}</strong></td></tr>`).join('') + '</tbody></table>' + verschil
+    : verschil;
 }
 
 // events
