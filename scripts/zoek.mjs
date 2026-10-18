@@ -1,25 +1,27 @@
-// Gebruik: node scripts/zoek.mjs FRA LIS 2027-03-10 2027-04-02
-// Opent Skyscanner zichtbaar. Rond zelf de "ik ben geen robot"-controle af en stel eventueel
-// het bagagefilter in; druk daarna op Enter in de terminal. Paginatekst en screenshot worden bewaard.
-import { chromium } from 'playwright';
+// Gebruik: node scripts/zoek.mjs FRA LIS 2027-03-10 2027-04-02 [--prijs=pp|totaal]
 import { mkdirSync, writeFileSync } from 'node:fs';
-import readline from 'node:readline/promises';
+import { startBrowser, laadResultaten } from './browser.mjs';
+import { zoekUrl, leesAanbod, kiesBeste, euro, dagenTussen } from './lib.mjs';
 
-const [van, naar, heen, terug] = process.argv.slice(2);
-if (!van || !naar || !heen || !terug) { console.error('Gebruik: node scripts/zoek.mjs VAN NAAR HEEN TERUG'); process.exit(1); }
-const yymmdd = d => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
-const url = `https://www.skyscanner.nl/transport/vliegtickets/${van.toLowerCase()}/${naar.toLowerCase()}/${yymmdd(heen)}/${yymmdd(terug)}/?adultsv2=2&cabinclass=economy&preferdirects=true&currency=EUR&rtn=1`;
+const args = process.argv.slice(2).filter(a => !a.startsWith('--'));
+const vlag = Object.fromEntries(process.argv.slice(2).filter(a => a.startsWith('--')).map(a => a.slice(2).split('=')));
+const [van, naar, heen, terug] = args;
+if (!terug) { console.error('Gebruik: node scripts/zoek.mjs VAN NAAR HEEN TERUG [--prijs=pp|totaal]'); process.exit(1); }
+const d = dagenTussen(heen, terug);
+if (d < 21 || d > 25) console.warn(`Let op: ${d} dagen, gewenst 21 tot 25.`);
 
-const browser = await chromium.launch({ headless: false });
-const page = await (await browser.newContext({ locale: 'nl-NL' })).newPage();
-await page.goto(url);
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-await rl.question('Rond de controle af, wacht tot de resultaten zichtbaar zijn en druk op Enter... ');
-rl.close();
-
+const ctx = await startBrowser();
+const page = ctx.pages()[0] ?? await ctx.newPage();
+const url = zoekUrl(van, naar, heen, terug);
+await laadResultaten(page, url, true);
+const tekst = await page.innerText('body');
+const aanbod = leesAanbod(tekst, { prijsBasis: vlag.prijs ?? 'pp' });
+const { beste } = kiesBeste(aanbod);
 mkdirSync('resultaten', { recursive: true });
 const naam = `resultaten/${van}-${naar}-${heen}-${terug}`;
-writeFileSync(`${naam}.txt`, `${url}\n\n${await page.innerText('body')}`);
-await page.screenshot({ path: `${naam}.png`, fullPage: true });
-console.log(`Bewaard: ${naam}.txt en ${naam}.png`);
-await browser.close();
+writeFileSync(`${naam}.txt`, `${url}\n\n${tekst}`);
+writeFileSync(`${naam}.json`, JSON.stringify({ van, naar, heen, terug, url, aanbod, beste }, null, 2));
+await page.screenshot({ path: `${naam}.png` });
+console.log(`${aanbod.length} aanbiedingen gevonden. Beste volgens regel: ${beste ? `${euro(beste.totaal)} (${beste.direct ? 'rechtstreeks' : 'overstap, ' + beste.uren + ' uur'})` : 'geen'}`);
+console.log(`Bewaard in ${naam}.json/.txt/.png. Klopt het niet met het scherm? Laat Claude het .txt-bestand lezen.`);
+await ctx.close();

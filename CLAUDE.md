@@ -18,20 +18,32 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
 
 ## Bestanden
 - index.html: de planner (luchthavens, links, prijsregels). Alles in één bestand, geen build.
-- scripts/zoek.mjs: opent Skyscanner zichtbaar in jouw browser, wacht tot de gebruiker de
-  "ik ben geen robot"-controle heeft afgerond en bewaart paginatekst + screenshot in `resultaten/`.
+- scripts/lib.mjs: luchthavens (leest LUCHTHAVENS uit index.html), straal, URL, uitlezen, regels.
+- scripts/zoek.mjs: één zoekopdracht (VAN NAAR HEEN TERUG) → resultaten/*.json, .txt, .png.
+- scripts/plan.mjs: de volledige routine (Frankfurt eerst, daarna DUS/AMS/BRU voor de winnaar).
+- scripts/browser.mjs: zichtbare Chrome met vast profiel (.browser-profiel); gebruiker doet de robotcontrole.
+- scripts/test.mjs: test alles wat zonder Skyscanner kan (`npm test`).
 
-## Werkwijze in een sessie met browser (pc)
-1. Vraag bestemming(en) en vertrekperiode.
-2. Gebruik de luchthavenlijst in index.html (LUCHTHAVENS) voor de straal van 500 km.
-3. Draai `node scripts/zoek.mjs <FRA|DUS|AMS|BRU> <BESTEMMING> <heen YYYY-MM-DD> <terug YYYY-MM-DD>`
-   of gebruik de browserkoppeling direct. Laat de gebruiker de robotcontrole zelf aanklikken;
-   omzeil die controle nooit.
-4. Lees `resultaten/*.txt`, pas de regels hierboven toe en rapporteer de beste keuze per bestemming.
+## Werkwijze op de pc (zuinig met tokens)
+Het script leest de pagina's uit en Claude beoordeelt alleen de uitkomst. Claude leest NIET zelf hele
+resultaatpagina's, tenzij het script niets kan uitlezen (dan: lees alleen het relevante deel van het .txt-bestand).
+Gebruik voor het routinewerk (scripts draaien, resultaten ophalen) een lichter model (`/model`, bijv. Haiku);
+het zwaardere model alleen voor de eindkeuze en bij fouten.
+1. Vraag plaats(en) en vertrekperiode. Zoek de goedkope dagen via de Skyscanner-maandkalender
+   (link uit index.html, stap 2) en kies 2 tot 3 datumparen van 21 tot 25 dagen.
+2. `node scripts/plan.mjs --plaats=Lissabon --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09`
+   (optioneel `--straal=500`, `--prijs=pp|totaal`). De gebruiker rondt de robotcontrole zelf af en
+   controleert het bagagefilter (1 ruimbagage 23 kg p.p.); omzeil die controle nooit.
+3. Rapporteer per bestemming de beste keuze volgens de regels, met link, en noem wat je niet kon verifiëren.
 
-## Let op
-- De Skyscanner-URL-parameters (`oym`, `iym`, `preferdirects`) zijn niet geverifieerd; controleer ze.
-- Bagagefilter kan niet via de URL: stel het in de pagina in (1 ruimbagage p.p., 23 kg).
+## Eerste keer op de pc: ijking (verplicht, voor je de resultaten vertrouwt)
+De uitleesfunctie `leesAanbod` en de URL-parameters zijn nooit tegen de echte site getest.
+1. `npm i && npx playwright install chromium && npm test`
+2. `node scripts/zoek.mjs FRA LIS 2027-03-10 2027-04-02` en vergelijk het resultaat met het scherm:
+   aantal aanbiedingen, prijs (per persoon of totaal? stel `--prijs` in), reistijd, rechtstreeks ja/nee.
+3. Klopt iets niet: pas `leesAanbod` in scripts/lib.mjs aan op de echte tekst in `resultaten/*.txt`, voeg
+   die tekst toe als testgeval in scripts/test.mjs en draai `npm test`.
+4. Controleer dat de prijs inclusief 2 koffers is en dat `preferdirects`/maandkalender-parameters werken.
 
 ## Overdracht van de cloudsessie naar de pc
 Gebruiker werkt op de pc met Claude Code en de Chrome-koppeling. Daarmee kan Skyscanner in de

@@ -1,0 +1,11 @@
+{
+  "name": "rondreisplanner",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/test.mjs",
+    "zoek": "node scripts/zoek.mjs",
+    "plan": "node scripts/plan.mjs"
+  },
+  "dependencies": { "playwright": "^1.48.0" }
+}

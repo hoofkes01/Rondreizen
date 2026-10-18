@@ -1,8 +1,20 @@
 # Rondreisplanner
 
-Open `index.html` in de browser (of via GitHub Pages). Afspraken en zoekregels staan in `CLAUDE.md`.
+`index.html` is de planner (open in de browser). De scripts in `scripts/` zoeken op Skyscanner via een
+zichtbare Chrome op je eigen pc. Afspraken, regels en werkwijze staan in `CLAUDE.md`.
 
-Op de pc, met zichtbare browser:
+## Starten op de pc
 
-    npm i playwright && npx playwright install chromium
-    node scripts/zoek.mjs FRA LIS 2027-03-10 2027-04-02
+    git clone https://github.com/hoofkes01/Rondreizen.git
+    cd Rondreizen
+    git checkout ccr-c57c0a15-ye0aal
+    npm i
+    npx playwright install chromium
+    npm test
+    claude
+
+Zeg tegen Claude: "Lees CLAUDE.md en voer de ijking uit (eerste keer op de pc)."
+
+## Zoeken
+
+    node scripts/plan.mjs --plaats=Lissabon --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09
