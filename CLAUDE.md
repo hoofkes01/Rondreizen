@@ -52,3 +52,21 @@ Stand van zaken: planner (index.html) werkt; zoeken op Skyscanner is nog nooit u
 URL-parameters zijn ongetest. Eerste taak op de pc: één testzoekopdracht (bijv. FRA-LIS, 23 dagen)
 en controleren of de links, de maandkalender en het bagagefilter (2 x 23 kg) kloppen.
 Daarna: Frankfurt-eerst-routine voor meerdere bestemmingen binnen 500 km uitvoeren.
+
+## Roadmap (door gebruiker aangegeven, in deze volgorde)
+1. Vluchten zoeken (nu in aanbouw, zie boven).
+2. Autohuur zoeken.
+3. Rondreisvoorstel op basis van parameters van de gebruiker (route, dagen, interesses, budget).
+4. Interactieve reisgids per dag, ter plekke digitaal te gebruiken (telefoon, ook met slecht bereik), met:
+   lokaal weer, weerbericht en weerwaarschuwingen, entreeprijzen, route naar en adres van het hotel,
+   restaurants binnen een ingestelde prijsrange.
+
+Ontwerpafspraken voor latere stappen (nog te bevestigen met de gebruiker):
+- Reisgegevens per reis als aparte JSON in `reizen/<naam>.json`; de gids is een statische pagina die dat leest.
+- Offline bruikbaar (PWA met service worker, gegevens vooraf opgehaald); weer ververst zodra er bereik is.
+- Weer: Open-Meteo (gratis, geen sleutel). Waarschuwingen: officiële dienst per land (bijv. MeteoAlarm/KNMI/DWD).
+- Entreeprijzen en restaurantprijzen: alleen uit officiële sites of een betaalde bron (bijv. Google Places API);
+  nooit schatten zonder dat te vermelden. Prijs en datum van de bron altijd tonen.
+- Routes naar hotel: deeplinks naar Google Maps/Apple Maps met het adres; geen eigen navigatie.
+- PRIVACY: de repo is publiek. Zet geen boekingsnummers, namen, hoteladressen of persoonlijke gegevens in de repo.
+  Houd reisgegevens lokaal of maak de repo privé voordat reizen erin komen.
