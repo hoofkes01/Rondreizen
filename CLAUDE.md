@@ -153,3 +153,12 @@ Principe: één klacht zegt weinig, maar een patroon bij veel reviews betekent d
   (veel 10/10 in korte tijd, bijna identieke teksten, reviews na een beloning). Meld dit, trek er geen harde conclusie uit.
 - Bij een nieuw hotel met weinig reviews: wees extra zorgvuldig met buurttoets, eigen site, foto's van gasten en
   vergelijk met de ervaring van de hotelketen of eigenaar (andere locaties), voor zover aanwezig.
+
+#### Hotelbeoordeling: eindoordeel is een onderbouwde afweging (leidend, gaat voor de drempels hierboven)
+- Weeg alles samen: reviews (inhoud, trend, aantal en betrouwbaarheid), buurt, eigen site, ligging t.o.v. de "place to be",
+  de harde eisen (waardering, ontbijt, eigen badkamer, wifi), leeftijd van het hotel en prijs.
+- De drempelpercentages hierboven zijn hulpmiddelen, geen automatische beslisregels. Eén uitzondering blijft hard: een duidelijk
+  patroon zoals het voorbeeld van de gebruiker (ruwweg de helft van ~100 reviews noemt onveilig of rumoerig) = niet voorstellen.
+- Geef per hotel een advies "adviseren", "adviseren met voorbehoud" of "niet adviseren", met in 3 tot 5 zinnen waarom:
+  wat voor en wat tegen pleit, en wat je niet kon verifiëren. Toon de cijfers (aantal en aandeel) als onderbouwing.
+- Bij twijfel: noem wat de gebruiker zelf nog kan nagaan (bijv. hotel mailen over een stille kamer).
