@@ -3,7 +3,20 @@
 Branch: `main`. Stand: 18 oktober 2026.
 Doel: rondreisplanner in 4 stappen (vluchten, autohuur, rondreisvoorstel, reisgids). Nu: stap 1, vluchten.
 
-## Start hier op de pc (kopieer en plak)
+## Allereerste opdracht (de gebruiker is een leek in techniek)
+Open Claude Code op je pc, in een lege map, en plak deze ene zin:
+> Ik ben een leek in techniek. Haal het project https://github.com/hoofkes01/Rondreizen.git op, lees daarin CLAUDE.md en OVERDRACHT.md, en begeleid me stap voor stap. Doe wat je zelf kunt, en leg kort uit wat ik moet doen als ik iets moet doen.
+
+## Begeleiding van een leek (voor Claude)
+- Gebruik gewone woorden, geen vakjargon. Leg in één zin uit wat je gaat doen en waarom.
+- Doe zelf zoveel mogelijk (clonen, installeren, tests, scripts draaien). Laat de gebruiker alleen doen wat niet anders kan:
+  de robotcontrole in Chrome aanklikken, het bagagefilter instellen, bevindingen doorgeven en keuzes maken.
+- Geef maximaal één taak tegelijk voor de gebruiker. Zeg precies waar die moet klikken of wat die moet typen.
+- Ontbreekt iets op de pc (Node.js, Git, Chrome), leg uit hoe het te installeren, met de officiële downloadpagina.
+- Gaat er iets mis: laat de gebruiker niet zelf zoeken. Los het op of leg in begrijpelijke taal uit wat er aan de hand is.
+- Vraag aan het einde van elke stap: "Klopt dit met wat je op het scherm ziet?" voordat je doorgaat.
+
+## Start hier op de pc (voor wie het handmatig wil; anders gebruik de zin hierboven)
 1. Open een terminal in de map waar je projecten staan en voer uit:
 ```
 git clone https://github.com/hoofkes01/Rondreizen.git

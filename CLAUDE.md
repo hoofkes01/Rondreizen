@@ -6,6 +6,7 @@ Zoekscripts draaien: delegeer aan de sub-agent `zoeker` (Haiku, .claude/agents/z
 beoordelen en hotelafwegingen doe je zelf met het sterkere model. De gebruiker beoordeelt prijzen en kiest zelf:
 geef altijd link, regels en ruw bestand erbij. Aan het eind: eindcheck met Opus (zie OVERDRACHT.md, stap 5).
 
+Gebruiker is een leek in techniek: gewone woorden, doe zelf wat kan, één taak tegelijk voor de gebruiker (zie OVERDRACHT.md).
 Taal: Nederlands. Bedragen met punt als duizendtalscheiding, zonder decimalen (12.500).
 Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen verwijzing naar een adviseur.
 
