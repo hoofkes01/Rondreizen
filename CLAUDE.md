@@ -127,3 +127,12 @@ Principe: één klacht zegt weinig, maar een patroon bij veel reviews betekent d
    wat je niet kon verifiëren. Gebruik nooit alleen de waardering als bewijs van veiligheid.
 4. Houd rekening met het verschil tussen kleine diefstal (zakkenrollers, vaak overal in toeristengebieden) en
    geweld/overvallen; benoem welk type voorkomt en wat te doen.
+
+#### Harde afkeurregel hotels (door gebruiker bevestigd)
+- Voorbeeld: bij ~100 reviews waarvan 50% "onveilig" of "rumoerig" noemt, nooit voorstellen.
+- Tel onveilig en rumoerig APART en toon beide percentages. Onveilig = veiligheid/diefstal/overlast/buurt; rumoerig = geluidsoverlast
+  (belangrijk voor 60+). Een hotel wordt afgekeurd als een van de twee ruim boven de drempel zit.
+- Drempels (voorstel, door gebruiker te bevestigen): onveilig 15% of meer = afkeuren; 5 tot 15% = twijfel, alleen voorstellen met
+  uitleg; onder 5% = geen bezwaar. Rumoerig 25% of meer = afkeuren, tenzij een stille kamer (achterzijde, hogere verdieping) bij de
+  boeking gegarandeerd kan worden en dat in de reviews bevestigd wordt.
+- Tel alleen reviews waarin het onderwerp negatief wordt genoemd, niet "veilig" of "rustig" in positieve zin.
