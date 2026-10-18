@@ -57,3 +57,16 @@ Principe: één klacht zegt weinig, maar een patroon bij veel reviews betekent d
 - Geef per hotel een advies "adviseren", "adviseren met voorbehoud" of "niet adviseren", met in 3 tot 5 zinnen waarom:
   wat voor en wat tegen pleit, en wat je niet kon verifiëren. Toon de cijfers (aantal en aandeel) als onderbouwing.
 - Bij twijfel: noem wat de gebruiker zelf nog kan nagaan (bijv. hotel mailen over een stille kamer).
+
+## Prijsbeleid (opgegeven door gebruiker)
+Doel: maximaal 100 euro per kamer per nacht, inclusief ontbijt. Zoek altijd eerst zo dicht mogelijk bij de "place to be".
+Versoepel pas als er niets voldoet, in deze volgorde (volgorde van de eerste twee staat in intake: hotels.versoepelVolgorde):
+1. Hogere prijs: tot 35% duurder (135 euro per kamer per nacht), waardering dan nog steeds Booking 8 of hoger en Google 4,0 of hoger.
+2. Lagere waardering: vanaf Booking 7 of Google 3,5, binnen het prijsdoel van 100 euro.
+3. Beide (alleen als bovenstaande allebei niet lukt en de gebruiker de variant "beide" heeft gekozen).
+4. Verder van het toeristische centrum, in een buurt waar de prijzen lager liggen (bijv. buiten het centrum van Nashville).
+   Meld altijd afstand tot het centrum, de reistijd en de kosten van vervoer en parkeren.
+Nooit versoepelen: veiligheid, lawaai, ontbijt, eigen badkamer, wifi. Een lagere waardering of een goedkopere buurt vergroot het risico
+op problemen; voer de veiligheidstoets en de afweging per hotel dan juist extra zorgvuldig uit.
+Prijzen altijd vergelijkbaar maken: per kamer per nacht, inclusief ontbijt, belastingen, resortfee en parkeren (VS: vaak extra), in euro's met
+vermelding van de koers en de datum. Ontbijt dat extra kost, tel erbij op.
