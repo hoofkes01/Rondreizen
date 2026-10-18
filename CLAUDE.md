@@ -86,3 +86,5 @@ Ontwerpafspraken voor latere stappen (nog te bevestigen met de gebruiker):
 - Autohuur: docs/autohuur.md
 - Hotels (eisen, veiligheidstoets, beoordeling als onderbouwde afweging): docs/hotels.md
 - Reisgids (voorbereidingspagina, dagkoers en betalen, avondadresje per dag): docs/reisgids.md
+
+Lees ook OVERDRACHT.md voor de stand van zaken en de open punten.
