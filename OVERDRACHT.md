@@ -1,6 +1,6 @@
 # Overdracht naar de pc (kort, stap voor stap)
 
-Branch: `ccr-c57c0a15-ye0aal`. Stand: 18 oktober 2026.
+Branch: `main`. Stand: 18 oktober 2026.
 Doel: rondreisplanner in 4 stappen (vluchten, autohuur, rondreisvoorstel, reisgids). Nu: stap 1, vluchten.
 
 ## Werkregels voor Claude (lees dit eerst)
@@ -22,7 +22,6 @@ Doel: rondreisplanner in 4 stappen (vluchten, autohuur, rondreisvoorstel, reisgi
 ## Stap 0: installeren (Haiku volstaat)
 ```
 git clone https://github.com/hoofkes01/Rondreizen.git && cd Rondreizen
-git checkout ccr-c57c0a15-ye0aal
 npm i && npx playwright install chromium && npm test
 ```
 Verwacht: "Alle tests geslaagd". **STOP en meld het resultaat.**

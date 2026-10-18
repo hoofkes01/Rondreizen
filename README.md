@@ -7,7 +7,6 @@ zichtbare Chrome op je eigen pc. Afspraken, regels en werkwijze staan in `CLAUDE
 
     git clone https://github.com/hoofkes01/Rondreizen.git
     cd Rondreizen
-    git checkout ccr-c57c0a15-ye0aal
     npm i
     npx playwright install chromium
     npm test
