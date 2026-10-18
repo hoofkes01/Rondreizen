@@ -11,8 +11,8 @@ Doel: rondreisplanner in 4 stappen (vluchten, autohuur, rondreisvoorstel, reisgi
    - Lees `docs/*.md` alleen voor het onderdeel waar je nu aan werkt. Lees `index.html` niet (groot); de scripts lezen daar zelf uit.
    - Laat scripts de pagina's uitlezen. Rapporteer alleen de uitkomst (tabel), niet de ruwe tekst.
    - Geen schermafbeeldingen lezen als tekst genoeg is.
-3. **Model.** Gebruik voor routinewerk (scripts draaien, uitkomsten samenvatten, tests draaien) het lichte model: `/model` en kies
-   Haiku 5.5. Schakel naar een sterker model voor: de uitleesfunctie `leesAanbod` aanpassen (stap 1B), een uitkomst beoordelen,
+3. **Model.** Bouwen met het sterkere model (Sonnet). Scripts draaien laat je door de sub-agent `zoeker` doen (Haiku, .claude/agents/zoeker.md):
+   zeg "laat de zoeker dit draaien". De scripts zelf gebruiken geen AI en kosten geen tokens. Schakel naar een sterker model voor: de uitleesfunctie `leesAanbod` aanpassen (stap 1B), een uitkomst beoordelen,
    hotelafwegingen, en bij fouten die je met Haiku niet oplost.
 4. **Eerlijk melden** wat niet getest of onzeker is. Geen gokken met prijzen; altijd bron en datum.
 5. **Robotcontrole** laat de gebruiker zelf afronden. Nooit omzeilen.
@@ -29,7 +29,7 @@ Verwacht: "Alle tests geslaagd". **STOP en meld het resultaat.**
 
 ## Stap 1A: één testzoekopdracht (Haiku volstaat)
 `node scripts/zoek.mjs FRA LIS 2027-03-10 2027-04-02`
-Gebruiker: robotcontrole afronden, bagagefilter instellen (1 ruimbagage 23 kg per persoon), Enter.
+Gebruiker: in het Chrome-venster de robotcontrole afronden en het bagagefilter instellen (1 ruimbagage 23 kg per persoon). Geen Enter nodig; het script wacht zelf (bagage: 45 seconden, aanpasbaar met BAGAGE_WACHT).
 Claude meldt alleen: aantal aanbiedingen, beste prijs, vliegtijd, rechtstreeks ja/nee. Gebruiker vergelijkt met het scherm.
 **STOP. Wacht op de bevindingen van de gebruiker.**
 

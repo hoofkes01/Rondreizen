@@ -2,7 +2,8 @@
 
 WERKWIJZE (leidend): lees eerst OVERDRACHT.md. Eén stap tegelijk; na elke stap STOP, korte melding (max 10 regels) en wacht op
 de bevindingen van de gebruiker. Zuinig met tokens: lees geen hele bestanden, gebruik grep/head, laat scripts de pagina's uitlezen.
-Routinewerk met Haiku 5.5 (`/model`); sterker model voor uitleesfunctie aanpassen, beoordelen en hotelafwegingen.
+Zoekscripts draaien: delegeer aan de sub-agent `zoeker` (Haiku, .claude/agents/zoeker.md). Bouwen, uitleesfunctie aanpassen,
+beoordelen en hotelafwegingen doe je zelf met het sterkere model.
 
 Taal: Nederlands. Bedragen met punt als duizendtalscheiding, zonder decimalen (12.500).
 Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen verwijzing naar een adviseur.
