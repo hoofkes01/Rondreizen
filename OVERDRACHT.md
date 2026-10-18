@@ -3,6 +3,24 @@
 Branch: `main`. Stand: 18 oktober 2026.
 Doel: rondreisplanner in 4 stappen (vluchten, autohuur, rondreisvoorstel, reisgids). Nu: stap 1, vluchten.
 
+## Start hier op de pc (kopieer en plak)
+1. Open een terminal in de map waar je projecten staan en voer uit:
+```
+git clone https://github.com/hoofkes01/Rondreizen.git
+cd Rondreizen
+npm i
+npx playwright install chromium
+npm test
+claude
+```
+Verwacht bij `npm test`: "Alle tests geslaagd". Zo niet, plak de melding in Claude.
+2. Plak in Claude Code deze opdracht:
+> Lees CLAUDE.md en OVERDRACHT.md. Voer stap 0 uit en stop daarna. Gebruik de sub-agent zoeker voor het draaien van scripts.
+3. Daarna doe je de eerste testzoekopdracht (stap 1A hieronder) en geef je je bevindingen door.
+
+Vereist op de pc: Node.js 18 of hoger, Git, Claude Code en Google Chrome. Controleer met `node -v` en `git --version`.
+De Chrome-koppeling hoeft niet aan te staan: de scripts openen zelf een Chrome-venster.
+
 ## Werkregels voor Claude (lees dit eerst)
 1. **Eén stap tegelijk.** Na elke stap: STOP, meld de uitkomst in maximaal 10 regels (gelukt / niet gelukt / wat afweek), en wacht op de
    bevindingen van de gebruiker. Begin nooit zelf aan de volgende stap.
@@ -19,12 +37,8 @@ Doel: rondreisplanner in 4 stappen (vluchten, autohuur, rondreisvoorstel, reisgi
 6. **Privacy:** repo is publiek. Geen persoonlijke reisgegevens committen (`intake.json`, `resultaten/`, `reizen/` staan in `.gitignore`).
 7. Nieuwe sessie starten als de context groot wordt (meld dat), of na elke afgeronde stap.
 
-## Stap 0: installeren (Haiku volstaat)
-```
-git clone https://github.com/hoofkes01/Rondreizen.git && cd Rondreizen
-npm i && npx playwright install chromium && npm test
-```
-Verwacht: "Alle tests geslaagd". **STOP en meld het resultaat.**
+## Stap 0: controle van de installatie (Haiku volstaat)
+Voer `npm test` uit. Verwacht: "Alle tests geslaagd". **STOP en meld het resultaat.**
 
 ## Stap 1A: één testzoekopdracht (Haiku volstaat)
 `node scripts/zoek.mjs FRA LIS 2027-03-10 2027-04-02`
