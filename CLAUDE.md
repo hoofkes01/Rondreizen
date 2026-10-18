@@ -3,7 +3,8 @@
 WERKWIJZE (leidend): lees eerst OVERDRACHT.md. Eén stap tegelijk; na elke stap STOP, korte melding (max 10 regels) en wacht op
 de bevindingen van de gebruiker. Zuinig met tokens: lees geen hele bestanden, gebruik grep/head, laat scripts de pagina's uitlezen.
 Zoekscripts draaien: delegeer aan de sub-agent `zoeker` (Haiku, .claude/agents/zoeker.md). Bouwen, uitleesfunctie aanpassen,
-beoordelen en hotelafwegingen doe je zelf met het sterkere model.
+beoordelen en hotelafwegingen doe je zelf met het sterkere model. De gebruiker beoordeelt prijzen en kiest zelf:
+geef altijd link, regels en ruw bestand erbij. Aan het eind: eindcheck met Opus (zie OVERDRACHT.md, stap 5).
 
 Taal: Nederlands. Bedragen met punt als duizendtalscheiding, zonder decimalen (12.500).
 Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen verwijzing naar een adviseur.

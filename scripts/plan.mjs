@@ -97,4 +97,12 @@ console.log('ov = met overstap');
 const zonder = alle.filter(r => !r.beste).map(r => `${r.van}→${r.naar}`);
 if (zonder.length) console.log(`\nGeen uitleesbaar resultaat voor: ${zonder.join(', ')}`);
 writeFileSync(`resultaten/uitkomst-${cfg.plaats}.json`, JSON.stringify({ plaats: cfg.plaats, periode: [cfg.van, cfg.tot], datums: [top.heen, top.terug], fase1a: scan.map(r => ({ heen: r.heen, terug: r.terug, prijs: r.beste?.totaal ?? null })), fase1: fra, fase2: alle, verschillen: tabel }, null, 2));
+// Overzicht dat je zonder Claude kunt nalezen en nacontroleren: elke regel heeft de Skyscanner-link en het bewaarde ruwe bestand.
+const regel = (r, i) => `| ${i + 1} | ${r.van}→${r.naar} | ${r.heen} → ${r.terug} | ${euro(r.beste.totaal)} | ${r.beste.direct ? 'rechtstreeks' : `overstap, ${r.beste.uren} uur`} | [zoekopdracht](${r.url}) | resultaten/${r.van}-${r.naar}-${r.heen}-${r.terug}.txt |`;
+writeFileSync(`resultaten/overzicht-${cfg.plaats}.md`, [
+  `# Overzicht ${cfg.plaats}`, '', `Periode heen: ${cfg.van} t/m ${cfg.tot}. Gekozen data: ${top.heen} → ${top.terug}. Regels: max ${cfg.maxUren} uur per enkele reis, overstap alleen bij minstens ${euro(cfg.besparing)} voordeel.`,
+  'Prijzen komen uit het script (aanname: prijs ' + (cfg.prijsBasis === 'pp' ? 'per persoon x 2' : 'totaal voor 2') + '). Controleer altijd in de zoekopdracht zelf voor je boekt.', '',
+  '| # | Route | Data | Totaal 2 pers. | Type | Link | Ruw bestand |', '|---|---|---|---|---|---|---|', ...rang.slice(0, 15).map(regel)
+].join('\n') + '\n');
+console.log(`Overzicht om zelf na te lezen: resultaten/overzicht-${cfg.plaats}.md`);
 await ctx.close();
