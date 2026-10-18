@@ -1,5 +1,9 @@
 # Rondreisplanner – afspraken
 
+WERKWIJZE (leidend): lees eerst OVERDRACHT.md. Eén stap tegelijk; na elke stap STOP, korte melding (max 10 regels) en wacht op
+de bevindingen van de gebruiker. Zuinig met tokens: lees geen hele bestanden, gebruik grep/head, laat scripts de pagina's uitlezen.
+Routinewerk met Haiku 5.5 (`/model`); sterker model voor uitleesfunctie aanpassen, beoordelen en hotelafwegingen.
+
 Taal: Nederlands. Bedragen met punt als duizendtalscheiding, zonder decimalen (12.500).
 Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen verwijzing naar een adviseur.
 
@@ -87,4 +91,3 @@ Ontwerpafspraken voor latere stappen (nog te bevestigen met de gebruiker):
 - Hotels (eisen, veiligheidstoets, beoordeling als onderbouwde afweging): docs/hotels.md
 - Reisgids (voorbereidingspagina, dagkoers en betalen, avondadresje per dag): docs/reisgids.md
 
-Lees ook OVERDRACHT.md voor de stand van zaken en de open punten.
