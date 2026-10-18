@@ -110,3 +110,20 @@ Ontwerpafspraken voor latere stappen (nog te bevestigen met de gebruiker):
 - Altijd adviseren om in lokale munt te betalen (dus "Dynamic Currency Conversion" weigeren). Toon per land of
   pinnen/contactloos gebruikelijk is en of contant nodig is.
 - Per land een korte tip: welke pinautomaten (bankgebonden) en waar niet (losse geldautomaten met hoge kosten).
+
+### Hotels: veiligheidstoets (aanscherping door gebruiker)
+Principe: één klacht zegt weinig, maar een patroon bij veel reviews betekent dat er iets mis is. Geen hotel in een achterbuurt.
+1. Reviews: lees de recente reviews (laatste 24 maanden) op Booking en Google. Tel hoeveel reviews veiligheid noemen
+   (zoek ook in de taal van het land en Engels: onveilig/unsafe, diefstal/theft/stolen, overval/robbery/mugged, dronken/
+   drugs, donkere straat/dark, "niet 's avonds lopen", scam). Rapporteer aantal en aandeel van de reviews, en
+   citeer 2 à 3 voorbeelden. Weinig reviews (onder ~100) = zwakke onderbouwing; zeg dat erbij.
+   Afkeuren bij een duidelijk patroon (bijv. meerdere recente reviews over diefstal of onveilig voelen, of een aandeel
+   dat opvallend hoger is dan bij vergelijkbare hotels in dezelfde stad).
+2. Buurt: beoordeel de straat en directe omgeving, niet alleen het hotel. Gebruik Google Maps/Street View (staat, verlichting,
+   leegstand, graffiti, winkels en horeca open 's avonds) en de looproute van het hotel naar de "place to be" en naar het
+   avondadresje. Officieel reisadvies van Buitenlandse Zaken per regio; waar beschikbaar officiële misdaadkaarten van
+   politie/gemeente. Indexen op basis van gebruikersmeldingen (bijv. Numbeo) zijn indicatief, geen bewijs.
+3. Conclusie per hotel: "veilig", "twijfel" of "afgekeurd", met de reden in één of twee zinnen. Bij twijfel altijd noemen
+   wat je niet kon verifiëren. Gebruik nooit alleen de waardering als bewijs van veiligheid.
+4. Houd rekening met het verschil tussen kleine diefstal (zakkenrollers, vaak overal in toeristengebieden) en
+   geweld/overvallen; benoem welk type voorkomt en wat te doen.
