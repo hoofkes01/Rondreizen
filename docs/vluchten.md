@@ -9,8 +9,8 @@
   verstelbaarheid, inchecken/uitstappen later). Baseer op de stoelenkaart van de maatschappij of het vliegtuigtype, nooit gokken.
 
 ## Reiskosten naar de vertrekluchthaven (vanaf Best, met de auto)
-- Auto rijdt 1 liter op 17 km. Parkeerkosten: 200 euro per reis (vast bedrag, door gebruiker opgegeven).
-- Formule per luchthaven: kosten = (2 x enkele afstand in km / 17) x literprijs + 200. Afstanden komen uit een routeplanner (ANWB of
-  OpenStreetMap-routering via het pc-script), brandstofprijs uit een officiële bron (EU Weekly Oil Bulletin) met datum.
-- Open punten: brandstofsoort van de auto (benzine, diesel of LPG) en of de 200 euro voor alle vier de luchthavens geldt.
-- Tel deze kosten op bij de vliegprijs om vertrekpunten eerlijk te vergelijken (totaal = vliegprijs 2 personen + reiskosten).
+- Besluit gebruiker: voor alle vertrekpunten hetzelfde, dus geen invloed op de vlucht-vergelijking: 30 liter benzine heen en terug
+  plus 200 euro parkeren. Standaard ingevuld in intake.html (reiskosten.liters, literprijs, parkeren).
+- Literprijs is een voorstel (Euro95, week 21 september 2026, 2,45 euro volgens zoekresultaat, niet zelf geverifieerd): controleren.
+- Deze kosten komen alleen in de kostenraming in de reisgids, niet in de ranglijst van vluchten.
+- Kanttekening: Frankfurt ligt veel verder dan Amsterdam; het verschil in werkelijke rijkosten wordt bewust genegeerd.

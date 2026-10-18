@@ -1,6 +1,6 @@
 // Test alles wat zonder Skyscanner te testen is: luchthavens, straal, uitlezen, regels.
 import assert from 'node:assert/strict';
-import { bestemmingenVoorPlaats, leesAanbod, kiesBeste, dagenTussen, zoekUrl } from './lib.mjs';
+import { fase1Data, datumsInPeriode, plusDagen, bestemmingenVoorPlaats, leesAanbod, kiesBeste, dagenTussen, zoekUrl } from './lib.mjs';
 
 const lis = bestemmingenVoorPlaats('Lissabon', 500);
 assert.equal(lis.voorkeur, 'LIS');
@@ -34,4 +34,18 @@ assert.equal(kiesBeste([{ totaal: 500, uren: 15, direct: true }, { totaal: 900, 
 assert.equal(kiesBeste([{ totaal: 500, uren: 15, direct: true }]).beste, null);
 assert.equal(kiesBeste([{ totaal: 900, uren: 10, direct: true }, { totaal: 650, uren: 14, direct: false }]).beste.totaal, 650);
 assert.equal(kiesBeste([{ totaal: 900, uren: 10, direct: true }, { totaal: 650, uren: 14.5, direct: false }]).beste.totaal, 900);
+// fase 1 met nepzoeker: de goedkoopste heendatum is 2027-04-08 met reisduur 22 dagen
+assert.deepEqual(datumsInPeriode('2027-03-01', '2027-03-20', 7), ['2027-03-01', '2027-03-08', '2027-03-15']);
+const aanroepen = [];
+const nepZoek = async (van, naar, heen, terug) => {
+  aanroepen.push(`${van}-${naar}-${heen}-${terug}`);
+  const duur = dagenTussen(heen, terug), verschil = Math.abs(dagenTussen('2027-04-08', heen));
+  return { heen, terug, naar, beste: { totaal: 1000 + verschil * 10 + Math.abs(duur - 22) * 5 + (naar === 'FAO' ? -30 : 0), direct: true, uren: 9 } };
+};
+const f1 = await fase1Data({ zoek: nepZoek, voorkeur: 'LIS', andere: ['LIS', 'FAO', 'OPO'], van: '2027-03-01', tot: '2027-05-31', duurMin: 21, duurMax: 25, stap: 7 });
+assert.equal(f1.top.heen, '2027-04-08'); assert.equal(dagenTussen(f1.top.heen, f1.top.terug), 22);
+assert.ok(f1.fra.some(r => r.naar === 'FAO') && f1.fra.length === 3);
+assert.ok(aanroepen.every(a => a.startsWith('FRA-')), 'fase 1 zoekt alleen vanaf Frankfurt');
+assert.ok(aanroepen.length < 45, 'aantal pagina\'s fase 1: ' + aanroepen.length);
+assert.equal(new Set(aanroepen).size, aanroepen.length, 'geen dubbele zoekopdrachten');
 console.log('Alle tests geslaagd');

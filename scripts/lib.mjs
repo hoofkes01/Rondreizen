@@ -36,6 +36,9 @@ export function bestemmingenVoorPlaats(plaats, straal = 500, max = 15) {
 const yymmdd = d => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
 export const zoekUrl = (van, naar, heen, terug) =>
   `https://www.skyscanner.nl/transport/vliegtickets/${van.toLowerCase()}/${naar.toLowerCase()}/${yymmdd(heen)}/${yymmdd(terug)}/?adultsv2=2&cabinclass=economy&preferdirects=true&currency=EUR&rtn=1`;
+export const plusDagen = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+// Datums in een periode, elke `stap` dagen (altijd inclusief de eerste datum).
+export const datumsInPeriode = (van, tot, stap = 7) => { const r = []; for (let d = van; d <= tot; d = plusDagen(d, stap)) r.push(d); return r; };
 export const dagenTussen = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
 
 const getal = s => parseInt(String(s).replace(/\./g, ''), 10);
@@ -81,3 +84,31 @@ export function kiesBeste(aanbod, { maxUren = 14, minBesparing = 200 } = {}) {
 }
 
 export const euro = n => '€ ' + Math.round(n).toLocaleString('nl-NL');
+
+// Fase 1 (alleen Frankfurt): zoekt binnen de periode de goedkoopste data. `zoek(van, naar, heen, terug)` geeft
+// { heen, terug, naar, beste } terug (beste = null als er niets bruikbaars is).
+export async function fase1Data({ zoek, voorkeur, andere = [], van, tot, duurMin, duurMax, stap = 7, log = () => {} }) {
+  const prijs = r => r?.beste?.totaal ?? Infinity;
+  const midden = Math.round((duurMin + duurMax) / 2);
+  const heenIn = d => d >= van && d <= tot;
+  log('Fase 1a: grove scan vanaf Frankfurt');
+  const scan = [];
+  for (const h of datumsInPeriode(van, tot, stap)) scan.push(await zoek('FRA', voorkeur, h, plusDagen(h, midden)));
+  const top2 = scan.filter(r => r.beste).sort((a, b) => prijs(a) - prijs(b)).slice(0, 2);
+  if (!top2.length) return null;
+  log('Fase 1b: verfijnen rond de goedkoopste heendatums');
+  const kandidaten = [...scan];
+  for (const t of top2) for (let o = -3; o <= 3; o++) {
+    const h = plusDagen(t.heen, o);
+    if (o && heenIn(h) && !kandidaten.some(k => k.heen === h)) kandidaten.push(await zoek('FRA', voorkeur, h, plusDagen(h, midden)));
+  }
+  const beste1 = kandidaten.filter(r => r.beste).sort((a, b) => prijs(a) - prijs(b))[0];
+  log('Fase 1c: reisduur op de beste heendatum');
+  const duren = kandidaten.filter(r => r.heen === beste1.heen);
+  for (let n = duurMin; n <= duurMax; n++) if (n !== midden) duren.push(await zoek('FRA', voorkeur, beste1.heen, plusDagen(beste1.heen, n)));
+  const top = duren.filter(r => r.beste).sort((a, b) => prijs(a) - prijs(b))[0];
+  log(`Fase 1d: andere luchthavens op ${top.heen} → ${top.terug}`);
+  const fra = [top];
+  for (const code of andere) if (code !== voorkeur) fra.push(await zoek('FRA', code, top.heen, top.terug));
+  return { scan, top, fra };
+}

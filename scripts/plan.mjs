@@ -1,28 +1,41 @@
-// Twee fasen, zoals afgesproken.
-// Gebruik: node scripts/plan.mjs --plaats=Denver --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09
-//          [--straal=500] [--straal2=1000] [--max2=20] [--prijs=pp|totaal]
-// Fase 1: alleen vanaf Frankfurt, alle luchthavens binnen --straal van de plaats, voor alle datumparen.
-//         Uitkomst: de goedkoopste data.
-// Fase 2: pas dan, op die data: alle vier de vertrekluchthavens (ook Frankfurt) naar alle aankomstluchthavens
-//         binnen --straal2 (standaard 1000 km) van de plaats. Dat geeft de beste combinatie, ook als de rondreis
-//         op een andere plek in het gebied begint.
-import { mkdirSync, writeFileSync } from 'node:fs';
+// Twee fasen, zoals afgesproken. Invoer: intake.json (uit intake.html) of vlaggen.
+// Gebruik: node scripts/plan.mjs --intake=intake.json
+//      of: node scripts/plan.mjs --plaats=Denver --van=2027-03-01 --tot=2027-05-31 [--stap=7] [--straal=500] [--straal2=1000]
+//          [--max2=20] [--maxuren=14] [--besparing=200] [--duurmin=21] [--duurmax=25] [--prijs=pp|totaal]
+// Fase 1 (alleen Frankfurt, binnen de opgegeven periode van heendatums):
+//   a) grove scan: elke --stap dagen een heendatum, op de voorkeursluchthaven, met de middelste reisduur;
+//   b) verfijnen: de 2 goedkoopste heendatums, 3 dagen eromheen (dag voor dag);
+//   c) reisduur: op de beste heendatum alle duren van min tot max;
+//   d) de andere luchthavens binnen --straal op het gekozen datumpaar.
+//   Uitkomst: de goedkoopste data.
+// Fase 2 (pas daarna): op die data alle vier de vertrekluchthavens (ook Frankfurt) naar alle aankomstluchthavens
+//   binnen --straal2 (rondreis kan op meerdere plekken beginnen).
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { startBrowser, laadResultaten } from './browser.mjs';
-import { bestemmingenVoorPlaats, zoekUrl, leesAanbod, kiesBeste, euro, dagenTussen, VERTREK } from './lib.mjs';
+import { bestemmingenVoorPlaats, zoekUrl, leesAanbod, kiesBeste, euro, dagenTussen, fase1Data, VERTREK } from './lib.mjs';
 
 const v = Object.fromEntries(process.argv.slice(2).filter(a => a.startsWith('--')).map(a => { const [k, ...r] = a.slice(2).split('='); return [k, r.join('=')]; }));
-if (!v.plaats || !v.data) { console.error('Gebruik: --plaats=Denver --data=HEEN:TERUG,HEEN:TERUG'); process.exit(1); }
-const paren = v.data.split(',').map(s => s.split(':'));
-paren.forEach(([h, t]) => { const d = dagenTussen(h, t); if (d < 21 || d > 25) { console.error(`Datumpaar ${h}:${t} is ${d} dagen; moet 21 tot 25 zijn.`); process.exit(1); } });
-const straal1 = +(v.straal || 500), straal2 = +(v.straal2 || 1000), max2 = +(v.max2 || 20);
-const fase1 = bestemmingenVoorPlaats(v.plaats, straal1, 15);
-const fase2 = bestemmingenVoorPlaats(v.plaats, straal2, max2);
-const aantal1 = fase1.bestemmingen.length * paren.length;
-const aantal2 = VERTREK.length * fase2.bestemmingen.length;
-console.log(`Voorkeur: ${fase1.voorkeur}`);
-console.log(`Fase 1 (FRA, ${straal1} km): ${fase1.bestemmingen.map(b => b.code).join(', ')}  → ${aantal1} pagina's`);
-console.log(`Fase 2 (alle vertrekpunten, ${straal2} km): ${fase2.bestemmingen.map(b => b.code).join(', ')}  → maximaal ${aantal2} pagina's`);
-if (fase2.bestemmingen.length >= max2) console.log(`Let op: lijst begrensd op ${max2} aankomstluchthavens (--max2). Verhoog als je meer wilt.`);
+let intake = {};
+if (v.intake) { try { intake = JSON.parse(readFileSync(v.intake, 'utf8')); } catch (e) { console.error(`Kan ${v.intake} niet lezen: ${e.message}`); process.exit(1); } }
+const ir = intake.reis ?? {}, iv = intake.vlucht ?? {};
+const cfg = {
+  plaats: v.plaats ?? ir.plaats, van: v.van ?? ir.periodeVan, tot: v.tot ?? ir.periodeTot,
+  duurMin: +(v.duurmin ?? ir.duurMin ?? 21), duurMax: +(v.duurmax ?? ir.duurMax ?? 25), stap: +(v.stap ?? 7),
+  straal1: +(v.straal ?? iv.straal1 ?? 500), straal2: +(v.straal2 ?? iv.straal2 ?? 1000), max2: +(v.max2 ?? iv.max2 ?? 20),
+  maxUren: +(v.maxuren ?? iv.maxUren ?? 14), besparing: +(v.besparing ?? iv.minBesparing ?? 200), prijsBasis: v.prijs ?? 'pp'
+};
+if (!cfg.plaats || !cfg.van || !cfg.tot) { console.error('Nodig: bestemming en periode (--intake=intake.json of --plaats, --van, --tot)'); process.exit(1); }
+if (cfg.tot < cfg.van) { console.error('De laatste vertrekdatum ligt vóór de vroegste.'); process.exit(1); }
+if (cfg.duurMin < 21 || cfg.duurMax > 25 || cfg.duurMin > cfg.duurMax) { console.error('Reisduur moet tussen 21 en 25 dagen liggen.'); process.exit(1); }
+const regels = { maxUren: cfg.maxUren, minBesparing: cfg.besparing };
+const midden = Math.round((cfg.duurMin + cfg.duurMax) / 2);
+const fase1 = bestemmingenVoorPlaats(cfg.plaats, cfg.straal1, 15);
+const fase2 = bestemmingenVoorPlaats(cfg.plaats, cfg.straal2, cfg.max2);
+const scanDatums = datumsInPeriode(cfg.van, cfg.tot, cfg.stap);
+console.log(`Voorkeur: ${fase1.voorkeur}. Periode heen: ${cfg.van} t/m ${cfg.tot}, reisduur ${cfg.duurMin}-${cfg.duurMax} dagen, max ${cfg.maxUren} uur per enkele reis`);
+console.log(`Fase 1: ongeveer ${scanDatums.length} (scan) + 12 (verfijnen) + ${cfg.duurMax - cfg.duurMin} (reisduur) + ${fase1.bestemmingen.length - 1} (andere luchthavens binnen ${cfg.straal1} km) pagina's, alleen vanaf Frankfurt`);
+console.log(`Fase 2: ${VERTREK.length} vertrekpunten x ${fase2.bestemmingen.length} aankomsten (${fase2.bestemmingen.map(b => b.code).join(', ')}) = maximaal ${VERTREK.length * fase2.bestemmingen.length} pagina's`);
+if (fase2.bestemmingen.length >= cfg.max2) console.log(`Let op: fase 2 is begrensd op ${cfg.max2} aankomstluchthavens (--max2).`);
 
 const ctx = await startBrowser();
 const page = ctx.pages()[0] ?? await ctx.newPage();
@@ -36,8 +49,8 @@ async function zoek(van, naar, heen, terug) {
   const url = zoekUrl(van, naar, heen, terug);
   await laadResultaten(page, url, eerste); eerste = false;
   const tekst = await page.innerText('body');
-  const aanbod = leesAanbod(tekst, { prijsBasis: v.prijs || 'pp' });
-  const { beste } = kiesBeste(aanbod);
+  const aanbod = leesAanbod(tekst, { prijsBasis: cfg.prijsBasis });
+  const { beste } = kiesBeste(aanbod, regels);
   writeFileSync(`resultaten/${sleutel}.txt`, `${url}\n\n${tekst}`);
   console.log(`  ${van}→${naar} ${heen}: ${aanbod.length} aanbiedingen, beste ${beste ? euro(beste.totaal) + (beste.direct ? ' direct' : ` overstap ${beste.uren}u`) : 'geen'}`);
   const r = { van, naar, heen, terug, url, beste, aantal: aanbod.length };
@@ -45,15 +58,15 @@ async function zoek(van, naar, heen, terug) {
   return r;
 }
 
-console.log('\nFase 1: alleen Frankfurt');
-const fra = [];
-for (const b of fase1.bestemmingen) for (const [h, t] of paren) fra.push(await zoek('FRA', b.code, h, t));
-const metPrijs = fra.filter(r => r.beste).sort((a, b) => a.beste.totaal - b.beste.totaal);
-if (!metPrijs.length) { console.log('Niets uitleesbaar. Laat Claude de .txt-bestanden in resultaten/ lezen.'); await ctx.close(); process.exit(0); }
-const top = metPrijs[0];
-console.log(`Goedkoopste data vanaf FRA: ${top.heen} → ${top.terug} (${top.naar}, ${euro(top.beste.totaal)})`);
+const vk = fase1.voorkeur;
+const uitkomst1 = await fase1Data({ zoek, voorkeur: vk, andere: fase1.bestemmingen.map(b => b.code), van: cfg.van, tot: cfg.tot,
+  duurMin: cfg.duurMin, duurMax: cfg.duurMax, stap: cfg.stap, log: t => console.log('\n' + t) });
+if (!uitkomst1) { console.log('Niets uitleesbaar. Laat Claude de .txt-bestanden in resultaten/ lezen.'); await ctx.close(); process.exit(0); }
+const { scan, top, fra } = uitkomst1;
+const winnaar1 = fra.filter(r => r.beste).sort((a, b) => a.beste.totaal - b.beste.totaal)[0];
+console.log(`Goedkoopste data vanaf FRA: ${top.heen} → ${top.terug} (${dagenTussen(top.heen, top.terug)} dagen; goedkoopste aankomst ${winnaar1.naar}, ${euro(winnaar1.beste.totaal)})`);
 
-console.log(`\nFase 2: ${top.heen} → ${top.terug}, alle vertrekpunten naar alle aankomsten binnen ${straal2} km`);
+console.log(`\nFase 2: ${top.heen} → ${top.terug}, alle vertrekpunten naar alle aankomsten binnen ${cfg.straal2} km`);
 const alle = [];
 for (const van of VERTREK) for (const b of fase2.bestemmingen) alle.push(await zoek(van, b.code, top.heen, top.terug));
 const rang = alle.filter(r => r.beste).sort((a, b) => a.beste.totaal - b.beste.totaal);
@@ -83,5 +96,5 @@ console.log('ov = met overstap');
 
 const zonder = alle.filter(r => !r.beste).map(r => `${r.van}→${r.naar}`);
 if (zonder.length) console.log(`\nGeen uitleesbaar resultaat voor: ${zonder.join(', ')}`);
-writeFileSync(`resultaten/uitkomst-${v.plaats}.json`, JSON.stringify({ plaats: v.plaats, straal1, straal2, fase1: fra, fase2: alle, verschillen: tabel }, null, 2));
+writeFileSync(`resultaten/uitkomst-${cfg.plaats}.json`, JSON.stringify({ plaats: cfg.plaats, periode: [cfg.van, cfg.tot], datums: [top.heen, top.terug], fase1a: scan.map(r => ({ heen: r.heen, terug: r.terug, prijs: r.beste?.totaal ?? null })), fase1: fra, fase2: alle, verschillen: tabel }, null, 2));
 await ctx.close();

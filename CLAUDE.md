@@ -8,8 +8,9 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
 - Reisduur 21 tot 25 dagen.
 - Vertrek alleen vanaf Frankfurt (FRA), Düsseldorf (DUS), Amsterdam (AMS), Brussel (BRU).
 - Twee fasen, in deze volgorde (andere vertrekluchthavens pas in fase 2):
-  1. Fase 1, alleen Frankfurt: plaatsnaam opgegeven = voorkeursluchthaven plus alle luchthavens binnen 500 km. Gebruik de
-     maand-/prijskalender van Skyscanner om goedkope dagen te vinden en zoek dan 2 à 3 datumparen. Uitkomst: de goedkoopste data.
+  1. Fase 1, alleen Frankfurt: de gebruiker geeft een PERIODE (vroegste en laatste heendatum) en een plaats. Het script zoekt
+     slim binnen die periode: grove scan elke 7 dagen, verfijnen rond de 2 goedkoopste heendatums, dan de reisduur 21 tot 25
+     dagen, dan de luchthavens binnen 500 km op het gekozen datumpaar. Uitkomst: de goedkoopste data.
   2. Fase 2, pas op die data: zoek vanaf alle vier de vertrekluchthavens (ook Frankfurt) naar alle aankomstluchthavens binnen
      1000 km van de voorkeursluchthaven. Reden: de rondreis kan op meerdere plekken beginnen (eerste reis: USA).
 - Vliegtijd maximaal 14 uur per enkele reis (heen en terug apart; ook rechtstreeks). Rechtstreeks heeft voorkeur.
@@ -24,6 +25,8 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
 
 ## Bestanden
 - index.html: de planner (luchthavens, links, prijsregels). Alles in één bestand, geen build.
+- intake.html: intakeformulier (vlucht, reiskosten, autohuur, hotels, overig) → intake.json. Reiskosten naar de luchthaven staan vast
+  op 30 liter benzine + 200 euro parkeren en komen alleen in de kostenraming van de reisgids (docs/reisgids.md).
 - scripts/lib.mjs: luchthavens (leest LUCHTHAVENS uit index.html), straal, URL, uitlezen, regels.
 - scripts/zoek.mjs: één zoekopdracht (VAN NAAR HEEN TERUG) → resultaten/*.json, .txt, .png.
 - scripts/plan.mjs: de volledige routine in twee fasen (fase 1 alleen Frankfurt; fase 2 alle vertrekpunten x aankomsten binnen 1000 km).
@@ -35,10 +38,11 @@ Het script leest de pagina's uit en Claude beoordeelt alleen de uitkomst. Claude
 resultaatpagina's, tenzij het script niets kan uitlezen (dan: lees alleen het relevante deel van het .txt-bestand).
 Gebruik voor het routinewerk (scripts draaien, resultaten ophalen) een lichter model (`/model`, bijv. Haiku);
 het zwaardere model alleen voor de eindkeuze en bij fouten.
-1. Vraag plaats(en) en vertrekperiode. Zoek de goedkope dagen via de Skyscanner-maandkalender
-   (link uit index.html, stap 2) en kies 2 tot 3 datumparen van 21 tot 25 dagen.
-2. `node scripts/plan.mjs --plaats=Denver --data=2027-03-10:2027-04-02,2027-03-17:2027-04-09`
-   (optioneel `--straal=500`, `--straal2=1000`, `--max2=20`, `--prijs=pp|totaal`). De gebruiker rondt de robotcontrole zelf af en
+1. De gebruiker vult intake.html in en bewaart het bestand als `intake.json` in de repo-map (staat in .gitignore, NIET committen).
+   Controleer eerst of bestemming en periode zijn ingevuld.
+2. `node scripts/plan.mjs --intake=intake.json`, of met vlaggen:
+   `node scripts/plan.mjs --plaats=Denver --van=2027-03-01 --tot=2027-05-31`
+   (optioneel `--stap=7`, `--straal=500`, `--straal2=1000`, `--max2=20`, `--maxuren=14`, `--prijs=pp|totaal`). De gebruiker rondt de robotcontrole zelf af en
    controleert het bagagefilter (1 ruimbagage 23 kg p.p.); omzeil die controle nooit.
 3. Rapporteer per bestemming de beste keuze volgens de regels, met link, en noem wat je niet kon verifiëren.
 

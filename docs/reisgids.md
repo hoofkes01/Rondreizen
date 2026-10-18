@@ -15,3 +15,10 @@
 - Altijd adviseren om in lokale munt te betalen (dus "Dynamic Currency Conversion" weigeren). Toon per land of
   pinnen/contactloos gebruikelijk is en of contant nodig is.
 - Per land een korte tip: welke pinautomaten (bankgebonden) en waar niet (losse geldautomaten met hoge kosten).
+
+## Kostenraming (totaal, op basis van alle gemaakte keuzes)
+- Onderdelen: vluchten (gekozen aanbieding, 2 personen incl. koffers, evt. stoelkosten), reiskosten naar de luchthaven
+  (intake: brandstof + parkeren), autohuur (gekozen aanbieding incl. verzekering, borg apart noteren), hotels (per stop: nachten x prijs),
+  entree, eten en drinken (restaurantbudget uit intake), brandstof en tol voor de huurauto, overig (visum/ESTA, verzekering).
+- Toon per onderdeel: bedrag, bron en datum van de prijs; markeer wat een schatting is en wat een vaste prijs.
+- Vergelijk het totaal met het budget uit de intake en meld overschrijding. Bedragen in hele euro's met punt als duizendtalscheiding.
