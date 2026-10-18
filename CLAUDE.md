@@ -70,3 +70,31 @@ Ontwerpafspraken voor latere stappen (nog te bevestigen met de gebruiker):
 - Routes naar hotel: deeplinks naar Google Maps/Apple Maps met het adres; geen eigen navigatie.
 - PRIVACY: de repo is publiek. Zet geen boekingsnummers, namen, hoteladressen of persoonlijke gegevens in de repo.
   Houd reisgegevens lokaal of maak de repo privé voordat reizen erin komen.
+
+## Wensen per onderdeel (door gebruiker opgegeven)
+### Vluchten (aanvulling op de vaste zoekregels)
+- Intercontinentaal: maaltijden en drankjes moeten inbegrepen zijn. Controleer de tariefvoorwaarden van de
+  maatschappij (aggregators tonen dit vaak niet betrouwbaar); noteer per aanbieding "maaltijd/drank: ja/nee/onbekend".
+- Zitplaatsadvies per vlucht en vliegtuigtype: (a) niemand naast ons, zodat we niet steeds iemand hoeven te vragen
+  voor de wc (denk aan 2-stoelrijen, bijv. achterin bij het smaller wordende deel, of raam+gang van een rij met 3 stoelen
+  als de middelste leeg blijft), (b) goedkoopste stoelen die naast elkaar zitten (let op kosten stoelkeuze per maatschappij),
+  (c) beste beenruimte, (d) liefst zo ver mogelijk achterin. Noem de nadelen eerlijk (wc-nabijheid, geluid, beperkte
+  verstelbaarheid, inchecken/uitstappen later). Baseer op de stoelenkaart van de maatschappij of het vliegtuigtype, nooit gokken.
+### Autohuur
+- Zoeken bij doyouspain.com, rentalcars.com, alamo.com en avis.com, en ook rechtstreeks bij aanbieders in het
+  bestemmingsland (niet alleen Europese sites).
+- Eisen: klasse intermediate, 2 personen, onbeperkt kilometers, brandstof vol/vol, zo mogelijk extra bestuurder,
+  zo goedkoop mogelijk voor de gekozen periode, met volledige verzekering (nul eigen risico).
+- Let op en noem altijd: bij brokers is "volledige verzekering" vaak een terugbetalingsverzekering (eerst eigen risico/borg
+  betalen); borg op creditcard; leeftijds- en rijbewijseisen (internationaal rijbewijs?); kosten voor extra bestuurder,
+  ophalen op luchthaven en eenrichtingsverkeer. Vergelijk daarom de totale kosten, niet alleen de dagprijs.
+### Hotels
+- Altijd in een veilige buurt: controleer Google-reviews en Booking-reviews, plus het officiële reisadvies (Buitenlandse Zaken).
+- Vergelijk Booking, Agoda en de site van het hotel zelf (vaak goedkoper of betere voorwaarden).
+- Zo dicht mogelijk bij de "place to be" met wat leven in de buurt, maar niet te druk (60+).
+- Minimaal: waardering 8 of hoger, ontbijt inbegrepen, eigen badkamer, wifi. Specificeer de schaal erbij: Booking 8,0+ en
+  Google 4,0+ met een minimum aantal reviews (nog vast te stellen met de gebruiker); gebruik nooit alleen één bron.
+### Reisgids
+- Extra pagina "Voorbereiding": stroomnet (stekker en voltage), weer, inentingen (RIVM/LCR), visum, tijdverschil,
+  gebruiken ter plaatse, niet doen ter plaatse. Alleen officiële bronnen (overheid) voor visum, inentingen en reisadvies.
+- Per dag: een gezellig adresje voor een drankje 's avonds, in de buurt van het hotel (veilig te bereiken, ook 's avonds).
