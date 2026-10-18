@@ -32,3 +32,11 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
 ## Let op
 - De Skyscanner-URL-parameters (`oym`, `iym`, `preferdirects`) zijn niet geverifieerd; controleer ze.
 - Bagagefilter kan niet via de URL: stel het in de pagina in (1 ruimbagage p.p., 23 kg).
+
+## Overdracht van de cloudsessie naar de pc
+Gebruiker werkt op de pc met Claude Code en de Chrome-koppeling. Daarmee kan Skyscanner in de
+eigen Chrome worden bediend; de gebruiker rondt zelf een robotcontrole af.
+Stand van zaken: planner (index.html) werkt; zoeken op Skyscanner is nog nooit uitgevoerd en de
+URL-parameters zijn ongetest. Eerste taak op de pc: één testzoekopdracht (bijv. FRA-LIS, 23 dagen)
+en controleren of de links, de maandkalender en het bagagefilter (2 x 23 kg) kloppen.
+Daarna: Frankfurt-eerst-routine voor meerdere bestemmingen binnen 500 km uitvoeren.
