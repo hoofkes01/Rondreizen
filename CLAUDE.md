@@ -144,3 +144,12 @@ Principe: één klacht zegt weinig, maar een patroon bij veel reviews betekent d
 - Bij weinig reviews (onder ~100): de buurttoets (Street View, reisadvies, looproutes) en de site van het hotel zelf wegen zwaarder;
   noem expliciet "weinig reviews, onderbouwing zwak". Met weinig reviews tellen percentages zwaar (één klacht bij 20 reviews = 5%):
   geef altijd het absolute aantal naast het percentage.
+
+#### Aantal reviews is geen kwaliteitssignaal (aanvulling gebruiker)
+- Het aantal reviews zegt niets over kwaliteit: het hangt af van de leeftijd van het hotel (nieuw = weinig reviews),
+  grootte, aantal boekingen en hoe actief gasten om een review worden gevraagd (herhaalverzoeken, kortingsacties).
+- Gebruik het aantal alleen om te bepalen hoe betrouwbaar de steekproef is, nooit als bewijs voor goed of slecht.
+- Noteer per hotel: sinds wanneer op het platform/geopend, reviews in de laatste 12 maanden, en of er verdachte patronen zijn
+  (veel 10/10 in korte tijd, bijna identieke teksten, reviews na een beloning). Meld dit, trek er geen harde conclusie uit.
+- Bij een nieuw hotel met weinig reviews: wees extra zorgvuldig met buurttoets, eigen site, foto's van gasten en
+  vergelijk met de ervaring van de hotelketen of eigenaar (andere locaties), voor zover aanwezig.
