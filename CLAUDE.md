@@ -136,3 +136,11 @@ Principe: één klacht zegt weinig, maar een patroon bij veel reviews betekent d
   uitleg; onder 5% = geen bezwaar. Rumoerig 25% of meer = afkeuren, tenzij een stille kamer (achterzijde, hogere verdieping) bij de
   boeking gegarandeerd kan worden en dat in de reviews bevestigd wordt.
 - Tel alleen reviews waarin het onderwerp negatief wordt genoemd, niet "veilig" of "rustig" in positieve zin.
+
+#### Weinig reviews (nuancering na overleg)
+- Weinig reviews is geen goed en geen slecht teken: het is onbekend. Niet automatisch afkeuren en niet automatisch goedkeuren.
+- Op Booking wordt na verblijf bijna elke gast om een review gevraagd, dus weinig reviews betekent meestal weinig boekingen
+  of een nieuw hotel, niet dat tevreden gasten zwijgen. Behandel dit als aanname en controleer het niet als feit.
+- Bij weinig reviews (onder ~100): de buurttoets (Street View, reisadvies, looproutes) en de site van het hotel zelf wegen zwaarder;
+  noem expliciet "weinig reviews, onderbouwing zwak". Met weinig reviews tellen percentages zwaar (één klacht bij 20 reviews = 5%):
+  geef altijd het absolute aantal naast het percentage.
