@@ -176,11 +176,11 @@ let DB = { actief: null, reizen: {} };
 let opslagOK = true;
 /* stappen: elke stap moet door de gebruiker worden bevestigd voordat de volgende opent */
 const STAPPEN = ['vlucht', 'auto', 'reis', 'verblijf', 'gids', 'route'];
-const STAPNAAM = { vlucht: 'Vlucht', auto: 'Auto en nachten', reis: 'Reisgegevens', verblijf: 'Verblijf', gids: 'Reisgids', route: 'Route' };
+const STAPNAAM = { vlucht: 'Vlucht', auto: 'Auto', reis: 'Reisgegevens', verblijf: 'Verblijf', gids: 'Reisgids', route: 'Route' };
 const STAPCHK = { vlucht: 'Vlucht', auto: 'Auto', reis: 'Reis', verblijf: 'Verblijf', gids: 'Reisgids', route: 'Route' };
 const alleBevestigd = () => Object.fromEntries(STAPPEN.map(k => [k, { ok: true, op: new Date().toISOString(), gewijzigd: false }]));
 /* reizen van vóór de stappen-flow blijven volledig toegankelijk */
-function migreer(t) { if (!('bevestigd' in t)) t.bevestigd = alleBevestigd(); return vul(t); }
+function migreer(t) { if (!('bevestigd' in t)) t.bevestigd = alleBevestigd(); vul(t); (t.hotels.lijst || []).forEach(h => { if (!h.opties) h.opties = [nieuwHotel(), nieuwHotel(), nieuwHotel()]; for (const k of ['wifi', 'badkamer', 'wijk']) if (!h[k]) h[k] = 'onbekend'; if (h.gekozen === undefined) h.gekozen = null; }); return t; }
 const stapOk = (t, k) => !!(t.bevestigd[k] && t.bevestigd[k].ok);
 const toegang = (t, k) => { const i = STAPPEN.indexOf(k); return i <= 0 || STAPPEN.slice(0, i).every(x => stapOk(t, x)); };
 const huidigeStap = t => STAPPEN.find(k => !stapOk(t, k)) || STAPPEN[STAPPEN.length - 1];
@@ -241,7 +241,8 @@ function nieuweReis(naam) {
     auto: { nodig: true, personen: null, land: '', verhuurder: '', klasse: 'intermediate', versnelling: 'automaat', koffers: 2, ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '',
       kmType: 'onbeperkt', kmLimiet: null, kmPer: 'dag', kmExtra: null, zitjes: '', zitjesAantal: null, zitjesKosten: null, grens: 'nee', grensLanden: '', grensToeslag: null, grensOk: false, eenrichtingToeslag: null, creditcard: false,
       verzekeringKeuze: voorkeurVerz(), volledigIncl: '', leeftijd: null, bufferOphaal: 60, bufferInlever: 180, verzekering: '', eigenRisico: null, borg: null, tweede: false, tweedeKosten: null, extraVerz: null, brandstofBeleid: 'vol-vol', brandstofSoort: 'benzine', verbruik: null, eenheidsprijs: null, eenheidsprijsDatum: '', ovWens: '', ovKosten: null, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', notitie: '' },
-    hotels: { personen: null, crit: { maxPrijs: null, kamers: 1, bedden: '', ontbijt: 'voorkeur', parkeren: 'voorkeur', annuleren: 'voorkeur', minReviews: 25, maxNegPct: 10, ligging: '', wensen: '', def: REVDEF }, lijst: [] },
+    hotels: { personen: null, crit: { maxPrijs: 100, maxUitz: 150, minBooking: 8, minGoogle: 4, minReviews: 25, maxNegPct: 10, ontbijt: 'ja', parkeren: 'ja', wifi: 'ja', badkamer: 'ja', wijk: 'ja', maxAfstand: null, annuleren: 'voorkeur', kamers: 1, bedden: '', ligging: '', wensen: '', def: REVDEF }, lijst: [] },
+    route: { wegfactor: 1.3, snelheid: 75, start: null, eind: null, n2: null, n3: null, n4: null },
     gids: { interesses: [], maxKm: null, maxUren: null, vertrektijd: '09:00', uiterstAankomst: '18:00', pauze: '', minTijd: '', maxWissels: null, minNachten: null, rustdagen: '', eten: '', uitgaan: '', muziek: '', cultuur: '', sport: '', winkelen: '', extra: '' },
     prakt: { nationaliteit: '', document: 'paspoort', doel: 'vakantie', rijbewijsLand: 'Nederland', ipr: false, apparaten: '', esim: '', betalen: '', verzekering: '', gezondheid: '', verzekeraar: '', alarm: '', polis: '' },
     bevestigd: {}, dagen: [], stops: [], sync: { start: '', eind: '', naar: '', terugVan: '', od: '', ot: '', id: '', it: '' }, buffer: 10, extra: standaardExtra(), valutaLokaal: { code: '', koers: null, datum: '', bron: '' },
@@ -266,11 +267,15 @@ function vul(t, d = nieuweReis(), pad = []) { /* ontbrekende velden aanvullen bi
   }
   return t;
 }
-const nieuwHotel = () => ({ id: uid(), plaats: '', naam: '', adres: '', tel: '', site: '', van: '', tot: '', kamers: 1, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', ontbijt: 'onbekend', ontbijtPp: null, parkeren: 'onbekend', parkeerPerNacht: null, belasting: null, annuleren: '', status: 'idee', ref: '', link: '', gN: null, gNeg: null, gScore: null, bN: null, bNeg: null, bScore: null, revDatum: '', gLink: '', bLink: '', veilig: 'onvoldoende', veiligNotitie: '', ligging: '', notitie: '' });
+const nieuwHotel = () => ({ id: uid(), plaats: '', naam: '', adres: '', tel: '', site: '', van: '', tot: '', kamers: 1, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', ontbijt: 'onbekend', ontbijtPp: null, parkeren: 'onbekend', parkeerPerNacht: null, belasting: null, annuleren: '', status: 'idee', ref: '', link: '', gN: null, gNeg: null, gScore: null, bN: null, bNeg: null, bScore: null, revDatum: '', gLink: '', bLink: '', veilig: 'onvoldoende', veiligNotitie: '', ligging: '', notitie: '', wifi: 'onbekend', badkamer: 'onbekend', wijk: 'onbekend', afstandCentrum: null, uitzondering: false, gekozen: null, bevestigd: false, bevestigdOp: '' });
+const nieuwVerblijf = () => { const h = nieuwHotel(); h.opties = [nieuwHotel(), nieuwHotel(), nieuwHotel()]; return h; };
+const OPTVELDEN = ['naam', 'adres', 'tel', 'site', 'prijs', 'prijsType', 'bron', 'prijsDatum', 'ontbijt', 'ontbijtPp', 'parkeren', 'parkeerPerNacht', 'belasting', 'annuleren', 'link', 'gN', 'gNeg', 'gScore', 'bN', 'bNeg', 'bScore', 'revDatum', 'gLink', 'bLink', 'veilig', 'veiligNotitie', 'ligging', 'wifi', 'badkamer', 'wijk', 'afstandCentrum', 'notitie'];
+const kopieerOptie = (h, k) => { OPTVELDEN.forEach(f => { h[f] = h.opties[k][f]; }); h.gekozen = k; };
+const wisKeuze = h => { const l = nieuwHotel(); OPTVELDEN.forEach(f => { h[f] = l[f]; }); h.gekozen = null; h.bevestigd = false; h.bevestigdOp = ''; };
 const nieuwItem = () => ({ id: uid(), tijd: '', soort: 'activiteit', titel: '', adres: '', pv: null, pk: null, munt: 'basis', status: 'controleren', prijsDatum: '', link: '', openingstijden: '', notitie: '' });
 const nieuweDag = datum => ({ id: uid(), datum, plaats: '', type: 'verblijfsdag', titel: '', km: null, uren: null, vertrek: '', aankomst: '', tz: '', geo: null, programma: [], lunchPp: null, dinerPp: null, overig: null, overigOmschr: '', avond: '', links: [], check: standaardDagCheck(), notitie: '', weer: null, dagboek: { tekst: '', werkelijk: '', favorieten: '', weerHand: '', fotos: [] } });
 const standaardDagCheck = () => ['Weer en waarschuwingen bekeken', 'Verkeer en wegafsluitingen bekeken', 'Openingstijden en reserveringen bevestigd', 'Route en aankomsttijd bekeken', 'Brandstof/laden en parkeren geregeld', 'Lokale veiligheidsinformatie bekeken'].map(t => ({ t, ok: false }));
-const NIEUW = { stop: () => ({ id: uid(), plaats: '', nachten: 1 }), hotel: nieuwHotel, item: nieuwItem, contact: () => ({ id: uid(), rol: '', naam: '', tel: '', notitie: '' }), extra: () => ({ id: uid(), post: '', bedrag: null, type: 'schatting', bron: '', datum: '' }), link: () => ({ t: '', u: '' }), taak: () => ({ id: uid(), tekst: '', dagenVoor: 30, link: '', klaar: false, kosten: null, notitie: '' }), info: () => ({ id: uid(), onderwerp: '', waarde: '', bron: '', datum: '', geverifieerd: false }) };
+const NIEUW = { stop: () => ({ id: uid(), plaats: '', nachten: 2, geo: null, tz: '' }), hotel: nieuwVerblijf, item: nieuwItem, contact: () => ({ id: uid(), rol: '', naam: '', tel: '', notitie: '' }), extra: () => ({ id: uid(), post: '', bedrag: null, type: 'schatting', bron: '', datum: '' }), link: () => ({ t: '', u: '' }), taak: () => ({ id: uid(), tekst: '', dagenVoor: 30, link: '', klaar: false, kosten: null, notitie: '' }), info: () => ({ id: uid(), onderwerp: '', waarde: '', bron: '', datum: '', geverifieerd: false }) };
 
 /* ====================== Berekeningen ====================== */
 const personen = t => (t.reis.volw || 0) + (t.reis.kind || 0);
@@ -378,6 +383,80 @@ function hotelOordeel(t, h) {
   else { s = 'onvoldoende gegevens'; k = 'l'; uitleg = `Niet beide bronnen zijn voldoende onderbouwd (Google: ${g.s}; Booking.com: ${b.s}). Dit hotel wordt niet stilzwijgend goedgekeurd.`; }
   return { g, b, s, k, uitleg };
 }
+const eis = v => v === 'ja' || v === 'eis';
+function prijsEff(t, o, st) {
+  const p = num(o.prijs); if (p == null) return null;
+  const k = num(st.kamers) || 1, n = nachten(st) || 1, pers = Math.ceil(persVoor(t, 'Verblijf') / k); let e = p;
+  if (o.parkeren === 'betaald') { const pp = num(o.parkeerPerNacht); if (pp == null) return null; e += pp; }
+  if (o.ontbijt === 'extra') { const op = num(o.ontbijtPp); if (op == null) return null; e += op * pers; }
+  if (num(o.belasting) != null) e += o.belasting / n / k;
+  return e;
+}
+/* toetst één hotelkandidaat aan alle criteria; status: ok, f (voldoet niet), l (let op), o (onbekend) */
+function hotelToets(t, o, st) {
+  const c = t.hotels.crit, C = [], add = (label, s, tekst) => C.push({ label, s, tekst });
+  const mp = num(c.maxPrijs) ?? 100, mu = num(c.maxUitz) ?? 150, pe = prijsEff(t, o, st);
+  if (pe == null) add('Prijs', 'o', num(o.prijs) == null ? 'prijs nog invullen' : 'kosten van ontbijt of parkeren nog invullen');
+  else if (pe <= mp) add('Prijs', 'ok', `${mny(pe)} p.n. per kamer, alles inbegrepen, binnen ${mny(mp)}`);
+  else if (pe <= mu) add('Prijs', st.uitzondering ? 'ok' : 'l', st.uitzondering ? `${mny(pe)} p.n.: boven ${mny(mp)}, uitzondering tot ${mny(mu)} door u bevestigd` : `${mny(pe)} p.n. is boven ${mny(mp)}: bevestig eerst de uitzondering (tot ${mny(mu)}) voor deze plaats`);
+  else add('Prijs', 'f', `${mny(pe)} p.n. is boven het absolute maximum van ${mny(mu)}`);
+  const mb = num(c.minBooking), mg = num(c.minGoogle), sb = num(o.bScore), sg = num(o.gScore), w = [];
+  if (mb != null) w.push(sb == null ? 'o' : sb >= mb ? 'ok' : 'f'); if (mg != null) w.push(sg == null ? 'o' : sg >= mg ? 'ok' : 'f');
+  const ws = w.includes('f') ? 'f' : w.includes('o') ? 'o' : 'ok';
+  add('Waardering', ws, `Booking ${sb ?? '—'} (min. ${mb ?? '—'}) · Google ${sg ?? '—'} (min. ${mg ?? '—'})`);
+  const ro = hotelOordeel(t, o);
+  add('Slechte reviews', ro.k === 'f' ? 'f' : ro.k === 'g' ? 'ok' : 'o', ro.k === 'g' ? `maximaal ${c.maxNegPct}% negatief bij beide bronnen` : ro.uitleg);
+  if (eis(c.ontbijt)) add('Ontbijt', o.ontbijt === 'ja' ? 'ok' : o.ontbijt === 'extra' ? 'ok' : o.ontbijt === 'nee' ? 'f' : 'o', { ja: 'inbegrepen', extra: 'tegen betaling (in de prijs verwerkt)', nee: 'niet beschikbaar', onbekend: 'nog niet bevestigd' }[o.ontbijt]);
+  if (eis(c.parkeren)) add('Parkeren', ['gratis', 'betaald'].includes(o.parkeren) ? 'ok' : o.parkeren === 'nee' ? 'f' : 'o', { gratis: 'gratis', betaald: 'betaald (in de prijs verwerkt)', nee: 'niet beschikbaar', onbekend: 'nog niet bevestigd' }[o.parkeren]);
+  if (eis(c.wifi)) add('Wifi', o.wifi === 'ja' ? 'ok' : o.wifi === 'nee' ? 'f' : 'o', { ja: 'aanwezig', nee: 'niet aanwezig', onbekend: 'nog niet bevestigd' }[o.wifi]);
+  if (eis(c.badkamer)) add('Eigen badkamer', o.badkamer === 'eigen' ? 'ok' : o.badkamer === 'gedeeld' ? 'f' : 'o', { eigen: 'eigen badkamer', gedeeld: 'gedeelde badkamer', onbekend: 'nog niet bevestigd' }[o.badkamer]);
+  add('Veiligheid', o.veilig === 'geen' ? 'ok' : o.veilig === 'aandacht' ? 'f' : 'o', { geen: 'geen duidelijke waarschuwingen gevonden', aandacht: 'aandachtspunten gevonden', onvoldoende: 'onvoldoende informatie: veiligheid is altijd een eis' }[o.veilig] + (o.veiligNotitie ? ' – ' + o.veiligNotitie : ''));
+  if (eis(c.wijk)) add('Wijk', o.wijk === 'goed' ? 'ok' : o.wijk === 'matig' ? 'l' : o.wijk === 'slecht' ? 'f' : 'o', { goed: 'goede wijk', matig: 'matige wijk', slecht: 'slechte wijk', onbekend: 'nog niet beoordeeld' }[o.wijk]);
+  const ma = num(c.maxAfstand); if (ma != null) add('Afstand centrum', num(o.afstandCentrum) == null ? 'o' : o.afstandCentrum <= ma ? 'ok' : 'l', `${o.afstandCentrum ?? '—'} km (max. ${ma} km)`);
+  if (c.annuleren === 'eis') add('Annuleren', o.annuleren ? 'ok' : 'o', o.annuleren || 'voorwaarden nog invullen');
+  const f = C.filter(x => x.s === 'f').length, l = C.filter(x => x.s === 'l' || x.s === 'o').length;
+  return { C, f, l, k: f ? 'f' : l ? 'l' : 'g', s: f ? 'voldoet niet' : l ? 'onder voorbehoud' : 'voldoet aan alle criteria', pe };
+}
+/* ---- rondreisvoorstel: afstanden zijn hemelsbreed x wegfactor (schatting) ---- */
+const hav = (a, b) => { const r = x => x * Math.PI / 180, dl = r(b.lat - a.lat), dn = r(b.lon - a.lon), h = Math.sin(dl / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dn / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
+const legKm = (t, a, b) => hav(a, b) * (num(t.route.wegfactor) || 1.3);
+function routeScore(t, order, st, ei, max) {
+  let km = 0, over = 0, prev = st; const leg = (a, b) => { if (!a || !b) return; const d = legKm(t, a, b); km += d; if (max != null && d > max) over++; };
+  order.forEach(x => { leg(prev, x.geo); prev = x.geo; }); leg(prev, ei);
+  return { km, over, score: over * 1e6 + km };
+}
+function voorstelVolgorde(t) {
+  const S = t.stops.filter(x => x.plaats && x.geo), st = t.route.start, ei = t.route.eind || t.route.start, max = num(t.gids.maxKm);
+  if (S.length < 2) return { order: S, ...routeScore(t, S, st, ei, max) };
+  let best = null;
+  if (S.length <= 8) {
+    const perm = (a, n) => { if (n === 1) { const sc = routeScore(t, a, st, ei, max); if (!best || sc.score < best.sc.score) best = { order: a.slice(), sc }; return; } for (let i = 0; i < n; i++) { perm(a, n - 1); const j = n % 2 ? 0 : i;[a[j], a[n - 1]] = [a[n - 1], a[j]]; } };
+    perm(S.slice(), S.length);
+  } else {
+    let order = [], rest = S.slice(), cur = st || S[0].geo; while (rest.length) { rest.sort((a, b) => hav(cur, a.geo) - hav(cur, b.geo)); const nx = rest.shift(); order.push(nx); cur = nx.geo; }
+    let sc = routeScore(t, order, st, ei, max), beter = true;
+    while (beter) { beter = false; for (let i = 0; i < order.length - 1; i++) for (let j = i + 1; j < order.length; j++) { const o2 = order.slice(0, i).concat(order.slice(i, j + 1).reverse(), order.slice(j + 1)), s2 = routeScore(t, o2, st, ei, max); if (s2.score < sc.score - 1e-9) { order = o2; sc = s2; beter = true; } } }
+    best = { order, sc };
+  }
+  return { order: best.order, ...best.sc };
+}
+function routeLegs(t, order) {
+  const st = t.route.start, ei = t.route.eind || t.route.start, max = num(t.gids.maxKm), maxU = num(t.gids.maxUren), v = num(t.route.snelheid) || 75, L = [];
+  const leg = (a, an, b, bn, nachten) => { if (!a || !b) return; const km = legKm(t, a, b), u = km / v, over = (max != null && km > max) || (maxU != null && u > maxU); L.push({ van: an, naar: bn, km, uren: u, over, nachten, extra: over ? Math.max(1, Math.ceil(Math.max(max != null ? km / max : 0, maxU != null ? u / maxU : 0)) - 1) : 0 }); };
+  let prev = st, pn = t.route.start ? (t.route.start.plaats || 'begin') : '';
+  order.forEach(x => { leg(prev, pn, x.geo, x.plaats, num(x.nachten)); prev = x.geo; pn = x.plaats; });
+  leg(prev, pn, ei, ei && t.route.eind ? (t.route.eind.plaats || 'eind') : (t.route.start ? t.route.start.plaats : ''), null);
+  return L;
+}
+function verblijvenUitStops(t) {
+  const gewenst = []; let datum = t.reis.vertrek;
+  t.stops.filter(x => x.plaats && num(x.nachten) > 0).forEach(x => { const tot = addD(datum, +x.nachten); gewenst.push({ plaats: x.plaats, van: datum, tot }); datum = tot; });
+  const leeg = h => !h.naam && h.gekozen == null && h.opties.every(o => !o.naam && num(o.prijs) == null);
+  const zelfde = (h, g) => h.plaats === g.plaats && h.van === g.van && h.tot === g.tot;
+  t.hotels.lijst = t.hotels.lijst.filter(h => gewenst.some(g => zelfde(h, g)) || !leeg(h));
+  gewenst.forEach(g => { if (!t.hotels.lijst.some(h => zelfde(h, g))) { const h = nieuwVerblijf(); Object.assign(h, g); h.kamers = num(t.hotels.crit.kamers) || 1; t.hotels.lijst.push(h); } });
+  t.hotels.lijst.sort((a, b) => (a.van || '').localeCompare(b.van || ''));
+}
 function overLimiet(t, d) {
   const mk = num(t.gids.maxKm), mu = num(t.gids.maxUren), m = [];
   if (mk != null && num(d.km) != null && d.km > mk) m.push(`${NF.format(d.km)} km is meer dan de limiet van ${NF.format(mk)} km`);
@@ -408,7 +487,7 @@ function voortgang(t) {
   if (v.nodig) chk('Vlucht', [['luchthavens om te zoeken', !!(v.zoekVan && v.zoekNaar)], ['zoekperiode', !!((v.maandVan && v.maandTot) || (v.exactVan && v.exactTot))], ['aantal dagen (min en max)', num(v.dagenMin) != null && num(v.dagenMax) != null], ['gekozen vlucht: heen- en terugdatum', okD(v.heenDatum) && okD(v.terugDatum)], ['prijs en prijsbasis', num(v.prijs) != null && !!v.prijsPer]]);
   if (a.nodig) chk('Auto', [['ophaalplaats', !!a.ophaalPlaats], ['ophaal- en inleverdatum', okD(a.ophaalDatum) && okD(a.inleverDatum)], ['soort auto', !!a.klasse], ['kilometers', !!a.kmType && (a.kmType === 'onbeperkt' || num(a.kmLimiet) != null)], ['kinderzitjes (bij kinderen)', !(r.kind > 0) || !!a.zitjes], ['grensoverschrijding bepaald', !!a.grens], ['huurprijs', num(a.prijs) != null]]);
   reisChk();
-  chk('Verblijf', [['maximale prijs per nacht', num(t.hotels.crit.maxPrijs) != null], ['minstens één verblijf', t.hotels.lijst.length > 0], ['prijs bij elk verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => num(h.prijs) != null)], ['reviewgegevens bij elk hotel', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => num(h.gN) != null && num(h.bN) != null)]]);
+  chk('Verblijf', [['plaatsen met nachten (klopt met het aantal nachten)', t.stops.length > 0 && okD(r.vertrek) && okD(r.terug) && sum(t.stops.map(x => num(x.nachten) || 0)) === diffD(r.terug, r.vertrek)], ['locaties van de plaatsen opgezocht', t.stops.length > 0 && t.stops.every(x => x.geo)], ['drie hotelopties per verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => h.opties.filter(o => o.naam).length >= 3)], ['hotel bevestigd bij elk verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => h.bevestigd)]]);
   chk('Reisgids', [['interesses', g.interesses.length > 0], ['limiet km per dag', num(g.maxKm) != null], ['limiet rijtijd per dag', num(g.maxUren) != null], ['nationaliteit (voor inreisregels)', !!p.nationaliteit]]);
   chk('Route', [['dagen aangemaakt', t.dagen.length > 0], ['plaats bij elke dag', t.dagen.length > 0 && t.dagen.every(d => d.plaats)], ['km en rijtijd bij elke rijdag', t.dagen.length > 0 && t.dagen.filter(d => d.type === 'rijdag').every(d => num(d.km) != null && num(d.uren) != null)], ['tijdzone bij elke dag', t.dagen.length > 0 && t.dagen.every(d => geldigeTz(d.tz))]]);
   return S;
@@ -417,7 +496,7 @@ function waarschuwingen(t) {
   const W = [], R = kostenRegels(t), ks = kostenSom(R);
   t.dagen.forEach((d, i) => { overLimiet(t, d).forEach(m => W.push(['fout', `Dag ${i + 1} (${d.plaats || '?'}): ${m}. Overweeg een tussenstop, extra overnachting of andere route.`])); const z = tzWissel(t, i); if (z) W.push(['let', `Dag ${i + 1}: ${z}`]); });
   t.dagen.forEach((d, i) => { if (d.type !== 'vertrek' && okD(d.datum) && t.hotels.lijst.length && !hotelVoorNacht(t, d.datum)) W.push(['let', `Dag ${i + 1} (${dFmt(d.datum)}): geen hotel voor deze nacht.`]); });
-  t.hotels.lijst.forEach((h, i) => { const o = hotelOordeel(t, h); if (o.k === 'f') W.push(['fout', `Hotel ${h.naam || i + 1}: afgewezen op reviews.`]); else if (o.k === 'l') W.push(['let', `Hotel ${h.naam || i + 1}: onvoldoende reviewgegevens.`]); const mp = num(t.hotels.crit.maxPrijs); if (mp != null && num(h.prijs) != null && h.prijs > mp) W.push(['let', `Hotel ${h.naam || i + 1}: ${mny(h.prijs)} per nacht is boven het maximum van ${mny(mp)}.`]); });
+  t.hotels.lijst.forEach((h, i) => { if (!h.bevestigd) W.push(['let', `Verblijf in ${h.plaats || i + 1}: nog geen hotel bevestigd.`]); if (!h.naam) return; const o = hotelOordeel(t, h); if (o.k === 'f') W.push(['fout', `Hotel ${h.naam || i + 1}: afgewezen op reviews.`]); else if (o.k === 'l') W.push(['let', `Hotel ${h.naam || i + 1}: onvoldoende reviewgegevens.`]); const mp = num(t.hotels.crit.maxPrijs); if (mp != null && num(h.prijs) != null && h.prijs > mp) W.push(['let', `Hotel ${h.naam || i + 1}: ${mny(h.prijs)} per nacht is boven het maximum van ${mny(mp)}.`]); });
   if (ks.onb) W.push(['let', `${ks.onb} kostenpost(en) zijn nog niet ingevuld; het totaal is dus een ondergrens.`]);
   const bud = num(t.reis.budget); if (bud != null && ks.bekend > bud) W.push(['fout', `De bekende kosten (${mny(ks.bekend)}) liggen boven het budget (${mny(bud)}).`]);
   if (okD(t.reis.vertrek)) { const vd = vandaagIn(); t.voorbereiding.filter(x => !x.klaar && addD(t.reis.vertrek, -x.dagenVoor) < vd && vd <= t.reis.terug).forEach(x => W.push(['let', `Voorbereiding over tijd (richtlijn): ${x.tekst}`])); }
@@ -445,7 +524,7 @@ const sectie = (titel, uitleg, inhoud) => `<section class="card"><h2>${titel}</h
 const badge = (k, tekst) => `<span class="b b-${{ g: 'goed', l: 'let', f: 'fout', n: 'n' }[k] || 'n'}">${esc(tekst)}</span>`;
 
 /* ====================== Tabbladen ====================== */
-const TABS = [['start', 'Start'], ['vlucht', '1 Vlucht'], ['auto', '2 Auto en nachten'], ['reis', '3 Reis'], ['verblijf', '4 Verblijf'], ['gids', '5 Reisgids'], ['route', 'Route'], ['dag', 'Onderweg'], ['dagboek', 'Dagboek'], ['kosten', 'Kosten'], ['boek', 'Reisboek (PDF)'], ['data', 'Gegevens']];
+const TABS = [['start', 'Start'], ['vlucht', '1 Vlucht'], ['auto', '2 Auto'], ['reis', '3 Reis'], ['verblijf', '4 Verblijf'], ['gids', '5 Reisgids'], ['route', 'Route'], ['dag', 'Onderweg'], ['dagboek', 'Dagboek'], ['kosten', 'Kosten'], ['boek', 'Reisboek (PDF)'], ['data', 'Gegevens']];
 let tab = 'start', dagSel = 0;
 const VIEWS = {};
 
@@ -522,15 +601,7 @@ VIEWS.vlucht = () => {
   return h;
 };
 
-const nachtenSectie = () => {
-  const t = T();
-  return sectie('2 Autohuur en overnachtingen', 'De data komen uit de gekozen vlucht. Verdeel hier de nachten over de plaatsen; daarna maakt de app de dagen en verblijven aan.',
-    `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>
-    <h3>Verdeling van de nachten</h3>
-    <table class="rtab"><thead><tr><th>Plaats</th><th>Nachten</th><th></th></tr></thead><tbody>${t.stops.map((x, i) => `<tr><td data-l="Plaats"><input type="text" data-b="stops.${i}.plaats" value="${esc(x.plaats)}" placeholder="bijv. Denver"></td><td data-l="Nachten"><input type="number" min="1" data-b="stops.${i}.nachten" value="${esc(x.nachten)}" style="width:90px"></td><td><button class="klein" data-a="omhoog" data-p="stops" data-i="${i}">↑</button> <button class="klein" data-a="omlaag" data-p="stops" data-i="${i}">↓</button> <button class="klein gevaar" data-a="del" data-p="stops" data-i="${i}">✕</button></td></tr>`).join('')}</tbody></table>
-    <div class="rij"><button data-a="add" data-p="stops" data-n="stop">+ Plaats toevoegen</button><button class="prim" data-a="stopsNaarDagen">Dagen en verblijven aanmaken uit deze verdeling</button></div>
-    <div class="box" data-calc="nachtenCheck"></div>`);
-};
+const nachtenSectie = () => sectie('2 Autohuur', 'De data komen uit de gekozen vlucht. De verdeling van de nachten over de plaatsen en de hotels volgen in stap 4.', `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>`);
 
 const autoSectie = () => {
   const t = T(), au = t.auto, eenrichting = au.ophaalPlaats && au.inleverPlaats && au.ophaalPlaats.trim().toLowerCase() !== au.inleverPlaats.trim().toLowerCase();
@@ -570,46 +641,76 @@ const autoSectie = () => {
 
 VIEWS.auto = () => nachtenSectie() + autoSectie();
 
+const JN = [['ja', 'ja, nodig'], ['nee', 'nee, niet nodig']];
+function optieVelden(i, k) {
+  const t = T(), o = t.hotels.lijst[i].opties[k], p = `hotels.lijst.${i}.opties.${k}`;
+  return `<div class="grid">
+    ${fld(p + '.naam', 'Naam hotel', 't')}${fld(p + '.adres', 'Adres', 't')}${fld(p + '.tel', 'Telefoon', 't')}${fld(p + '.site', 'Officiële website', 'u')}${fld(p + '.link', 'Boekingslink', 'u')}
+    ${fld(p + '.prijs', `Prijs per kamer per nacht (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld(p + '.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld(p + '.prijsDatum', 'Prijs gezien op', 'd')}${fld(p + '.bron', 'Bron prijs', 't')}
+    ${fld(p + '.ontbijt', 'Ontbijt', 's', { r: 1, opts: [['onbekend', 'niet bevestigd'], ['ja', 'inbegrepen'], ['extra', 'tegen betaling'], ['nee', 'niet beschikbaar']] })}${o.ontbijt === 'extra' ? fld(p + '.ontbijtPp', 'Ontbijt per persoon per dag', 'n', { min: 0 }) : ''}
+    ${fld(p + '.parkeren', 'Parkeren', 's', { r: 1, opts: [['onbekend', 'niet bevestigd'], ['gratis', 'gratis'], ['betaald', 'betaald'], ['nee', 'niet beschikbaar']] })}${o.parkeren === 'betaald' ? fld(p + '.parkeerPerNacht', 'Parkeerkosten per nacht', 'n', { min: 0 }) : ''}
+    ${fld(p + '.wifi', 'Wifi', 's', { opts: [['onbekend', 'niet bevestigd'], ['ja', 'ja'], ['nee', 'nee']] })}${fld(p + '.badkamer', 'Badkamer', 's', { opts: [['onbekend', 'niet bevestigd'], ['eigen', 'eigen badkamer'], ['gedeeld', 'gedeeld']] })}
+    ${fld(p + '.belasting', 'Toeristenbelasting/toeslagen totaal', 'n', { min: 0 })}${fld(p + '.annuleren', 'Annuleringsvoorwaarden', 't')}
+    ${fld(p + '.afstandCentrum', 'Afstand tot het centrum (km)', 'n', { min: 0 })}${fld(p + '.wijk', 'Wijk', 's', { opts: [['onbekend', 'nog niet beoordeeld'], ['goed', 'goede wijk'], ['matig', 'matige wijk'], ['slecht', 'slechte wijk']] })}
+    ${fld(p + '.veilig', 'Veiligheidsinformatie', 's', { opts: [['onvoldoende', 'onvoldoende informatie'], ['geen', 'geen duidelijke waarschuwingen gevonden'], ['aandacht', 'aandachtspunten gevonden']] })}${fld(p + '.veiligNotitie', 'Bron en toelichting veiligheid', 't', { h: 'Nooit garanderen dat een buurt veilig is; noteer bron en datum.' })}
+    ${fld(p + '.gScore', 'Google: gemiddelde (van 5)', 'n')}${fld(p + '.gN', 'Google: aantal reviews', 'n', { min: 0 })}${fld(p + '.gNeg', 'Google: negatief (1–2 sterren)', 'n', { min: 0 })}${fld(p + '.gLink', 'Google-link', 'u')}
+    ${fld(p + '.bScore', 'Booking.com: gemiddelde (van 10)', 'n')}${fld(p + '.bN', 'Booking.com: aantal reviews', 'n', { min: 0 })}${fld(p + '.bNeg', 'Booking.com: negatief (volgens definitie)', 'n', { min: 0 })}${fld(p + '.bLink', 'Booking.com-link', 'u')}${fld(p + '.revDatum', 'Reviews gezien op', 'd')}
+    ${fld(p + '.ligging', 'Ligging: bij activiteiten, eten, openbaar vervoer', 'a', { w: 1, rows: 2 })}${fld(p + '.notitie', 'Notities', 'a', { w: 1, rows: 2 })}
+  </div>`;
+}
+function hotelBrief(t, i) {
+  const h = t.hotels.lijst[i], c = t.hotels.crit, jn = v => eis(v) ? 'ja' : 'nee';
+  return [`Zoek 3 hotels in ${h.plaats}`, `Aankomst ${h.van}, vertrek ${h.tot} (${nachten(h)} nachten), ${persVoor(t, 'Verblijf')} reizigers, ${h.kamers || 1} kamer(s)`,
+    `Maximumprijs ${c.maxPrijs} ${t.reis.valuta} per kamer per nacht, alles inbegrepen (ontbijt, parkeren, belasting). Een duurder hotel (tot ${c.maxUitz}) alleen als ik dat eerst bevestig.`,
+    `Waardering: Booking minimaal ${c.minBooking}, Google minimaal ${c.minGoogle}; minimaal ${c.minReviews} reviews per bron en maximaal ${c.maxNegPct}% negatieve reviews`,
+    `Ontbijt: ${jn(c.ontbijt)} · Parkeren: ${jn(c.parkeren)} · Wifi: ${jn(c.wifi)} · Eigen badkamer: ${jn(c.badkamer)} · Goede wijk: ${jn(c.wijk)} (veiligheid is altijd een eis)`,
+    num(c.maxAfstand) != null ? `Maximaal ${c.maxAfstand} km van het centrum` : null, c.ligging ? `Ligging: ${c.ligging}` : null,
+    'Geef per hotel: adres, prijs per nacht (alles inbegrepen), Booking- en Google-score met aantal reviews en % negatief, ontbijt, parkeren, wifi, badkamer, wijk/veiligheid, afstand tot het centrum en een link.'].filter(Boolean).join('\n');
+}
+
 VIEWS.verblijf = () => {
   const t = T(), c = t.hotels.crit;
-  let h = sectie('4 Hotels en verblijf', `De hotelzoeker blijft een apart onderdeel. Hier legt u criteria vast en noteert u per verblijf de gegevens. Reviewcijfers voert u zelf in; de app haalt ze niet op.`,
+  let h = sectie('4 Hotels: criteria', 'De data staan vast (uit de vlucht). Stel hier in waaraan een hotel moet voldoen. Veiligheid is altijd een eis; een hotel met aandachtspunten of onvoldoende veiligheidsinformatie wordt niet stilzwijgend goedgekeurd.',
     `<div class="grid">
-      ${persVeld('hotels.personen', t, 'Gebruikt voor ontbijtkosten.')}
-      ${fld('hotels.crit.maxPrijs', `Maximale prijs per kamer per nacht (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('hotels.crit.kamers', 'Aantal kamers', 'n', { min: 1 })}${fld('hotels.crit.bedden', 'Bedden', 't')}
-      ${fld('hotels.crit.ontbijt', 'Ontbijt', 's', { opts: [['eis', 'harde eis'], ['voorkeur', 'voorkeur'], ['n.v.t.', 'niet van belang']] })}${fld('hotels.crit.parkeren', 'Parkeren', 's', { opts: [['eis', 'harde eis'], ['voorkeur', 'voorkeur'], ['n.v.t.', 'niet van belang']] })}${fld('hotels.crit.annuleren', 'Gratis annuleren', 's', { opts: [['eis', 'harde eis'], ['voorkeur', 'voorkeur'], ['n.v.t.', 'niet van belang']] })}
-      ${fld('hotels.crit.minReviews', 'Minimum aantal reviews per bron', 'n', { min: 1, r: 1 })}${fld('hotels.crit.maxNegPct', 'Maximaal negatief percentage', 'n', { min: 0, r: 1 })}
-      ${fld('hotels.crit.ligging', 'Gewenste ligging', 't', { ph: 'centrum, rustig, avondleven, openbaar vervoer…' })}${fld('hotels.crit.wensen', 'Overige wensen (toegankelijkheid e.d.)', 't')}
+      ${persVeld('hotels.personen', t, 'Gebruikt voor ontbijtkosten.')}${fld('hotels.crit.kamers', 'Aantal kamers', 'n', { min: 1 })}
+      ${fld('hotels.crit.maxPrijs', `Maximumprijs per kamer per nacht, alles inbegrepen (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('hotels.crit.maxUitz', `Absoluut maximum bij uitzondering (${esc(t.reis.valuta)})`, 'n', { min: 0, h: 'Alleen na uw bevestiging per plaats.' })}
+      ${fld('hotels.crit.minBooking', 'Minimale Booking.com-score (van 10)', 'n', { min: 0 })}${fld('hotels.crit.minGoogle', 'Minimale Google-score (van 5)', 'n', { min: 0 })}
+      ${fld('hotels.crit.minReviews', 'Minimum aantal reviews per bron', 'n', { min: 1 })}${fld('hotels.crit.maxNegPct', 'Maximaal % slechte reviews', 'n', { min: 0 })}
+      ${fld('hotels.crit.ontbijt', 'Ontbijt', 's', { opts: JN })}${fld('hotels.crit.parkeren', 'Parkeren', 's', { opts: JN })}${fld('hotels.crit.wifi', 'Wifi', 's', { opts: JN })}${fld('hotels.crit.badkamer', 'Eigen badkamer', 's', { opts: JN })}${fld('hotels.crit.wijk', 'Goede wijk', 's', { opts: JN })}
+      ${fld('hotels.crit.maxAfstand', 'Maximale afstand tot het centrum (km)', 'n', { min: 0 })}${fld('hotels.crit.annuleren', 'Gratis annuleren', 's', { opts: [['eis', 'harde eis'], ['voorkeur', 'voorkeur'], ['n.v.t.', 'niet van belang']] })}
+      ${fld('hotels.crit.ligging', 'Gewenste ligging', 't', { ph: 'dicht bij de “place to be”, niet te druk, avondleven, openbaar vervoer…', w: 1 })}${fld('hotels.crit.wensen', 'Overige wensen (toegankelijkheid e.d.)', 't', { w: 1 })}
       ${fld('hotels.crit.def', 'Definitie van “negatieve review” (vastgelegd)', 'a', { w: 1, rows: 3, h: 'Pas dit bewust aan; het wordt in het reisboek vermeld.' })}
+    </div>`);
+  h += sectie('Rondreisvoorstel', 'U geeft de plaatsen en hoe vaak u er 2, 3 of 4 nachten wilt blijven. De app stelt de volgorde voor, met de grens van maximaal kilometers per dag. Afstanden zijn een schatting (hemelsbreed × wegfactor).',
+    `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>
+    <div class="grid" style="margin-top:12px">
+      ${fld('reis.startplaats', 'Beginpunt: plaats bij de aankomstluchthaven', 't', { ph: 'bijv. Denver' })}${fld('reis.eindplaats', 'Eindpunt: plaats bij de terugvlucht', 't', { h: 'Leeg = zelfde als beginpunt.' })}
+      ${fld('gids.maxKm', 'Maximum kilometers per dag', 'n', { min: 0 })}${fld('gids.maxUren', 'Maximum rijtijd per dag (uren)', 'n', { min: 0 })}
+      ${fld('route.snelheid', 'Gemiddelde snelheid (km/u, voor de rijtijd)', 'n', { min: 20 })}${fld('route.wegfactor', 'Wegfactor (weg = hemelsbreed × factor)', 'n', { min: 1 })}
     </div>
-    <div class="rij"><button class="prim" data-a="add" data-p="hotels.lijst" data-n="hotel">+ Verblijf toevoegen</button><button data-a="hotelsUitRoute">Verblijven voorstellen uit route</button></div>`);
+    <h3>Hoe vaak 2, 3 of 4 nachten op één plek?</h3>
+    <div class="grid">${fld('route.n2', 'Aantal plaatsen met 2 nachten', 'n', { min: 0 })}${fld('route.n3', 'Aantal plaatsen met 3 nachten', 'n', { min: 0 })}${fld('route.n4', 'Aantal plaatsen met 4 nachten', 'n', { min: 0 })}</div>
+    <div class="rij"><button data-a="patroonRijen">Lege plaatsen aanmaken uit dit patroon</button></div>
+    <div class="box" data-calc="patroonCheck"></div>
+    <h3>Uw plaatsen en waar u 2, 3 of 4 nachten blijft</h3>
+    <table class="rtab"><thead><tr><th>Plaats</th><th>Nachten</th><th>Locatie</th><th></th></tr></thead><tbody>${t.stops.map((x, i) => `<tr><td data-l="Plaats"><input type="text" data-b="stops.${i}.plaats" value="${esc(x.plaats)}" placeholder="bijv. Santa Fe"></td><td data-l="Nachten"><input type="number" min="1" data-b="stops.${i}.nachten" value="${esc(x.nachten)}" style="width:90px"></td><td data-l="Locatie" class="noot">${x.geo ? esc(x.geo.naam) : '—'}</td><td><button class="klein" data-a="omhoog" data-p="stops" data-i="${i}">↑</button> <button class="klein" data-a="omlaag" data-p="stops" data-i="${i}">↓</button> <button class="klein gevaar" data-a="del" data-p="stops" data-i="${i}">✕</button></td></tr>`).join('')}</tbody></table>
+    <div class="rij"><button data-a="add" data-p="stops" data-n="stop">+ Plaats toevoegen</button><button data-a="geoStops">Locaties opzoeken</button></div>
+    <h3>Voorstel voor de route</h3><div class="box" style="margin-top:0" data-calc="routeVoorstel"></div>
+    <div class="rij"><button data-a="voorstelOvernemen">Neem de voorgestelde volgorde over</button><button class="prim" data-a="stopsNaarDagen">Maak dagen en verblijven aan uit deze verdeling</button></div>
+    <h3>Overzichtskaart van de route</h3><div data-calc="routeKaart"></div>`);
   t.hotels.lijst.forEach((hh, i) => {
     const p = `hotels.lijst.${i}`;
-    h += `<details class="sub" open><summary>${esc(hh.naam || 'Verblijf ' + (i + 1))} – ${esc(hh.plaats || '?')} <span data-calc="hotelkop" data-i="${i}"></span></summary>
-      <div class="grid" style="margin-top:8px">
-        ${fld(p + '.plaats', 'Plaats', 't')}${fld(p + '.naam', 'Naam hotel/verblijf', 't')}${fld(p + '.adres', 'Adres', 't')}${fld(p + '.tel', 'Telefoon', 't')}${fld(p + '.site', 'Officiële website', 'u')}
-        ${fld(p + '.van', 'Incheckdatum', 'd')}${fld(p + '.tot', 'Uitcheckdatum', 'd')}${fld(p + '.kamers', 'Aantal kamers', 'n', { min: 1 })}
-        ${fld(p + '.prijs', `Prijs per kamer per nacht (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld(p + '.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld(p + '.prijsDatum', 'Prijs gecontroleerd op', 'd')}${fld(p + '.bron', 'Bron prijs', 't')}
-        ${fld(p + '.ontbijt', 'Ontbijt', 's', { r: 1, opts: [['onbekend', 'niet bevestigd'], ['ja', 'inbegrepen'], ['extra', 'tegen betaling'], ['nee', 'niet beschikbaar']] })}${hh.ontbijt === 'extra' ? fld(p + '.ontbijtPp', 'Ontbijt per persoon per dag', 'n', { min: 0 }) : ''}
-        ${fld(p + '.parkeren', 'Parkeren', 's', { r: 1, opts: [['onbekend', 'niet bevestigd'], ['gratis', 'gratis'], ['betaald', 'betaald'], ['nee', 'niet beschikbaar']] })}${hh.parkeren === 'betaald' ? fld(p + '.parkeerPerNacht', 'Parkeerkosten per nacht', 'n', { min: 0 }) : ''}
-        ${fld(p + '.belasting', 'Toeristenbelasting/toeslagen totaal (indien bekend)', 'n', { min: 0 })}${fld(p + '.annuleren', 'Annuleringsvoorwaarden', 't', { ph: 'bijv. gratis tot 10 mei' })}
-        ${fld(p + '.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld(p + '.ref', 'Bevestigingsnummer (optioneel)', 't')}${fld(p + '.link', 'Boekingslink', 'u')}
-      </div>
-      <h3>Reviews (zelf invullen, met bronlink en datum)</h3><div class="grid">
-        ${fld(p + '.gN', 'Google: aantal reviews', 'n', { min: 0 })}${fld(p + '.gNeg', 'Google: negatief (1–2 sterren)', 'n', { min: 0 })}${fld(p + '.gScore', 'Google: gemiddelde (optioneel)', 'n')}${fld(p + '.gLink', 'Google-link', 'u')}
-        ${fld(p + '.bN', 'Booking.com: aantal reviews', 'n', { min: 0 })}${fld(p + '.bNeg', 'Booking.com: negatief (volgens definitie)', 'n', { min: 0 })}${fld(p + '.bScore', 'Booking.com: gemiddelde (optioneel)', 'n')}${fld(p + '.bLink', 'Booking.com-link', 'u')}
-        ${fld(p + '.revDatum', 'Reviewgegevens opgehaald op', 'd')}
-      </div>
-      <div class="box" data-calc="hotel" data-i="${i}"></div>
-      <h3>Veiligheid en ligging</h3><div class="grid">
-        ${fld(p + '.veilig', 'Veiligheidsinformatie', 's', { opts: [['onvoldoende', 'onvoldoende informatie'], ['geen', 'geen duidelijke waarschuwingen gevonden'], ['aandacht', 'aandachtspunten gevonden']] })}
-        ${fld(p + '.veiligNotitie', 'Bron en toelichting veiligheid', 't', { h: 'Nooit garanderen dat een buurt veilig is; noteer bron en datum.' })}
-        ${fld(p + '.ligging', 'Ligging: afstand/reistijd tot activiteiten, eten, openbaar vervoer', 'a', { w: 1, rows: 2 })}
-        ${fld(p + '.notitie', 'Notities', 'a', { w: 1, rows: 2 })}
-      </div>
-      <div class="rij"><button class="klein gevaar" data-a="del" data-p="hotels.lijst" data-i="${i}">Verblijf verwijderen</button><a class="knop klein" target="_blank" rel="noopener" href="${esc(mapsZoek((hh.naam || '') + ' ' + (hh.adres || hh.plaats || '')))}">Kaart</a></div>
-    </details>`;
+    h += `<section class="card"><h2>Verblijf ${i + 1}: ${esc(hh.plaats || '?')} · ${nachten(hh)} nacht${nachten(hh) === 1 ? '' : 'en'} (${dFmt(hh.van)} – ${dFmt(hh.tot)})</h2>
+      ${hh.bevestigd ? `<div class="banner" style="border-color:var(--goed)">✔ Bevestigd: <b>${esc(hh.naam)}</b> (optie ${'ABC'[hh.gekozen]}) op ${esc(new Date(hh.bevestigdOp).toLocaleString('nl-NL'))} <button class="klein" data-a="hotelTerug" data-i="${i}">Keuze intrekken</button></div>` : '<p class="noot">Kies hieronder één van de drie hotels en bevestig het. Zonder uw bevestiging wordt er geen hotel gekozen.</p>'}
+      <div class="grid">${fld(p + '.plaats', 'Plaats', 't')}${fld(p + '.van', 'Incheckdatum', 'd')}${fld(p + '.tot', 'Uitcheckdatum', 'd')}${fld(p + '.kamers', 'Aantal kamers', 'n', { min: 1 })}${fld(p + '.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld(p + '.ref', 'Bevestigingsnummer (optioneel)', 't')}
+        ${fld(p + '.uitzondering', `Uitzondering voor deze plaats: een hotel tot ${mny(num(c.maxUitz))} p.n. is toegestaan (normaal maximaal ${mny(num(c.maxPrijs))})`, 'c', { w: 1 })}</div>
+      <div class="rij"><button class="klein" data-a="kopie" data-v="${esc(hotelBrief(t, i))}">Kopieer hotelopdracht (voor Booking.com of Claude)</button><a class="knop klein" target="_blank" rel="noopener" href="${esc(mapsZoek('hotels in ' + (hh.plaats || '')))}">Hotels op de kaart</a><button class="klein gevaar" data-a="del" data-p="hotels.lijst" data-i="${i}">Verblijf verwijderen</button></div>
+      <h3>Vergelijking van de drie opties</h3><div data-calc="vergelijk" data-i="${i}"></div>
+      ${[0, 1, 2].map(k => `<details class="sub" ${hh.gekozen === k || (!hh.bevestigd && k === 0) ? 'open' : ''}><summary>Optie ${'ABC'[k]}: ${esc(hh.opties[k].naam || '(nog leeg)')} <span data-calc="optiebadge" data-i="${i}" data-k="${k}"></span></summary>${optieVelden(i, k)}<div class="box" data-calc="optie" data-i="${i}" data-k="${k}"></div></details>`).join('')}
+    </section>`;
   });
-  return h + `<section class="card"><h2>Overzicht verblijf</h2><div data-calc="verblijfTabel"></div>${kBox('Verblijf')}</section>`;
+  h += `<section class="card"><h2>Overzicht per dag</h2><div data-calc="dagHotels"></div>${kBox('Verblijf')}</section>`;
+  return h;
 };
 
 VIEWS.gids = () => {
@@ -672,16 +773,19 @@ VIEWS.route = () => {
 };
 
 function kaartSVG(t) {
-  const P = []; t.dagen.forEach((d, i) => { if (d.geo && isFinite(d.geo.lat)) { const l = P[P.length - 1]; if (!l || l.naam !== (d.plaats || d.geo.naam)) P.push({ naam: d.plaats || d.geo.naam, lat: d.geo.lat, lon: d.geo.lon, n: i + 1 }); } });
-  if (P.length < 2) return '<p class="noot">Nog geen kaart: zoek de locaties op met “Locaties en tijdzones opzoeken”.</p>';
+  const P = []; t.dagen.forEach(d => { if (d.geo && isFinite(d.geo.lat)) { const l = P[P.length - 1], naam = d.plaats || d.geo.naam; if (!l || l.naam !== naam) P.push({ naam, lat: d.geo.lat, lon: d.geo.lon, nr: String(P.length + 1) }); } });
+  return kaartTeken(P, 'Nog geen kaart: zoek de locaties op met “Locaties en tijdzones opzoeken”.');
+}
+function kaartTeken(P, leeg) {
+  if (P.length < 2) return `<p class="noot">${leeg}</p>`;
   const lat0 = sum(P.map(p => p.lat)) / P.length, kx = Math.cos(lat0 * Math.PI / 180);
   const X = P.map(p => p.lon * kx), Y = P.map(p => -p.lat);
   const minX = Math.min(...X), maxX = Math.max(...X), minY = Math.min(...Y), maxY = Math.max(...Y);
   const W = 640, H = 340, m = 40, sc = Math.min((W - 2 * m) / ((maxX - minX) || 1), (H - 2 * m) / ((maxY - minY) || 1));
   const px = i => m + (X[i] - minX) * sc + ((W - 2 * m) - (maxX - minX) * sc) / 2, py = i => m + (Y[i] - minY) * sc + ((H - 2 * m) - (maxY - minY) * sc) / 2;
   /* dezelfde plaats die vaker voorkomt (bijv. begin en eind) krijgt één marker met meerdere nummers */
-  const U = []; P.forEach((p, i) => { const g = U.find(u => u.naam === p.naam); if (g) g.nrs.push(i + 1); else U.push({ naam: p.naam, i, nrs: [i + 1] }); });
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Schematische routekaart" style="width:100%;max-width:700px;background:#f4f6f8;border:1px solid #ccc;border-radius:6px"><polyline fill="none" stroke="#0b4f9c" stroke-width="2" stroke-dasharray="5 3" points="${P.map((_, i) => px(i).toFixed(1) + ',' + py(i).toFixed(1)).join(' ')}"/>${U.map(u => { const l = u.nrs.join(','), r = 8 + 3 * l.length; return `<circle cx="${px(u.i).toFixed(1)}" cy="${py(u.i).toFixed(1)}" r="${r}" fill="#0b4f9c"/><text x="${px(u.i).toFixed(1)}" y="${(py(u.i) + 4).toFixed(1)}" text-anchor="middle" font-size="11" fill="#fff" font-family="sans-serif">${l}</text><text x="${(px(u.i) + r + 4).toFixed(1)}" y="${(py(u.i) + 4).toFixed(1)}" font-size="12" fill="#111" font-family="sans-serif">${esc(u.naam)}</text>`; }).join('')}</svg>`;
+  const U = []; P.forEach((p, i) => { const g = U.find(u => u.naam === p.naam); if (g) g.nrs.push(p.nr); else U.push({ naam: p.naam, i, nrs: [p.nr] }); });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Schematische routekaart" style="width:100%;max-width:700px;background:#f4f6f8;border:1px solid #ccc;border-radius:6px"><polyline fill="none" stroke="#0b4f9c" stroke-width="2" stroke-dasharray="5 3" points="${P.map((_, i) => px(i).toFixed(1) + ',' + py(i).toFixed(1)).join(' ')}"/>${U.map(u => { const l = u.nrs.join(','), r = 8 + 3 * l.length; return `<circle cx="${px(u.i).toFixed(1)}" cy="${py(u.i).toFixed(1)}" r="${r}" fill="#0b4f9c"/><text x="${px(u.i).toFixed(1)}" y="${(py(u.i) + 4).toFixed(1)}" text-anchor="middle" font-size="11" fill="#fff" font-family="sans-serif">${esc(l)}</text><text x="${(px(u.i) + r + 4).toFixed(1)}" y="${(py(u.i) + 4).toFixed(1)}" font-size="12" fill="#111" font-family="sans-serif">${esc(u.naam)}</text>`; }).join('')}</svg>`;
 }
 
 VIEWS.dag = () => {
@@ -899,6 +1003,56 @@ const metBalk = k => { const f = VIEWS[k]; VIEWS[k] = () => f() + `<section clas
 /* ====================== Berekende blokken (live bijgewerkt) ====================== */
 const engDatum = d => okD(d) ? dt(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '';
 const CALC = {
+  optiebadge: e => { const t = T(), st = t.hotels.lijst[+e.i]; if (!st) return ''; const o = st.opties[+e.k]; if (!o.naam && num(o.prijs) == null) return ''; const x = hotelToets(t, o, st); return (st.gekozen === +e.k && st.bevestigd ? badge('g', '✔ bevestigd') + ' ' : '') + badge(x.k, x.s); },
+  optie: e => {
+    const t = T(), st = t.hotels.lijst[+e.i]; if (!st) return ''; const k = +e.k, o = st.opties[k], x = hotelToets(t, o, st), ico = { ok: '✔', f: '✖', l: '⚠', o: '?' }, kl = { ok: 'goed', f: 'fout', l: 'let', o: 'n' };
+    const gekozen = st.gekozen === k && st.bevestigd;
+    return `<table><tbody>${x.C.map(c => `<tr><td style="width:28px" class="${kl[c.s]}"><b>${ico[c.s]}</b></td><td style="width:130px"><b>${esc(c.label)}</b></td><td class="${c.s === 'f' ? 'fout' : ''}">${esc(c.tekst)}</td></tr>`).join('')}</tbody></table>
+      <div class="rij">${gekozen ? '<span class="goed"><b>✔ Dit hotel is bevestigd voor dit verblijf.</b></span>' : `<button class="prim" data-a="bevestigHotel" data-i="${e.i}" data-k="${k}" ${x.f || !o.naam ? 'disabled' : ''}>Bevestig dit hotel voor ${esc(st.plaats)}</button>`}${x.f ? '<span class="fout">Voldoet niet aan uw criteria: kan niet worden bevestigd.</span>' : ''}</div>`;
+  },
+  vergelijk: e => {
+    const t = T(), st = t.hotels.lijst[+e.i]; if (!st) return ''; const X = st.opties.map(o => ({ o, x: hotelToets(t, o, st), r: hotelOordeel(t, o) }));
+    const rij = (kop, f) => `<tr><td data-l=""><b>${kop}</b></td>${X.map((z, k) => `<td data-l="Optie ${'ABC'[k]}">${f(z.o, z.x, z.r)}</td>`).join('')}</tr>`;
+    return `<table class="rtab"><thead><tr><th></th>${X.map((z, k) => `<th>Optie ${'ABC'[k]}${st.gekozen === k && st.bevestigd ? ' ✔' : ''}</th>`).join('')}</tr></thead><tbody>
+      ${rij('Hotel', o => esc(o.naam || '—'))}${rij('Prijs p.n. (alles inbegrepen)', (o, x) => x.pe == null ? '—' : mny(x.pe))}${rij('Booking / Google', o => `${o.bScore ?? '—'} / ${o.gScore ?? '—'}`)}
+      ${rij('Slechte reviews', (o, x, r) => [r.g, r.b].map((b, n) => `${n ? 'B' : 'G'}: ${b.p != null ? NF1.format(b.p) + '%' : b.s}`).join(' · '))}
+      ${rij('Ontbijt · parkeren · wifi', o => [o.ontbijt, o.parkeren, o.wifi].map(v => esc(v === 'onbekend' ? '?' : v)).join(' · '))}${rij('Badkamer · wijk', o => `${esc(o.badkamer === 'onbekend' ? '?' : o.badkamer)} · ${esc(o.wijk === 'onbekend' ? '?' : o.wijk)}`)}
+      ${rij('Veiligheid', o => esc({ geen: 'geen waarschuwingen', aandacht: 'aandachtspunten', onvoldoende: 'onvoldoende info' }[o.veilig]))}${rij('Afstand centrum', o => o.afstandCentrum != null ? o.afstandCentrum + ' km' : '—')}
+      ${rij('Beoordeling', (o, x) => o.naam || num(o.prijs) != null ? badge(x.k, x.s) : '—')}</tbody></table>`;
+  },
+  dagHotels: () => { const t = T(); if (!t.dagen.length) return '<p class="noot">Nog geen dagen: maak ze aan met “Maak dagen en verblijven aan” hierboven.</p>'; return `<table class="rtab"><thead><tr><th>Dag</th><th>Datum</th><th>Plaats</th><th>Hotel</th><th>Status</th></tr></thead><tbody>${t.dagen.filter(d => d.type !== 'vertrek').map(d => { const h = hotelVoorNacht(t, d.datum), i = t.dagen.indexOf(d) + 1; return `<tr><td data-l="Dag">${i}</td><td data-l="Datum">${dFmt(d.datum)}</td><td data-l="Plaats">${esc(d.plaats)}</td><td data-l="Hotel">${h && h.naam ? esc(h.naam) : '—'}</td><td data-l="Status">${!h ? badge('l', 'geen verblijf') : h.bevestigd ? badge('g', '✔ bevestigd') : badge('n', 'nog te bevestigen')}</td></tr>`; }).join('')}</tbody></table>`; },
+  patroonCheck: () => {
+    const t = T(), r = t.route; if (!okD(t.reis.vertrek) || !okD(t.reis.terug)) return 'Vul eerst de vlucht in; dan is het aantal nachten bekend.';
+    const tot = diffD(t.reis.terug, t.reis.vertrek), n2 = num(r.n2) || 0, n3 = num(r.n3) || 0, n4 = num(r.n4) || 0, som = 2 * n2 + 3 * n3 + 4 * n4, aantal = n2 + n3 + n4;
+    const rijen = t.stops.filter(x => x.plaats || num(x.nachten) != null), tel = n => rijen.filter(x => +x.nachten === n).length, rsom = sum(rijen.map(x => num(x.nachten) || 0)), overig = rijen.filter(x => ![2, 3, 4].includes(+x.nachten)).length, w = [];
+    let uit = `<div>Het patroon geeft <b>${som} nachten</b> op ${aantal} plaatsen (${n2}×2 + ${n3}×3 + ${n4}×4); de reis heeft <b>${tot} nachten</b>: ${som === tot ? '<span class="goed">klopt</span>' : `<span class="let">verschil ${tot - som > 0 ? '+' : ''}${tot - som}</span>`}.</div>`;
+    if (som !== tot && aantal > 0) { const C = []; for (let a = 0; a <= aantal; a++) for (let b = 0; a + b <= aantal; b++) { const c = aantal - a - b; if (2 * a + 3 * b + 4 * c === tot) C.push(`${a}×2 + ${b}×3 + ${c}×4`); } uit += `<div class="noot">${C.length ? 'Met ' + aantal + ' plaatsen kan het precies zo: ' + C.slice(0, 6).join(' · ') : 'Met ' + aantal + ' plaatsen is ' + tot + ' nachten niet precies te maken met 2, 3 en 4 nachten: pas het aantal plaatsen aan.'}</div>`; }
+    uit += `<div>Uw plaatsen: ${tel(2)}× 2, ${tel(3)}× 3, ${tel(4)}× 4 nachten${overig ? `, ${overig} met een ander aantal` : ''}; samen <b>${rsom} van ${tot} nachten</b> · ${rsom === tot ? '<span class="goed">alles verdeeld</span>' : rsom < tot ? `<span class="let">nog ${tot - rsom} nacht(en) te verdelen</span>` : `<span class="fout">${rsom - tot} nacht(en) te veel</span>`}</div>`;
+    if (aantal && rijen.length && (tel(2) !== n2 || tel(3) !== n3 || tel(4) !== n4)) w.push('Uw plaatsen wijken af van het opgegeven patroon.');
+    const g = t.gids; if (num(g.maxWissels) != null && t.stops.length - 1 > g.maxWissels) w.push(`${t.stops.length - 1} hotelwissels is meer dan uw maximum (${g.maxWissels}).`);
+    return uit + w.map(x => `<div class="banner">${esc(x)}</div>`).join('');
+  },
+  routeVoorstel: () => {
+    const t = T(), S = t.stops.filter(x => x.plaats), met = S.filter(x => x.geo), max = num(t.gids.maxKm);
+    if (!S.length) return 'Voeg hierboven uw plaatsen toe.';
+    if (met.length < 2) return 'Zoek de locaties op (knop “Locaties opzoeken”): voor een voorstel zijn minstens 2 plaatsen met locatie nodig.';
+    const v = voorstelVolgorde(t), L = routeLegs(t, v.order), hu = routeScore(t, met, t.route.start, t.route.eind || t.route.start, max), w = [];
+    if (S.length > met.length) w.push(`${S.length - met.length} plaats(en) zonder locatie staan niet in het voorstel.`);
+    if (!t.route.start) w.push('Het beginpunt is niet opgezocht: de eerste rit is niet meegeteld.');
+    if (max == null) w.push('Vul het maximum aantal kilometers per dag in; zonder grens kan de app geen ritten afkeuren.');
+    const status = l => l.over ? badge('f', `boven daglimiet: ± ${l.extra} tussenstop(s) of extra nacht nodig`) : badge('g', 'binnen daglimiet');
+    return `<div>Voorgestelde volgorde: <b>${L.length ? esc(L.map(l => l.van).concat(L.at(-1).naar).filter((x, i, a) => i === 0 || x !== a[i - 1]).join(' → ')) : '—'}</b></div>
+      <table class="rtab"><thead><tr><th>Rit</th><th class="r">km (schatting)</th><th class="r">Rijtijd</th><th>Daglimiet</th></tr></thead><tbody>${L.map(l => `<tr><td data-l="Rit"><a target="_blank" rel="noopener" href="${esc(mapsRoute(l.van, l.naar))}">${esc(l.van)} → ${esc(l.naar)}</a>${l.nachten ? ` <span class="noot">(daarna ${l.nachten} nachten)</span>` : ''}</td><td class="r" data-l="km">${NF.format(l.km)}</td><td class="r" data-l="Rijtijd">${urenFmt(l.uren)}</td><td data-l="Daglimiet">${status(l)}</td></tr>`).join('')}<tr class="totaal"><td>Totaal</td><td class="r">${NF.format(v.km)} km</td><td class="r">${urenFmt(v.km / (num(t.route.snelheid) || 75))}</td><td>${v.over ? badge('f', v.over + ' rit(ten) te lang') : badge('g', 'alle ritten binnen de limiet')}</td></tr></tbody></table>
+      <div class="noot">Uw huidige volgorde: ${NF.format(hu.km)} km${hu.over ? `, ${hu.over} rit(ten) boven de daglimiet` : ''}. Het voorstel: ${NF.format(v.km)} km.</div>${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}
+      <p class="noot">Afstanden zijn hemelsbreed × wegfactor (${t.route.wegfactor}), rijtijden gebaseerd op ${t.route.snelheid} km/u: een schatting, geen routeberekening. Controleer elke rit via de link in Google Maps. De app verzint geen tussenstops: voeg ze zelf toe als een rit te lang is.</p>`;
+  },
+  routeKaart: () => {
+    const t = T(), v = voorstelVolgorde(t), P = [], e = t.route.eind || t.route.start;
+    if (t.route.start) P.push({ naam: t.route.start.plaats, lat: t.route.start.lat, lon: t.route.start.lon, nr: 'S' });
+    v.order.forEach((x, i) => P.push({ naam: x.plaats, lat: x.geo.lat, lon: x.geo.lon, nr: String(i + 1) }));
+    if (e) P.push({ naam: e.plaats, lat: e.lat, lon: e.lon, nr: 'E' });
+    return kaartTeken(P, 'De kaart verschijnt zodra de locaties van minstens twee punten zijn opgezocht (knop “Locaties opzoeken”).') + (P.length > 1 ? '<p class="noot">Volgorde van het voorstel. S = begin, E = eind. Schematisch, zonder achtergrondkaart.</p>' : '');
+  },
   stapbalk: e => {
     const t = T(), k = e.k, i = STAPPEN.indexOf(k), st = t.bevestigd[k] || {}, S = voortgang(t).find(x => x.naam === STAPCHK[k]), mis = S ? S.ontbreekt : [], vol = STAPPEN[i + 1], laatste = !vol;
     if (st.ok) return `<h2>✔ Stap ${i + 1} (${esc(STAPNAAM[k])}) is door u bevestigd</h2><p class="noot">Bevestigd op ${esc(new Date(st.op).toLocaleString('nl-NL'))}.</p>` +
@@ -1020,11 +1174,6 @@ A.maakDagen = () => {
   for (let i = 0; i < n; i++) { const dd = addD(r.vertrek, i); if (!heeft.has(dd)) { const d = nieuweDag(dd); d.type = i === 0 ? 'aankomst' : i === n - 1 ? 'vertrek' : 'verblijfsdag'; if (i === 0) d.plaats = r.startplaats; if (i === n - 1) d.plaats = r.eindplaats; t.dagen.push(d); nieuw++; } }
   t.dagen.sort((a, b) => a.datum.localeCompare(b.datum)); opslaan(); rerender(); melding(`${nieuw} dag(en) aangemaakt.`);
 };
-A.hotelsUitRoute = () => {
-  const t = T(); if (!t.dagen.length) return melding('Maak eerst dagen aan (tab Route).', true);
-  let n = 0; blokken(t).forEach(b => { if (!b.plaats || b.nachten < 1) return; const van = t.dagen[b.van].datum; if (t.hotels.lijst.some(h => h.plaats === b.plaats && h.van === van)) return; const h = nieuwHotel(); h.plaats = b.plaats; h.van = van; h.tot = addD(van, b.nachten); t.hotels.lijst.push(h); n++; });
-  opslaan(); rerender(); melding(n + ' verblijf(en) voorgesteld. Vul naam, prijs en reviews zelf in.');
-};
 A.kopie = async b => { const v = b.dataset.v; try { await navigator.clipboard.writeText(v); } catch { const a = document.createElement('textarea'); a.value = v; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch { } a.remove(); } melding('Gekopieerd.'); };
 A.koersVlucht = async () => {
   const t = T(), v = t.vlucht;
@@ -1032,15 +1181,55 @@ A.koersVlucht = async () => {
   catch (e) { melding('Koers ophalen mislukt (' + e.message + '). Vul de prijs in euro’s in of probeer het later.', true); }
 };
 A.stopsNaarDagen = () => {
-  const t = T(), r = t.reis; if (!okD(r.vertrek) || !okD(r.terug) || r.terug <= r.vertrek) return melding('Vul eerst de vlucht in (stap 1 en 2): de reisdata ontbreken.', true);
+  const t = T(), r = t.reis; if (!okD(r.vertrek) || !okD(r.terug) || r.terug <= r.vertrek) return melding('Vul eerst de vlucht in (stap 1): de reisdata ontbreken.', true);
   const st = t.stops.filter(x => x.plaats && num(x.nachten) > 0), tot = diffD(r.terug, r.vertrek);
   if (!st.length) return melding('Voeg eerst plaatsen met aantal nachten toe.', true);
   const nu = sum(st.map(x => +x.nachten)); if (nu !== tot) return melding(`De verdeling telt ${nu} nachten, de reis heeft er ${tot}. Pas dit eerst aan.`, true);
-  const pl = []; st.forEach(x => { for (let k = 0; k < +x.nachten; k++) pl.push(x.plaats); }); pl.push(st[st.length - 1].plaats);
-  pl.forEach((p, i) => { const datum = addD(r.vertrek, i); let d = t.dagen.find(x => x.datum === datum); if (!d) { d = nieuweDag(datum); t.dagen.push(d); } d.plaats = p; d.type = i === 0 ? 'aankomst' : i === tot ? 'vertrek' : (p !== pl[i - 1] ? 'rijdag' : 'verblijfsdag'); });
-  t.dagen.sort((a, b) => a.datum.localeCompare(b.datum));
-  A.hotelsUitRoute(); melding(`${tot + 1} dagen en de verblijven zijn aangemaakt. U ziet ze bij Route (stap 6) en Verblijf (stap 4); bevestig eerst deze stap.`);
+  const pl = []; st.forEach(x => { for (let k = 0; k < +x.nachten; k++) pl.push(x); }); pl.push(st[st.length - 1]);
+  const snelh = num(t.route.snelheid) || 75, ei = t.route.eind || t.route.start;
+  pl.forEach((x, i) => {
+    const datum = addD(r.vertrek, i); let d = t.dagen.find(z => z.datum === datum); if (!d) { d = nieuweDag(datum); t.dagen.push(d); }
+    d.plaats = x.plaats; d.type = i === 0 ? 'aankomst' : i === tot ? 'vertrek' : (x.plaats !== pl[i - 1].plaats ? 'rijdag' : 'verblijfsdag');
+    if (x.geo) { d.geo = x.geo; if (x.tz) d.tz = x.tz; }
+    let km = null;
+    if (i === 0) km = t.route.start && x.geo ? legKm(t, t.route.start, x.geo) : null;
+    else if (i === tot) km = ei && x.geo ? legKm(t, x.geo, ei) : null;
+    else if (x.plaats !== pl[i - 1].plaats) km = pl[i - 1].geo && x.geo ? legKm(t, pl[i - 1].geo, x.geo) : null;
+    else km = 0;
+    if (d.km == null || d.kmGeschat) { d.km = km == null ? null : Math.round(km); d.uren = km == null ? null : Math.round(km / snelh * 4) / 4; d.kmGeschat = km != null; }
+  });
+  t.dagen.sort((a, b) => a.datum.localeCompare(b.datum)); verblijvenUitStops(t); opslaan(); rerender();
+  melding(`${tot + 1} dagen en ${t.hotels.lijst.length} verblijven aangemaakt. Afstanden zijn geschat: controleer ze in Google Maps. Kies daarna per verblijf een hotel.`);
 };
+A.patroonRijen = () => {
+  const t = T(), r = t.route, rijen = []; [[2, r.n2], [3, r.n3], [4, r.n4]].forEach(([n, c]) => { for (let k = 0; k < (num(c) || 0); k++) rijen.push(Object.assign(NIEUW.stop(), { nachten: n })); });
+  if (!rijen.length) return melding('Vul eerst in hoe vaak 2, 3 of 4 nachten.', true);
+  if (t.stops.some(x => x.plaats) && !confirm('De bestaande plaatsen vervangen door lege rijen uit het patroon?')) return;
+  t.stops = rijen; opslaan(); rerender();
+};
+A.geoStops = async () => {
+  const t = T(), cache = {}; let ok = 0, fout = 0;
+  const zoek = async naam => { const k = naam.trim().toLowerCase(); if (!(k in cache)) cache[k] = (await zoekGeo(naam))[0] || null; return cache[k]; };
+  try {
+    for (const x of t.stops) if (x.plaats && !x.geo) { const r = await zoek(x.plaats); if (r) { x.geo = { lat: r.latitude, lon: r.longitude, naam: geoNaam(r) }; x.tz = r.timezone || ''; ok++; } else fout++; }
+    for (const [sl, naam] of [['start', t.reis.startplaats], ['eind', t.reis.eindplaats || t.reis.startplaats]]) if (naam && !(t.route[sl] && t.route[sl].plaats === naam)) { const r = await zoek(naam); if (r) { t.route[sl] = { plaats: naam, lat: r.latitude, lon: r.longitude, naam: geoNaam(r), tz: r.timezone || '' }; ok++; } else fout++; }
+  } catch (e) { fout++; }
+  opslaan(); rerender(); melding(`${ok} locatie(s) gevonden${fout ? `, ${fout} niet gevonden of niet bereikbaar` : ''}. Controleer de kolom “Locatie”: bij gelijknamige plaatsen is de eerste treffer gekozen; pas de naam aan (bijv. “Santa Fe, New Mexico”) en zoek opnieuw.`, !!fout);
+};
+A.voorstelOvernemen = () => {
+  const t = T(), v = voorstelVolgorde(t); if (v.order.length < 2) return melding('Zoek eerst de locaties van minstens 2 plaatsen op.', true);
+  t.stops = [...v.order, ...t.stops.filter(x => !(x.plaats && x.geo))]; opslaan(); rerender(); melding('Volgorde van het voorstel overgenomen. Maak daarna de dagen en verblijven aan.');
+};
+A.bevestigHotel = b => {
+  const t = T(), i = +b.dataset.i, k = +b.dataset.k, st = t.hotels.lijst[i], o = st.opties[k], x = hotelToets(t, o, st);
+  if (!o.naam) return melding('Vul eerst de naam van het hotel in.', true);
+  if (x.f) return melding('Dit hotel voldoet niet: ' + x.C.filter(c => c.s === 'f').map(c => `${c.label} (${c.tekst})`).join('; '), true);
+  if (x.C.some(c => c.label === 'Prijs' && c.s === 'l')) return melding('De prijs is boven het normale maximum: vink eerst de uitzondering voor deze plaats aan.', true);
+  const onb = x.C.filter(c => c.s === 'o' || c.s === 'l');
+  if (onb.length && !confirm(`Nog niet bevestigd of let op: ${onb.map(c => c.label).join(', ')}.\n\nToch dit hotel bevestigen voor ${st.plaats}?`)) return;
+  kopieerOptie(st, k); st.bevestigd = true; st.bevestigdOp = new Date().toISOString(); opslaan(); rerender(); melding(`Hotel voor ${st.plaats} bevestigd.`);
+};
+A.hotelTerug = b => { const st = T().hotels.lijst[+b.dataset.i]; wisKeuze(st); opslaan(); rerender(); };
 A.bevestig = b => {
   const t = T(), k = b.dataset.s, i = STAPPEN.indexOf(k), S = voortgang(t).find(x => x.naam === STAPCHK[k]);
   if (S && S.ontbreekt.length && !confirm(`Er ontbreekt nog: ${S.ontbreekt.join(', ')}.\n\nToch bevestigen en verder gaan?`)) return;
@@ -1126,13 +1315,20 @@ A.koers = async () => {
   catch (e) { melding('Koers ophalen mislukt (' + e.message + '). Vul de koers handmatig in met datum.', true); }
 };
 
+function hooks(path) {
+  const t = T(); let m;
+  if ((m = /^hotels\.lijst\.(\d+)\.opties\.(\d+)\./.exec(path))) { const st = t.hotels.lijst[+m[1]]; if (st.gekozen === +m[2]) kopieerOptie(st, +m[2]); }
+  if ((m = /^stops\.(\d+)\.plaats$/.exec(path))) t.stops[+m[1]].geo = null;
+  if (/^reis\.(startplaats|eindplaats)$/.test(path)) { t.route.start = null; t.route.eind = null; }
+  if ((m = /^dagen\.(\d+)\.(km|uren)$/.exec(path))) t.dagen[+m[1]].kmGeschat = false;
+}
 app.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b || b.dataset.ch) return; if (A[b.dataset.a]) { if (b.tagName === 'A') return; e.preventDefault(); A[b.dataset.a](b, e); } });
 app.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.ch === 'rekenhulp') return A.rekenhulp(el);
   if (el.dataset.wk !== undefined) { const v = num(el.value); if (v == null) delete T().werkelijk[el.dataset.wk]; else T().werkelijk[el.dataset.wk] = v; opslaan(); return; }
   if (el.dataset.b === undefined) return;
-  setP(T(), el.dataset.b, el.type === 'checkbox' ? el.checked : el.type === 'number' ? num(el.value) : el.value); if (el.dataset.b === 'auto.verzekeringKeuze') { try { localStorage.setItem('rr_auto_verz', el.value); } catch { } } { const bv = T().bevestigd[tab]; if (bv && bv.ok && !bv.gewijzigd) bv.gewijzigd = true; } syncDatums(T()); opslaan(); refreshCalc();
+  setP(T(), el.dataset.b, el.type === 'checkbox' ? el.checked : el.type === 'number' ? num(el.value) : el.value); if (el.dataset.b === 'auto.verzekeringKeuze') { try { localStorage.setItem('rr_auto_verz', el.value); } catch { } } hooks(el.dataset.b); { const bv = T().bevestigd[tab]; if (bv && bv.ok && !bv.gewijzigd) bv.gewijzigd = true; } syncDatums(T()); opslaan(); refreshCalc();
 });
 app.addEventListener('change', e => {
   const el = e.target;
@@ -1171,8 +1367,9 @@ function demoReis() {
   const plan = [['Lissabon', 'aankomst', null, null, 'Europe/Lisbon'], ['Lissabon', 'verblijfsdag', 0, 0, 'Europe/Lisbon'], ['Porto', 'rijdag', 315, 3.25, 'Europe/Lisbon'], ['Porto', 'verblijfsdag', 0, 0, 'Europe/Lisbon'], ['Lissabon', 'vertrek', 315, 3.25, 'Europe/Lisbon']];
   plan.forEach(([pl, ty, km, u, tz], i) => { const d = nieuweDag(addD('2027-05-10', i)); Object.assign(d, { plaats: pl, type: ty, km, uren: u, tz, lunchPp: 15, dinerPp: 30 }); t.dagen.push(d); });
   t.dagen[2].programma.push(Object.assign(nieuwItem(), { tijd: '14:00', titel: 'DEMO-museum', pv: 12, status: 'schatting' }));
-  const h1 = Object.assign(nieuwHotel(), { plaats: 'Lissabon', naam: 'DEMO Hotel Lissabon', van: '2027-05-10', tot: '2027-05-12', prijs: 95, ontbijt: 'ja', parkeren: 'betaald', parkeerPerNacht: 15, gN: 120, gNeg: 8, bN: 300, bNeg: 20, revDatum: '2027-01-15' });
-  const h2 = Object.assign(nieuwHotel(), { plaats: 'Porto', naam: 'DEMO Hotel Porto', van: '2027-05-12', tot: '2027-05-14', prijs: 85, ontbijt: 'extra', ontbijtPp: 9, parkeren: 'gratis', gN: 40, gNeg: 8, bN: 15, bNeg: 0 });
+  const h1 = Object.assign(nieuwVerblijf(), { wifi: 'ja', badkamer: 'eigen', wijk: 'goed', veilig: 'geen', bScore: 8.6, gScore: 4.4, plaats: 'Lissabon', naam: 'DEMO Hotel Lissabon', van: '2027-05-10', tot: '2027-05-12', prijs: 95, ontbijt: 'ja', parkeren: 'betaald', parkeerPerNacht: 15, gN: 120, gNeg: 8, bN: 300, bNeg: 20, revDatum: '2027-01-15' });
+  const h2 = Object.assign(nieuwVerblijf(), { wifi: 'ja', badkamer: 'eigen', wijk: 'goed', veilig: 'onvoldoende', plaats: 'Porto', naam: 'DEMO Hotel Porto', van: '2027-05-12', tot: '2027-05-14', prijs: 85, ontbijt: 'extra', ontbijtPp: 9, parkeren: 'gratis', gN: 40, gNeg: 8, bN: 15, bNeg: 0 });
+  [h1, h2].forEach(h => { OPTVELDEN.forEach(f => { h.opties[0][f] = h[f]; }); h.gekozen = 0; h.bevestigd = true; h.bevestigdOp = new Date().toISOString(); });
   t.hotels.lijst.push(h1, h2); t.hotels.crit.maxPrijs = 100; t.bevestigd = alleBevestigd();
   return t;
 }
@@ -1184,7 +1381,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
-window.__rr = { kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>
