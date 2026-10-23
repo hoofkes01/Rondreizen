@@ -176,6 +176,23 @@ check('verblijf van 24 dagen valt binnen 21-25: geen melding over duur', !/korte
 await page.fill('#f_vlucht_terugDatum', '2027-05-30');
 check('te lang verblijf wordt gemeld', /langer dan uw maximum/.test(await page.textContent('[data-calc=vluchtCheck]')));
 await page.fill('#f_vlucht_terugDatum', '2027-04-26');
+await page.fill('#f_vlucht_heenAankomst', '23:30'); await page.fill('#f_vlucht_terugVertrek', '06:00');
+const at = await page.evaluate(() => { const a = __rr.T().auto; return [a.ophaalDatum, a.ophaalTijd, a.inleverDatum, a.inleverTijd]; });
+check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00 - 180 min = 03:00', at.join() === '2027-04-04,00:30,2027-04-26,03:00', at.join());
+await page.click('[data-t=auto]');
+const tijden = await page.textContent('[data-calc=autoTijden]');
+check('huurperiode 530,5 uur = 23 dagen van 24 uur', /23 dag\(en\)/.test(tijden), tijden.slice(0, 300));
+check('voorlopig-melding zolang de vlucht niet als geboekt staat', /nog niet als geboekt/.test(tijden));
+const dc = await page.textContent('[data-calc=dcZoek]');
+check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('DEN') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
+check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
+check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
+await page.fill('#f_auto_ophaalTijd', '12:00');
+await page.click('[data-t=vlucht]'); await page.fill('#f_vlucht_heenAankomst', '22:00');
+const hand = await page.evaluate(() => __rr.T().auto.ophaalTijd);
+check('zelf aangepaste ophaaltijd wordt niet overschreven door de vlucht', hand === '12:00', hand);
+await page.fill('#f_vlucht_heenAankomst', '09:25');
+await page.evaluate(() => { const a = __rr.T().auto; a.ophaalTijd = '10:25'; a.ophaalDatum = '2027-04-03'; });
 await page.fill('#f_vlucht_prijs', '600'); await page.selectOption('#f_vlucht_prijsValuta', 'USD');
 let vl = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'vlucht'));
 check('prijs zonder "per persoon/groep" telt niet mee en is niet 0', vl.b === null && /per persoon of voor de hele groep/.test(vl.opm), JSON.stringify(vl));
@@ -198,6 +215,19 @@ await page.click('[data-a=stopsNaarDagen]'); await page.waitForTimeout(400);
 const dg = await page.evaluate(() => { const t = __rr.T(); return { n: t.dagen.length, eerste: [t.dagen[0].datum, t.dagen[0].type, t.dagen[0].plaats], wissel: t.dagen.find(d => d.type === 'rijdag')?.datum, laatste: [t.dagen.at(-1).datum, t.dagen.at(-1).type], hotels: t.hotels.lijst.map(h => [h.plaats, h.van, h.tot]) }; });
 check('24 dagen aangemaakt van 3 april t/m 26 april', dg.n === 24 && dg.eerste.join() === '2027-04-03,aankomst,Denver' && dg.laatste.join() === '2027-04-26,vertrek', JSON.stringify(dg));
 check('rijdag op de wisseldag (13 april) en twee verblijven', dg.wissel === '2027-04-13' && dg.hotels.length === 2 && dg.hotels[0].join() === 'Denver,2027-04-03,2027-04-13' && dg.hotels[1].join() === 'Santa Fe,2027-04-13,2027-04-26', JSON.stringify(dg.hotels));
+
+
+console.log('Verzekeringskeuze per reiziger');
+const kk = await page.evaluate(() => __rr.T().auto.verzekeringKeuze);
+check('nieuwe reis: volledige verzekering is de standaard', kk === 'volledig', kk);
+const regel = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'auto-huur'));
+check('huurregel waarschuwt dat de prijs de volledige verzekering nog niet bevat', /volledige verzekering/.test(regel.opm) && /volledige verzekering gewenst/.test(regel.post), JSON.stringify(regel));
+await page.click('[data-t=auto]'); await page.selectOption('#f_auto_verzekeringKeuze', 'basis');
+check('keuze basisdekking wordt onthouden voor nieuwe reizen', await page.evaluate(() => localStorage.getItem('rr_auto_verz') === 'basis'));
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+page.once('dialog', d => d.accept('Reis voor andere reiziger'));
+await page.click('[data-a=nieuw]');
+check('andere reis start met de basisdekking als standaard', await page.evaluate(() => __rr.T().auto.verzekeringKeuze === 'basis'));
 
 check('geen scriptfouten in de console', consoleFouten.length === 0, consoleFouten.join(' | '));
 await browser.close();

@@ -126,6 +126,7 @@ const num = v => (v === '' || v == null || !isFinite(+v)) ? null : +v;
 const sum = a => a.reduce((x, y) => x + y, 0);
 const NF = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 });
 const NF1 = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 });
+const voorkeurVerz = () => lees('rr_auto_verz') === 'basis' ? 'basis' : 'volledig';
 const ROAM = 'https://get-roam.com/flexible-search';
 const SYM = { EUR: '€', USD: 'US$', GBP: '£' };
 const getP = (o, p) => p.split('.').reduce((a, k) => a == null ? a : a[k], o);
@@ -214,11 +215,11 @@ function nieuweReis(naam) {
     vlucht: { nodig: true, personen: null, zoekVan: '', zoekNaar: '', maandVan: '', maandTot: '', exactVan: '', exactTot: '', dagenMin: null, dagenMax: null, maxStops: '', maxUren: null, maxPrijsUsd: null, bagage: '1 koffer van 23 kg per persoon',
       van: '', naar: '', terugVan: '', maatschappij: '', stops: '', heenDatum: '', heenVertrek: '', heenAankomstDatum: '', heenAankomst: '', heenNr: '', terugDatum: '', terugVertrek: '', terugAankomstDatum: '', terugAankomst: '', terugNr: '',
       prijs: null, prijsValuta: 'EUR', prijsPer: '', koers: null, koersDatum: '', prijsType: 'schatting', bron: 'Get-Roam', prijsDatum: '', status: 'idee', ref: '', link: '', liters: 30, literprijs: 2.45, literprijsDatum: '', parkeren: 200, extra: null, notitie: '' },
-    auto: { nodig: true, personen: null, verhuurder: '', klasse: '', versnelling: 'automaat', ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '', verzekering: 'volledig, nul eigen risico', eigenRisico: null, borg: null, tweede: false, tweedeKosten: null, extraVerz: null, brandstofBeleid: 'vol/vol', brandstofSoort: 'benzine', verbruik: null, eenheidsprijs: null, eenheidsprijsDatum: '', ovWens: '', ovKosten: null, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', notitie: '' },
+    auto: { nodig: true, personen: null, verhuurder: '', klasse: '', versnelling: 'automaat', ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '', verzekeringKeuze: voorkeurVerz(), volledigIncl: '', leeftijd: null, bufferOphaal: 60, bufferInlever: 180, verzekering: '', eigenRisico: null, borg: null, tweede: false, tweedeKosten: null, extraVerz: null, brandstofBeleid: 'vol/vol', brandstofSoort: 'benzine', verbruik: null, eenheidsprijs: null, eenheidsprijsDatum: '', ovWens: '', ovKosten: null, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', notitie: '' },
     hotels: { personen: null, crit: { maxPrijs: null, kamers: 1, bedden: '', ontbijt: 'voorkeur', parkeren: 'voorkeur', annuleren: 'voorkeur', minReviews: 25, maxNegPct: 10, ligging: '', wensen: '', def: REVDEF }, lijst: [] },
     gids: { interesses: [], maxKm: null, maxUren: null, vertrektijd: '09:00', uiterstAankomst: '18:00', pauze: '', minTijd: '', maxWissels: null, minNachten: null, rustdagen: '', eten: '', uitgaan: '', muziek: '', cultuur: '', sport: '', winkelen: '', extra: '' },
     prakt: { nationaliteit: '', document: 'paspoort', doel: 'vakantie', rijbewijsLand: 'Nederland', ipr: false, apparaten: '', esim: '', betalen: '', verzekering: '', gezondheid: '', verzekeraar: '', alarm: '', polis: '' },
-    dagen: [], stops: [], sync: { start: '', eind: '', naar: '', terugVan: '' }, buffer: 10, extra: standaardExtra(), valutaLokaal: { code: '', koers: null, datum: '', bron: '' },
+    dagen: [], stops: [], sync: { start: '', eind: '', naar: '', terugVan: '', od: '', ot: '', id: '', it: '' }, buffer: 10, extra: standaardExtra(), valutaLokaal: { code: '', koers: null, datum: '', bron: '' },
     voorbereiding: standaardVoorbereiding(), info: standaardInfo(), contacten: [], werkelijk: {},
     boek: { foto: true, dagboek: true, refs: false, bronnen: true }
   };
@@ -281,7 +282,7 @@ function kostenRegels(t) {
   }
   const a = t.auto;
   if (a.nodig) {
-    add('Auto', `Huurprijs ${a.verhuurder || ''}`.trim(), num(a.prijs), a.prijsType, a.bron, a.prijsDatum, 'auto-huur');
+    add('Auto', `Huurprijs ${a.verhuurder || ''} (${a.verzekeringKeuze === 'volledig' ? 'volledige verzekering gewenst' : 'basisdekking'})`.replace('  ', ' '), num(a.prijs), a.prijsType, a.bron, a.prijsDatum, 'auto-huur', { opm: a.verzekeringKeuze === 'volledig' && a.volledigIncl !== 'ja' ? 'prijs bevat de volledige verzekering (nog) niet: voeg die toe bij “Extra verzekering”' : '' });
     if (a.tweede) add('Auto', 'Tweede bestuurder', num(a.tweedeKosten), a.prijsType, a.bron, a.prijsDatum, 'auto-tweede');
     if (num(a.extraVerz) != null) add('Auto', 'Extra verzekering / lager eigen risico', num(a.extraVerz), a.prijsType, a.bron, a.prijsDatum, 'auto-verz');
     const km = totaalKm(t), vb = num(a.verbruik), pe = num(a.eenheidsprijs);
@@ -502,12 +503,14 @@ const autoSectie = () => {
   const t = T();
   return sectie('Autohuur en vervoer', `De autozoeker blijft een apart onderdeel (DiscoverCars via uw dashboard). Ophaal- en inleverdatum en -plaats zijn overgenomen uit de vlucht; u kunt ze aanpassen.`,
     `<div class="grid">${fld('auto.nodig', 'Ik huur een auto', 'c', { r: 1 })}</div>` + (t.auto.nodig ? `
+    <h3>Ophaal- en inlevertijd (volgt uit de vlucht)</h3><div class="box" style="margin-top:0" data-calc="autoTijden"></div>
+    <h3>Auto zoeken bij DiscoverCars</h3><div class="box" style="margin-top:0" data-calc="dcZoek"></div>
     <h3>Intake</h3><div class="grid">
       ${persVeld('auto.personen', t)}
       ${fld('auto.klasse', 'Voertuigklasse / voorkeur', 't')}${fld('auto.versnelling', 'Versnelling', 's', { opts: [['automaat', 'automaat'], ['schakel', 'handgeschakeld'], ['maakt niet uit', 'maakt niet uit']] })}${fld('auto.bagage', 'Bagage (aantal koffers)', 't')}
       ${fld('auto.ophaalPlaats', 'Ophaallocatie', 't')}${fld('auto.ophaalDatum', 'Ophaaldatum', 'd')}${fld('auto.ophaalTijd', 'Ophaaltijd (lokaal)', 'h')}
       ${fld('auto.inleverPlaats', 'Inleverlocatie', 't')}${fld('auto.inleverDatum', 'Inleverdatum', 'd')}${fld('auto.inleverTijd', 'Inlevertijd (lokaal)', 'h')}
-      ${fld('auto.verzekering', 'Verzekering', 't')}${fld('auto.eigenRisico', 'Eigen risico', 'n', { min: 0 })}${fld('auto.borg', 'Borg (komt niet in het totaal)', 'n', { min: 0, h: 'Wordt meestal geblokkeerd op de creditcard en teruggestort.' })}
+      ${fld('auto.verzekeringKeuze', 'Verzekering: mijn keuze', 's', { r: 1, opts: [['volledig', 'Volledige verzekering (full insurance)'], ['basis', 'Basisdekking, met eigen risico']], h: 'Standaard volledig. Wordt onthouden voor nieuwe reizen op dit apparaat; per reis te wijzigen (bijv. voor een andere reiziger).' })}${fld('auto.volledigIncl', 'Bevat de gekozen prijs de volledige verzekering?', 's', { opts: [['', 'kies…'], ['ja', 'ja, inbegrepen'], ['nee', 'nee, nog niet']] })}${fld('auto.verzekering', 'Opmerkingen verzekering', 't')}${fld('auto.leeftijd', 'Leeftijd hoofdbestuurder (DiscoverCars vraagt dit)', 'n', { min: 18 })}${fld('auto.bufferOphaal', 'Ophalen: minuten na aankomst vlucht', 'n', { min: 0, h: 'Voorstel 60 (bagage, douane). Pas aan naar uw ervaring.' })}${fld('auto.bufferInlever', 'Inleveren: minuten vóór vertrek terugvlucht', 'n', { min: 0, h: 'Voorstel 180. Pas aan naar luchthaven en inleverprocedure.' })}${fld('auto.eigenRisico', 'Eigen risico', 'n', { min: 0 })}${fld('auto.borg', 'Borg (komt niet in het totaal)', 'n', { min: 0, h: 'Wordt meestal geblokkeerd op de creditcard en teruggestort.' })}
       ${fld('auto.tweede', 'Tweede bestuurder', 'c', { r: 1 })}${t.auto.tweede ? fld('auto.tweedeKosten', 'Kosten tweede bestuurder', 'n', { min: 0 }) : ''}
       ${fld('auto.brandstofBeleid', 'Brandstof-/laadbeleid', 't')}${fld('auto.brandstofSoort', 'Aandrijving', 's', { opts: ['benzine', 'diesel', 'hybride', 'elektrisch'] })}
       ${fld('auto.verbruik', 'Verbruik per 100 km (liter of kWh)', 'n', { min: 0 })}${fld('auto.eenheidsprijs', `Prijs per liter/kWh (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('auto.eenheidsprijsDatum', 'Prijs gecontroleerd op', 'd')}
@@ -762,7 +765,7 @@ function reisboekHTML(t, src) {
   const v = t.vlucht, a = t.auto;
   h += `<div class="bsec"><h2>Vlucht, auto, verblijf en contacten</h2>`;
   if (v.nodig) h += `<h3>Vlucht</h3>` + tbl(['', 'Heen', 'Terug'], [['Vertrekdatum', dFmt(v.heenDatum), dFmt(v.terugDatum)], ['Aankomstdatum (lokaal)', dFmt(v.heenAankomstDatum || v.heenDatum), dFmt(v.terugAankomstDatum || v.terugDatum)], ['Van – naar', esc(v.van) + ' → ' + esc(v.naar), esc(v.terugVan || v.naar) + ' → ' + esc(v.van)], ['Vertrek / aankomst (lokaal)', `${esc(v.heenVertrek || '—')} / ${esc(v.heenAankomst || '—')}`, `${esc(v.terugVertrek || '—')} / ${esc(v.terugAankomst || '—')}`], ['Vluchtnummer', esc(v.heenNr || '—'), esc(v.terugNr || '—')]]) + `<p>${esc(v.maatschappij)} · overstappen: ${esc(v.stops || '—')} · ${persVoor(t, 'Vlucht')} pers. · bagage: ${esc(v.bagage)} · status ${esc(v.status)} · referentie ${ref(v.ref)}</p>`;
-  if (a.nodig) h += `<h3>Huurauto</h3><p>${esc(a.verhuurder || '—')} ${esc(a.klasse)} (${esc(a.versnelling)}) · ophalen ${esc(a.ophaalPlaats)} ${dFmt(a.ophaalDatum)} ${esc(a.ophaalTijd)} (lokaal) · inleveren ${esc(a.inleverPlaats)} ${dFmt(a.inleverDatum)} ${esc(a.inleverTijd)} (lokaal)<br>Verzekering: ${esc(a.verzekering)} · eigen risico ${a.eigenRisico != null ? mny(a.eigenRisico) : '—'} · borg ${a.borg != null ? mny(a.borg) : '—'} · brandstofbeleid ${esc(a.brandstofBeleid)} · tweede bestuurder: ${a.tweede ? 'ja' : 'nee'} · status ${esc(a.status)} · reserveringsnr ${ref(a.ref)}</p>`;
+  if (a.nodig) h += `<h3>Huurauto</h3><p>${esc(a.verhuurder || '—')} ${esc(a.klasse)} (${esc(a.versnelling)}) · ophalen ${esc(a.ophaalPlaats)} ${dFmt(a.ophaalDatum)} ${esc(a.ophaalTijd)} (lokaal) · inleveren ${esc(a.inleverPlaats)} ${dFmt(a.inleverDatum)} ${esc(a.inleverTijd)} (lokaal)<br>Verzekering: ${a.verzekeringKeuze === 'volledig' ? 'volledige verzekering gewenst' : 'basisdekking'}${a.verzekering ? ' (' + esc(a.verzekering) + ')' : ''} · eigen risico ${a.eigenRisico != null ? mny(a.eigenRisico) : '—'} · borg ${a.borg != null ? mny(a.borg) : '—'} · brandstofbeleid ${esc(a.brandstofBeleid)} · tweede bestuurder: ${a.tweede ? 'ja' : 'nee'} · status ${esc(a.status)} · reserveringsnr ${ref(a.ref)}</p>`;
   h += `<h3>Verblijf</h3>` + (t.hotels.lijst.length ? tbl(['Plaats / hotel', 'Datums', 'Nachten', 'Prijs/nacht', 'Ontbijt', 'Parkeren', 'Status', 'Bevestiging'], t.hotels.lijst.map(x => [`<b>${esc(x.naam || '—')}</b><br>${esc(x.plaats)}<br><span class="bron">${esc(x.adres)} ${esc(x.tel)}</span>`, `${dFmt(x.van)} – ${dFmt(x.tot)}`, nachten(x), x.prijs != null && x.prijs !== '' ? mny(+x.prijs) : '—', { ja: 'inbegrepen', extra: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.ontbijt], { gratis: 'gratis', betaald: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.parkeren], esc(x.status) + (x.annuleren ? `<br><span class="bron">annuleren: ${esc(x.annuleren)}</span>` : ''), ref(x.ref)])) : '<p>Geen verblijven ingevuld.</p>');
   if (t.contacten.length || t.prakt.verzekeraar) h += `<h3>Contacten en verzekering</h3>` + tbl(['Rol', 'Naam', 'Telefoon', 'Notitie'], t.contacten.map(c => [esc(c.rol), esc(c.naam), esc(c.tel), esc(c.notitie)]).concat(t.prakt.verzekeraar ? [['Reisverzekering', esc(t.prakt.verzekeraar), esc(t.prakt.alarm), 'polis: ' + ref(t.prakt.polis)]] : []));
   h += `</div>`;
@@ -820,15 +823,23 @@ VIEWS.data = () => {
 };
 
 /* De gekozen vlucht bepaalt de reisdata; autodata volgen mee zolang u ze niet zelf hebt aangepast */
+const tMin = (datum, tijd) => okD(datum) && /^\d{2}:\d{2}$/.test(tijd || '') ? Date.parse(datum + 'T' + tijd + ':00Z') / 60000 : null;
+const minNaarDT = m => { const d = new Date(m * 60000); return [iso(d), d.toISOString().slice(11, 16)]; };
 function syncDatums(t) {
   const v = t.vlucht; if (!v.nodig) return;
-  const start = okD(v.heenAankomstDatum) ? v.heenAankomstDatum : (okD(v.heenDatum) ? v.heenDatum : ''), eind = okD(v.terugDatum) ? v.terugDatum : '', p = t.sync;
-  if (start) { t.reis.vertrek = start; if (!t.auto.ophaalDatum || t.auto.ophaalDatum === p.start) t.auto.ophaalDatum = start; }
-  if (eind) { t.reis.terug = eind; if (!t.auto.inleverDatum || t.auto.inleverDatum === p.eind) t.auto.inleverDatum = eind; }
+  const start = okD(v.heenAankomstDatum) ? v.heenAankomstDatum : (okD(v.heenDatum) ? v.heenDatum : ''), eind = okD(v.terugDatum) ? v.terugDatum : '', p = t.sync, au = t.auto;
+  if (start) t.reis.vertrek = start;
+  if (eind) t.reis.terug = eind;
+  /* ophalen = aankomst + buffer; inleveren = vertrek terugvlucht - buffer (lokale tijd, valt soms op een andere dag) */
+  let od = start, ot = '', id = eind, it = '';
+  const aan = tMin(start, v.heenAankomst), vert = tMin(eind, v.terugVertrek);
+  if (aan != null) [od, ot] = minNaarDT(aan + (num(au.bufferOphaal) ?? 60));
+  if (vert != null) [id, it] = minNaarDT(vert - (num(au.bufferInlever) ?? 180));
+  const volg = (key, nieuw, vorig) => { if (nieuw && (!au[key] || au[key] === vorig)) au[key] = nieuw; };
+  volg('ophaalDatum', od, p.od); volg('ophaalTijd', ot, p.ot); volg('inleverDatum', id, p.id); volg('inleverTijd', it, p.it);
   const tv = v.terugVan || v.naar;
-  if (v.naar && (!t.auto.ophaalPlaats || t.auto.ophaalPlaats === p.naar)) t.auto.ophaalPlaats = v.naar;
-  if (tv && (!t.auto.inleverPlaats || t.auto.inleverPlaats === p.terugVan)) t.auto.inleverPlaats = tv;
-  t.sync = { start: start || p.start, eind: eind || p.eind, naar: v.naar || p.naar, terugVan: tv || p.terugVan };
+  volg('ophaalPlaats', v.naar, p.naar); volg('inleverPlaats', tv, p.terugVan);
+  t.sync = { start: start || p.start, eind: eind || p.eind, naar: v.naar || p.naar, terugVan: tv || p.terugVan, od: od || p.od, ot: ot || p.ot, id: id || p.id, it: it || p.it };
 }
 const codes = txt => String(txt || '').split(/[,;\n]+/).map(x => x.trim()).filter(Boolean).map(x => /^[a-z]{3}$/i.test(x) ? x.toUpperCase() : x);
 const maandEinde = m => { const [y, mo] = m.split('-').map(Number); return iso(new Date(Date.UTC(y, mo, 0))); };
@@ -840,7 +851,35 @@ function roamZoek(t) {
 }
 
 /* ====================== Berekende blokken (live bijgewerkt) ====================== */
+const engDatum = d => okD(d) ? dt(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '';
 const CALC = {
+  autoTijden: () => {
+    const t = T(), a = t.auto, v = t.vlucht; if (!a.nodig) return 'Geen huurauto: geen ophaal- en inlevertijd nodig.';
+    const pk = tMin(a.ophaalDatum, a.ophaalTijd), dr = tMin(a.inleverDatum, a.inleverTijd), w = [];
+    if (v.nodig && (!v.heenAankomst || !v.terugVertrek)) w.push('Vul bij de vlucht de aankomsttijd heen en de vertrektijd terug in (lokale tijd); dan worden de tijden hieronder automatisch ingevuld.');
+    if (v.nodig && !['geboekt', 'betaald'].includes(v.status)) w.push('Voorlopig: de vlucht staat nog niet als geboekt. Zet de status op “geboekt” zodra u bevestigd hebt; boek de auto pas daarna.');
+    const rij = (kop, d, tm, pl) => `<div><b>${kop}:</b> ${okD(d) ? wd(d) + ' ' + dFmt(d) : '—'} om ${esc(tm || '—')} (lokale tijd${pl ? ', ' + esc(pl) : ''})</div>`;
+    let uit = rij('Ophalen', a.ophaalDatum, a.ophaalTijd, a.ophaalPlaats) + rij('Inleveren', a.inleverDatum, a.inleverTijd, a.inleverPlaats);
+    if (pk != null && dr != null) {
+      const u = (dr - pk) / 60;
+      if (u <= 0) w.push('Inleveren ligt vóór ophalen.');
+      else uit += `<div><b>Huurperiode:</b> ${NF1.format(u)} uur = ${Math.ceil(u / 24)} dag(en) van 24 uur. <span class="noot">Verhuurders rekenen vaak per begonnen 24 uur; later inleveren dan de ophaaltijd kan een extra dag kosten. Controleer dit in het aanbod.</span></div>`;
+    }
+    [['ophalen', a.ophaalTijd], ['inleveren', a.inleverTijd]].forEach(([k, tm]) => { if (/^\d{2}:\d{2}$/.test(tm || '') && (tm < '07:00' || tm >= '22:00')) w.push(`Tijd van ${k} (${tm}) ligt buiten gebruikelijke kantooruren: controleer de openingstijden van het verhuurkantoor.`); });
+    if (v.nodig && v.heenAankomst) uit += `<div class="noot">Regel: ophalen = aankomst vlucht + ${num(a.bufferOphaal) ?? 60} min; inleveren = vertrek terugvlucht − ${num(a.bufferInlever) ?? 180} min. U kunt de velden hieronder zelf overschrijven; ze volgen de vlucht niet meer als u ze wijzigt.</div>`;
+    return uit + w.map(x => `<div class="banner">${esc(x)}</div>`).join('');
+  },
+  dcZoek: () => {
+    const t = T(), a = t.auto, v = t.vlucht; if (!a.nodig) return '';
+    const zelfde = !a.inleverPlaats || a.inleverPlaats === a.ophaalPlaats;
+    const rij = [['Pick-up location', a.ophaalPlaats], ['Return car in same location', zelfde ? 'ja' : 'nee: ' + a.inleverPlaats], ['Pick-up date', engDatum(a.ophaalDatum)], ['Time', a.ophaalTijd], ['Drop-off date', engDatum(a.inleverDatum)], ['Time (drop-off)', a.inleverTijd], ['Driver’s age', a.leeftijd ?? '']];
+    const reis = v.nodig && v.van && v.naar ? [`Flight ${v.heenNr || ''} ${v.maatschappij || ''}`.trim() + `: ${v.van} to ${v.naar}`, `Departure: ${engDatum(v.heenDatum)} ${v.heenVertrek || ''} (local time ${v.van})`, `Arrival: ${engDatum(v.heenAankomstDatum || v.heenDatum)} ${v.heenAankomst || ''} (local time ${v.naar})`, `Return flight ${v.terugNr || ''}: ${v.terugVan || v.naar} to ${v.van}`, `Departure: ${engDatum(v.terugDatum)} ${v.terugVertrek || ''} (local time ${v.terugVan || v.naar})`].join('\n') : '';
+    const verz = a.verzekeringKeuze === 'volledig' ? `<div class="banner"><b>Volledige verzekering gewenst.</b> Let op wat de “Full Coverage” van DiscoverCars is (volgens hun hulppagina’s, gelezen op 23-10-2026): een <b>vergoedingspolis</b>, geen dekking zonder eigen risico aan de balie. U betaalt schade of eigen risico eerst aan de verhuurder en claimt het daarna terug via “My Booking”. De <b>borg blijft gewoon</b> bestaan, de vergoeding heeft een <b>maximum</b> (staat op de voucher), schade aan derden valt er niet onder, en de claimtermijn staat in uw voucher (de bronnen noemen 28 en 90 dagen). Wilt u echt niets voorschieten, vergelijk dan met de eigen dekking van de verhuurder aan de balie (meestal duurder; controleer in het aanbod). Zie <a target="_blank" rel="noopener" href="https://www.discovercars.com/help/articles/protection-coverage/discovercars-full-coverage/what-is-full-coverage">wat is Full Coverage</a> en de <a target="_blank" rel="noopener" href="https://www.discovercars.com/terms-and-conditions">huurvoorwaarden</a>.</div>` : '<div class="banner">Basisdekking gekozen: u draagt het eigen risico. Controleer de hoogte ervan in het aanbod.</div>';
+    const w = a.verzekeringKeuze === 'volledig' && a.volledigIncl !== 'ja' ? '<div class="banner">Vergelijk alleen aanbiedingen mét volledige verzekering, of tel die erbij op, en zet “Bevat de gekozen prijs de volledige verzekering?” op ja zodra dat klopt.</div>' : '';
+    return `<table class="rtab"><thead><tr><th>Veld op DiscoverCars</th><th>Waarde</th><th></th></tr></thead><tbody>${rij.map(r => `<tr><td data-l="Veld">${esc(r[0])}</td><td data-l="Waarde">${r[1] === '' || r[1] == null ? '<span class="noot">—</span>' : '<b>' + esc(r[1]) + '</b>'}</td><td>${r[1] === '' || r[1] == null ? '' : `<button class="klein" data-a="kopie" data-v="${esc(r[1])}">Kopieer</button>`}</td></tr>`).join('')}</tbody></table>
+      <div class="rij"><a class="knop" target="_blank" rel="noopener" href="https://www.discovercars.com/">Open DiscoverCars ↗</a>${reis ? `<button data-a="kopie" data-v="${esc(reis)}">Kopieer reisschema (voor “Search by flight”)</button>` : ''}</div>
+      <p class="noot">Zoekgegevens kunnen niet automatisch worden doorgegeven (geen bekende link-opbouw): kopieer ze of plak het reisschema in “Search by flight” op de DiscoverCars-homepage. Die functie is niet door mij getest; controleer altijd het zoekformulier.</p>${verz}${w}`;
+  },
   roam: () => {
     const t = T(), z = roamZoek(t), rij = [['Starting airport(s)', z.van.join(', ')], ['Where to: specific destination(s)', z.naar.join(', ')], ['Within certain dates: earliest departure date', z.vroegste], ['Latest departure date', z.laatste], ['Length of stay (days): min', z.dagenMin ?? ''], ['Length of stay (days): max', z.dagenMax ?? ''], ['Number of passengers (adults)', z.adults || ''], ['Advanced: max price ($)', z.maxPrijs ?? ''], ['Advanced: max stops per direction', z.maxStops === '' ? '' : ({ 0: 'Nonstop only', 1: '1 stop or fewer', 2: '2 stops or fewer' })[z.maxStops]], ['Advanced: max flight duration (hours)', z.maxUren ?? '']];
     const ontbr = [!z.van.length && 'vertrekluchthavens', !z.naar.length && 'aankomstluchthavens', (!z.vroegste || !z.laatste) && 'zoekperiode', (z.dagenMin == null || z.dagenMax == null) && 'minimum en maximum aantal dagen'].filter(Boolean);
@@ -1020,7 +1059,7 @@ app.addEventListener('input', e => {
   if (el.dataset.ch === 'rekenhulp') return A.rekenhulp(el);
   if (el.dataset.wk !== undefined) { const v = num(el.value); if (v == null) delete T().werkelijk[el.dataset.wk]; else T().werkelijk[el.dataset.wk] = v; opslaan(); return; }
   if (el.dataset.b === undefined) return;
-  setP(T(), el.dataset.b, el.type === 'checkbox' ? el.checked : el.type === 'number' ? num(el.value) : el.value); syncDatums(T()); opslaan(); refreshCalc();
+  setP(T(), el.dataset.b, el.type === 'checkbox' ? el.checked : el.type === 'number' ? num(el.value) : el.value); if (el.dataset.b === 'auto.verzekeringKeuze') { try { localStorage.setItem('rr_auto_verz', el.value); } catch { } } syncDatums(T()); opslaan(); refreshCalc();
 });
 app.addEventListener('change', e => {
   const el = e.target;
@@ -1053,7 +1092,7 @@ function demoReis() {
   Object.assign(t.reis, { landen: 'Portugal', startplaats: 'Lissabon', eindplaats: 'Lissabon', vertrek: '2027-05-10', terug: '2027-05-14', volw: 2, kind: 0, budget: 3000, valuta: 'EUR' });
   Object.assign(t.vlucht, { zoekVan: 'AMS, DUS, FRA', zoekNaar: 'LIS, OPO', maandVan: '2027-05', maandTot: '2027-05', dagenMin: 4, dagenMax: 6, van: 'AMS', naar: 'LIS', heenDatum: '2027-05-10', heenVertrek: '07:30', heenAankomst: '09:25', terugDatum: '2027-05-14', terugVertrek: '18:00', terugAankomst: '22:05', prijs: 480, prijsValuta: 'EUR', prijsPer: 'totaal', prijsType: 'schatting', bron: 'DEMO' });
   t.stops = [{ id: uid(), plaats: 'Lissabon', nachten: 2 }, { id: uid(), plaats: 'Porto', nachten: 2 }];
-  Object.assign(t.auto, { verhuurder: 'DEMO Verhuur', prijs: 190, prijsType: 'schatting', ophaalPlaats: 'Lissabon', ophaalDatum: '2027-05-11', inleverDatum: '2027-05-14', verbruik: 6, eenheidsprijs: 1.9 });
+  Object.assign(t.auto, { verhuurder: 'DEMO Verhuur', prijs: 190, prijsType: 'schatting', verbruik: 6, eenheidsprijs: 1.9 });
   Object.assign(t.gids, { interesses: ['stad', 'eten'], maxKm: 350, maxUren: 4.5 }); t.prakt.nationaliteit = 'Nederlandse';
   const plan = [['Lissabon', 'aankomst', null, null, 'Europe/Lisbon'], ['Lissabon', 'verblijfsdag', 0, 0, 'Europe/Lisbon'], ['Porto', 'rijdag', 315, 3.25, 'Europe/Lisbon'], ['Porto', 'verblijfsdag', 0, 0, 'Europe/Lisbon'], ['Lissabon', 'vertrek', 315, 3.25, 'Europe/Lisbon']];
   plan.forEach(([pl, ty, km, u, tz], i) => { const d = nieuweDag(addD('2027-05-10', i)); Object.assign(d, { plaats: pl, type: ty, km, uren: u, tz, lunchPp: 15, dinerPp: 30 }); t.dagen.push(d); });
