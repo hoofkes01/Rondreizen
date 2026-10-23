@@ -76,6 +76,7 @@ Daarna: Frankfurt-eerst-routine voor meerdere bestemmingen binnen 500 km uitvoer
 
 ## Stand reisgids (stap 4)
 Eerste versie gebouwd op uitdrukkelijk verzoek van de gebruiker (bouwspecificatie rondreisapp_v01), vóór goedkeuring van stap 1.
+Volgorde in de app: 1 Vlucht (zoekcriteria voor Get-Roam, daarna goedkoopste uitkomst invullen; die data worden de reisdata) → 2 Auto en nachten (nachtenverdeling maakt dagen en verblijven aan) → 3 Reis → verder. Get-Roam-link vooraf invullen is niet mogelijk/onbekend: de app toont de velden met kopieerknoppen.
 Werkend: intake, route, dagpagina's, kosten, dagboek met foto's, reisboek, back-up. Handmatig (geen API): reviews, prijzen, routeafstand.
 Online op verzoek: plaats/tijdzone en weer (Open-Meteo), koers (Frankfurter/ECB). Alleen links: waarschuwingen, verkeer, Google Maps.
 Nog niet gebouwd: zie tab Gegevens in de app. Vluchtzoeker en autozoeker blijven aparte modules.

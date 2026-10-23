@@ -30,7 +30,7 @@
   label { display:block; font-size:.85rem; color:var(--zacht); margin-bottom:2px; }
   .hint { font-size:.78rem; color:var(--zacht); margin-top:2px; }
   input, select, textarea, button { font:inherit; color:inherit; max-width:100%; }
-  input[type=text], input[type=number], input[type=date], input[type=time], input[type=url], select, textarea { width:100%; padding:7px 8px; border:1px solid var(--lijn); border-radius:6px; background:var(--bg); }
+  input[type=text], input[type=number], input[type=date], input[type=time], input[type=url], input[type=month], select, textarea { width:100%; padding:7px 8px; border:1px solid var(--lijn); border-radius:6px; background:var(--bg); }
   .vink { display:flex; gap:8px; align-items:flex-start; }
   .vink input { margin-top:5px; }
   .vink label { color:var(--tekst); font-size:.95rem; margin:0; }
@@ -126,6 +126,7 @@ const num = v => (v === '' || v == null || !isFinite(+v)) ? null : +v;
 const sum = a => a.reduce((x, y) => x + y, 0);
 const NF = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 });
 const NF1 = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 });
+const ROAM = 'https://get-roam.com/flexible-search';
 const SYM = { EUR: '€', USD: 'US$', GBP: '£' };
 const getP = (o, p) => p.split('.').reduce((a, k) => a == null ? a : a[k], o);
 function setP(o, p, v) { const k = p.split('.'); const l = k.pop(); const t = k.reduce((a, x) => a[x], o); t[l] = v; }
@@ -210,12 +211,14 @@ function nieuweReis(naam) {
   return {
     id: uid(), naam: naam || 'Nieuwe reis', gemaakt: new Date().toISOString(), demo: false,
     reis: { landen: '', startplaats: '', eindplaats: '', vertrek: '', terug: '', flexibel: false, volw: 2, kind: 0, kindLeeftijden: '', reisvorm: 'rondreis', tempo: 'normaal', valuta: 'EUR', budget: null, taal: 'nl', detail: 'normaal', toegang: '', wensen: '', toonMijl: false },
-    vlucht: { nodig: true, personen: null, van: '', naar: '', terugVan: '', flex: '', bagage: '1 koffer van 23 kg per persoon', overstappen: '', tijdWens: '', budget: null, maatschappij: '', heenDatum: '', heenVertrek: '', heenAankomst: '', heenNr: '', terugDatum: '', terugVertrek: '', terugAankomst: '', terugNr: '', prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', liters: 30, literprijs: 2.45, literprijsDatum: '', parkeren: 200, extra: null, notitie: '' },
+    vlucht: { nodig: true, personen: null, zoekVan: '', zoekNaar: '', maandVan: '', maandTot: '', exactVan: '', exactTot: '', dagenMin: null, dagenMax: null, maxStops: '', maxUren: null, maxPrijsUsd: null, bagage: '1 koffer van 23 kg per persoon',
+      van: '', naar: '', terugVan: '', maatschappij: '', stops: '', heenDatum: '', heenVertrek: '', heenAankomstDatum: '', heenAankomst: '', heenNr: '', terugDatum: '', terugVertrek: '', terugAankomstDatum: '', terugAankomst: '', terugNr: '',
+      prijs: null, prijsValuta: 'EUR', prijsPer: '', koers: null, koersDatum: '', prijsType: 'schatting', bron: 'Get-Roam', prijsDatum: '', status: 'idee', ref: '', link: '', liters: 30, literprijs: 2.45, literprijsDatum: '', parkeren: 200, extra: null, notitie: '' },
     auto: { nodig: true, personen: null, verhuurder: '', klasse: '', versnelling: 'automaat', ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '', verzekering: 'volledig, nul eigen risico', eigenRisico: null, borg: null, tweede: false, tweedeKosten: null, extraVerz: null, brandstofBeleid: 'vol/vol', brandstofSoort: 'benzine', verbruik: null, eenheidsprijs: null, eenheidsprijsDatum: '', ovWens: '', ovKosten: null, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', notitie: '' },
     hotels: { personen: null, crit: { maxPrijs: null, kamers: 1, bedden: '', ontbijt: 'voorkeur', parkeren: 'voorkeur', annuleren: 'voorkeur', minReviews: 25, maxNegPct: 10, ligging: '', wensen: '', def: REVDEF }, lijst: [] },
     gids: { interesses: [], maxKm: null, maxUren: null, vertrektijd: '09:00', uiterstAankomst: '18:00', pauze: '', minTijd: '', maxWissels: null, minNachten: null, rustdagen: '', eten: '', uitgaan: '', muziek: '', cultuur: '', sport: '', winkelen: '', extra: '' },
     prakt: { nationaliteit: '', document: 'paspoort', doel: 'vakantie', rijbewijsLand: 'Nederland', ipr: false, apparaten: '', esim: '', betalen: '', verzekering: '', gezondheid: '', verzekeraar: '', alarm: '', polis: '' },
-    dagen: [], buffer: 10, extra: standaardExtra(), valutaLokaal: { code: '', koers: null, datum: '', bron: '' },
+    dagen: [], stops: [], sync: { start: '', eind: '', naar: '', terugVan: '' }, buffer: 10, extra: standaardExtra(), valutaLokaal: { code: '', koers: null, datum: '', bron: '' },
     voorbereiding: standaardVoorbereiding(), info: standaardInfo(), contacten: [], werkelijk: {},
     boek: { foto: true, dagboek: true, refs: false, bronnen: true }
   };
@@ -241,7 +244,7 @@ const nieuwHotel = () => ({ id: uid(), plaats: '', naam: '', adres: '', tel: '',
 const nieuwItem = () => ({ id: uid(), tijd: '', soort: 'activiteit', titel: '', adres: '', pv: null, pk: null, munt: 'basis', status: 'controleren', prijsDatum: '', link: '', openingstijden: '', notitie: '' });
 const nieuweDag = datum => ({ id: uid(), datum, plaats: '', type: 'verblijfsdag', titel: '', km: null, uren: null, vertrek: '', aankomst: '', tz: '', geo: null, programma: [], lunchPp: null, dinerPp: null, overig: null, overigOmschr: '', avond: '', links: [], check: standaardDagCheck(), notitie: '', weer: null, dagboek: { tekst: '', werkelijk: '', favorieten: '', weerHand: '', fotos: [] } });
 const standaardDagCheck = () => ['Weer en waarschuwingen bekeken', 'Verkeer en wegafsluitingen bekeken', 'Openingstijden en reserveringen bevestigd', 'Route en aankomsttijd bekeken', 'Brandstof/laden en parkeren geregeld', 'Lokale veiligheidsinformatie bekeken'].map(t => ({ t, ok: false }));
-const NIEUW = { hotel: nieuwHotel, item: nieuwItem, contact: () => ({ id: uid(), rol: '', naam: '', tel: '', notitie: '' }), extra: () => ({ id: uid(), post: '', bedrag: null, type: 'schatting', bron: '', datum: '' }), link: () => ({ t: '', u: '' }), taak: () => ({ id: uid(), tekst: '', dagenVoor: 30, link: '', klaar: false, kosten: null, notitie: '' }), info: () => ({ id: uid(), onderwerp: '', waarde: '', bron: '', datum: '', geverifieerd: false }) };
+const NIEUW = { stop: () => ({ id: uid(), plaats: '', nachten: 1 }), hotel: nieuwHotel, item: nieuwItem, contact: () => ({ id: uid(), rol: '', naam: '', tel: '', notitie: '' }), extra: () => ({ id: uid(), post: '', bedrag: null, type: 'schatting', bron: '', datum: '' }), link: () => ({ t: '', u: '' }), taak: () => ({ id: uid(), tekst: '', dagenVoor: 30, link: '', klaar: false, kosten: null, notitie: '' }), info: () => ({ id: uid(), onderwerp: '', waarde: '', bron: '', datum: '', geverifieerd: false }) };
 
 /* ====================== Berekeningen ====================== */
 const personen = t => (t.reis.volw || 0) + (t.reis.kind || 0);
@@ -257,12 +260,20 @@ function itemKosten(t, it) {
   const pk = num(it.pk), v = t.reis.volw || 0, k = t.reis.kind || 0;
   return (pv * v + (k ? (pk != null ? pk : pv) * k : 0)) * f;
 }
+function vluchtPrijs(t) {
+  const v = t.vlucht, p = num(v.prijs); if (p == null) return { b: null, opm: '' };
+  if (!v.prijsPer) return { b: null, opm: 'kies bij de vlucht of de prijs per persoon of voor de hele groep geldt' };
+  let f = 1, opm = '';
+  if (v.prijsValuta !== t.reis.valuta) { const k = num(v.koers); if (!k) return { b: null, opm: `koers ${v.prijsValuta} → ${t.reis.valuta} ontbreekt (haal hem op bij de vlucht)` }; f = 1 / k; opm = `${NF.format(p)} ${v.prijsValuta}${v.prijsPer === 'pp' ? ' p.p.' : ''} omgerekend met koers ${k} (${dFmt(v.koersDatum)})`; }
+  return { b: p * f * (v.prijsPer === 'pp' ? persVoor(t, 'Vlucht') : 1), opm };
+}
 function kostenRegels(t) {
   const R = [], r = t.reis, pers = personen(t);
   const add = (o, post, b, type, bron, datum, key, extra = {}) => R.push(Object.assign({ o, post, b: b == null ? null : b, type: type || 'schatting', bron: bron || '', datum: datum || '', key, onb: 0, opm: '' }, extra));
   const v = t.vlucht;
   if (v.nodig) {
-    add('Vlucht', `Vluchten heen en terug (${persVoor(t, 'Vlucht')} pers.)`, num(v.prijs), v.prijsType, v.bron, v.prijsDatum, 'vlucht');
+    const vp = vluchtPrijs(t);
+    add('Vlucht', `Vluchten heen en terug (${persVoor(t, 'Vlucht')} pers.)`, vp.b, v.prijsType, v.bron, v.prijsDatum, 'vlucht', { opm: vp.opm });
     const lit = num(v.liters), lp = num(v.literprijs);
     add('Vlucht', 'Brandstof naar luchthaven en terug', lit != null && lp != null ? lit * lp : null, 'schatting', 'eigen invoer (literprijs nog controleren)', v.literprijsDatum, 'vlucht-brandstof');
     add('Vlucht', 'Parkeren bij luchthaven', num(v.parkeren), 'schatting', 'eigen invoer', '', 'vlucht-park');
@@ -360,9 +371,10 @@ function voortgang(t) {
   const r = t.reis, v = t.vlucht, a = t.auto, g = t.gids, p = t.prakt;
   const S = [];
   const chk = (naam, items) => { const ontbreekt = items.filter(([, ok]) => !ok).map(([l]) => l); S.push({ naam, ontbreekt, totaal: items.length, klaar: items.length - ontbreekt.length }); };
-  chk('Reis', [['naam', !!t.naam], ['landen/regio', !!r.landen], ['startplaats', !!r.startplaats], ['vertrekdatum', okD(r.vertrek)], ['einddatum', okD(r.terug)], ['aantal reizigers', (r.volw || 0) > 0], ['totaalbudget', num(r.budget) != null]]);
-  if (v.nodig) chk('Vlucht', [['vertrekluchthaven', !!v.van], ['aankomstluchthaven', !!v.naar], ['heen- en terugdatum', okD(v.heenDatum) && okD(v.terugDatum)], ['prijs', num(v.prijs) != null]]);
+  const reisChk = () => chk('Reis', [['naam', !!t.naam], ['landen/regio', !!r.landen], ['startplaats', !!r.startplaats], ['vertrekdatum', okD(r.vertrek)], ['einddatum', okD(r.terug)], ['aantal reizigers', (r.volw || 0) > 0], ['totaalbudget', num(r.budget) != null]]);
+  if (v.nodig) chk('Vlucht', [['luchthavens om te zoeken', !!(v.zoekVan && v.zoekNaar)], ['zoekperiode', !!((v.maandVan && v.maandTot) || (v.exactVan && v.exactTot))], ['aantal dagen (min en max)', num(v.dagenMin) != null && num(v.dagenMax) != null], ['gekozen vlucht: heen- en terugdatum', okD(v.heenDatum) && okD(v.terugDatum)], ['prijs en prijsbasis', num(v.prijs) != null && !!v.prijsPer]]);
   if (a.nodig) chk('Auto', [['ophaalplaats', !!a.ophaalPlaats], ['ophaal- en inleverdatum', okD(a.ophaalDatum) && okD(a.inleverDatum)], ['huurprijs', num(a.prijs) != null]]);
+  reisChk();
   chk('Verblijf', [['maximale prijs per nacht', num(t.hotels.crit.maxPrijs) != null], ['minstens één verblijf', t.hotels.lijst.length > 0], ['prijs bij elk verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => num(h.prijs) != null)], ['reviewgegevens bij elk hotel', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => num(h.gN) != null && num(h.bN) != null)]]);
   chk('Reisgids', [['interesses', g.interesses.length > 0], ['limiet km per dag', num(g.maxKm) != null], ['limiet rijtijd per dag', num(g.maxUren) != null], ['nationaliteit (voor inreisregels)', !!p.nationaliteit], ['dagen aangemaakt', t.dagen.length > 0], ['plaats bij elke dag', t.dagen.length > 0 && t.dagen.every(d => d.plaats)], ['tijdzone bij elke dag', t.dagen.length > 0 && t.dagen.every(d => geldigeTz(d.tz))]]);
   return S;
@@ -386,7 +398,7 @@ function fld(path, label, type = 't', o = {}) {
   let inp;
   if (type === 's') inp = `<select id="${id}" data-b="${path}"${r}>${o.opts.map(x => { const [k, tt] = Array.isArray(x) ? x : [x, x]; return `<option value="${esc(k)}"${(v ?? '') == k ? ' selected' : ''}>${esc(tt)}</option>`; }).join('')}</select>`;
   else if (type === 'a') inp = `<textarea id="${id}" data-b="${path}" rows="${o.rows || 3}"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''}>${esc(v)}</textarea>`;
-  else inp = `<input id="${id}" type="${{ t: 'text', n: 'number', d: 'date', h: 'time', u: 'url' }[type]}"${type === 'n' ? ' step="any"' : ''} data-b="${path}"${r} value="${esc(v)}"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''}${o.min != null ? ` min="${o.min}"` : ''}>`;
+  else inp = `<input id="${id}" type="${{ t: 'text', n: 'number', d: 'date', h: 'time', u: 'url', m: 'month' }[type]}"${type === 'n' ? ' step="any"' : ''} data-b="${path}"${r} value="${esc(v)}"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''}${o.min != null ? ` min="${o.min}"` : ''}>`;
   return `<div class="${o.w ? 'wide' : ''}"><label for="${id}">${esc(label)}</label>${inp}${h}</div>`;
 }
 function multi(path, opts) {
@@ -399,7 +411,7 @@ const sectie = (titel, uitleg, inhoud) => `<section class="card"><h2>${titel}</h
 const badge = (k, tekst) => `<span class="b b-${{ g: 'goed', l: 'let', f: 'fout', n: 'n' }[k] || 'n'}">${esc(tekst)}</span>`;
 
 /* ====================== Tabbladen ====================== */
-const TABS = [['start', 'Start'], ['reis', '1 Reis'], ['vlucht', '2 Vlucht'], ['auto', '3 Auto'], ['verblijf', '4 Verblijf'], ['gids', '5 Reisgids'], ['route', 'Route'], ['dag', 'Onderweg'], ['dagboek', 'Dagboek'], ['kosten', 'Kosten'], ['boek', 'Reisboek (PDF)'], ['data', 'Gegevens']];
+const TABS = [['start', 'Start'], ['vlucht', '1 Vlucht'], ['auto', '2 Auto en nachten'], ['reis', '3 Reis'], ['verblijf', '4 Verblijf'], ['gids', '5 Reisgids'], ['route', 'Route'], ['dag', 'Onderweg'], ['dagboek', 'Dagboek'], ['kosten', 'Kosten'], ['boek', 'Reisboek (PDF)'], ['data', 'Gegevens']];
 let tab = 'start', dagSel = 0;
 const VIEWS = {};
 
@@ -426,15 +438,14 @@ VIEWS.start = () => {
 };
 
 VIEWS.reis = () => {
-  const t = T();
-  return sectie('1 Reisintake', 'Basisgegevens van de reis. Alles is te wijzigen; niets is verplicht, maar zonder gegevens zijn kosten en route minder nauwkeurig.',
-    `<div class="grid">
-      ${fld('naam', 'Naam van de reis', 't', { w: 1 })}
+  const t = T(), vl = t.vlucht.nodig;
+  return sectie('3 Reisgegevens', 'De reisdata en het aantal reizigers komen uit de vlucht (tab 1). Hier vult u de rest van de basisgegevens in. Niets is verplicht, maar zonder gegevens zijn kosten en route minder nauwkeurig.',
+    `<div class="box" style="margin-top:0" data-calc="reisdatums"></div><div class="grid" style="margin-top:12px">
+      ${fld('naam', 'Naam van de reis', 't')}
       ${fld('reis.landen', 'Land(en) / regio’s', 't', { ph: 'bijv. Portugal' })}
       ${fld('reis.startplaats', 'Beginpunt', 't')}${fld('reis.eindplaats', 'Eindpunt', 't')}
-      ${fld('reis.vertrek', 'Eerste reisdag', 'd', { r: 1 })}${fld('reis.terug', 'Laatste reisdag', 'd', { r: 1 })}
+      ${vl ? '' : fld('reis.vertrek', 'Eerste reisdag', 'd', { r: 1 }) + fld('reis.terug', 'Laatste reisdag', 'd', { r: 1 }) + fld('reis.volw', 'Aantal volwassenen', 'n', { min: 0, r: 1 }) + fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1 })}
       ${fld('reis.flexibel', 'Reisdata zijn flexibel', 'c')}
-      ${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 0, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1 })}${fld('reis.kindLeeftijden', 'Leeftijden kinderen', 't')}
       ${fld('reis.reisvorm', 'Reisvorm', 's', { opts: [['rondreis', 'rondreis met veel stops'], ['uitvalsbasis', 'enkele uitvalsbases'], ['mix', 'mix']] })}
       ${fld('reis.tempo', 'Tempo', 's', { opts: [['rustig', 'rustig'], ['normaal', 'normaal'], ['actief', 'actief']] })}
       ${fld('reis.valuta', 'Valuta voor de begroting', 's', { r: 1, opts: ['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD'] })}${fld('reis.budget', 'Totaalbudget (hele reis)', 'n', { min: 0 })}
@@ -442,38 +453,54 @@ VIEWS.reis = () => {
       ${fld('reis.toegang', 'Toegankelijkheid / mobiliteit (vrijwillig)', 'a', { w: 1, rows: 2 })}
       ${fld('reis.wensen', 'Overige persoonlijke wensen', 'a', { w: 1, rows: 2 })}
       ${fld('reis.toonMijl', 'Toon afstanden ook in mijl', 'c')}
-    </div>
-    <div class="box">Reisduur: <b data-calc="duur"></b></div>`);
+    </div>`);
 };
 
 VIEWS.vlucht = () => {
-  const t = T();
-  return sectie('2 Vlucht', `De vluchtzoeker blijft een apart onderdeel: <a href="index.html">open de vluchtplanner</a> (Get-Roam blijft bereikbaar via uw dashboard). Hier noteert u de intake en de gekozen vlucht; er worden geen vluchten automatisch gezocht of geboekt.`,
+  const t = T(), v = t.vlucht;
+  let h = sectie('1 Vlucht: eerst de goedkoopste vlucht vinden', `Begin altijd hier. U geeft de zoekcriteria op, zoekt in <a target="_blank" rel="noopener" href="${ROAM}">Get-Roam</a> en vult hieronder de goedkoopste uitkomst in. De data van die vlucht worden de data van de rondreis; daarna volgen de autohuur en het aantal nachten. <a href="index.html">Andere vluchtplanner (Skyscanner)</a>.`,
+    `<div class="grid">${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}</div>${v.nodig ? '' : '<p class="noot">Zonder vlucht vult u de reisdata in op tab 3.</p>'}`);
+  if (!v.nodig) return h + kBox('Vlucht');
+  h += sectie('Stap 1: zoekcriteria', 'Dezelfde velden als op de Get-Roam-pagina “flexible search”. De app kan ze niet automatisch in Get-Roam invullen (er is geen bekende link-opbouw); kopieer ze met de knoppen.',
     `<div class="grid">
-      ${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}
-    </div>` + (t.vlucht.nodig ? `
-    <h3>Intake</h3><div class="grid">
-      ${persVeld('vlucht.personen', t, 'Voor de prijs hieronder.')}
-      ${fld('vlucht.van', 'Vertrekluchthaven', 't', { ph: 'bijv. AMS' })}${fld('vlucht.naar', 'Aankomstluchthaven', 't')}${fld('vlucht.terugVan', 'Terugvlucht vanaf (indien anders)', 't')}
-      ${fld('vlucht.flex', 'Flexibiliteit data', 't', { ph: 'bijv. ± 3 dagen' })}${fld('vlucht.bagage', 'Bagage', 't')}${fld('vlucht.overstappen', 'Overstappen', 's', { opts: [['', 'geen voorkeur'], ['direct', 'alleen rechtstreeks'], ['max1', 'maximaal 1 overstap']] })}
-      ${fld('vlucht.tijdWens', 'Gewenste tijden', 't')}${fld('vlucht.budget', 'Vluchtbudget (totaal)', 'n', { min: 0 })}
-    </div>
-    <h3>Gekozen vlucht <span class="noot">(tijden in lokale tijd van de luchthaven)</span></h3><div class="grid">
-      ${fld('vlucht.maatschappij', 'Maatschappij', 't')}
-      ${fld('vlucht.heenDatum', 'Heenvlucht: datum', 'd')}${fld('vlucht.heenVertrek', 'Vertrek (lokaal)', 'h')}${fld('vlucht.heenAankomst', 'Aankomst (lokaal, evt. andere datum)', 'h')}${fld('vlucht.heenNr', 'Vluchtnummer heen', 't')}
-      ${fld('vlucht.terugDatum', 'Terugvlucht: datum', 'd')}${fld('vlucht.terugVertrek', 'Vertrek (lokaal)', 'h')}${fld('vlucht.terugAankomst', 'Aankomst (lokaal)', 'h')}${fld('vlucht.terugNr', 'Vluchtnummer terug', 't')}
-      ${fld('vlucht.prijs', `Totaalprijs voor alle reizigers (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('vlucht.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld('vlucht.prijsDatum', 'Prijs gecontroleerd op', 'd')}${fld('vlucht.bron', 'Bron van de prijs', 't')}
-      ${fld('vlucht.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld('vlucht.ref', 'Boekingsreferentie (optioneel)', 't', { h: 'Sla alleen op wat nodig is. Geen paspoort- of kaartnummers.' })}${fld('vlucht.link', 'Link naar boeking/aanbieding', 'u')}
+      ${fld('vlucht.zoekVan', 'Vertrekluchthaven(s)', 'a', { rows: 2, ph: 'AMS, DUS, FRA, BRU', h: 'Meerdere mogelijk, gescheiden door komma’s (IATA-codes).' })}
+      ${fld('vlucht.zoekNaar', 'Aankomstluchthaven(s)', 'a', { rows: 2, ph: 'DEN, COS, SLC', h: 'Meerdere mogelijk. Ook ruim: Get-Roam kent ook continenten/landen.' })}
+      ${fld('vlucht.maandVan', 'Vroegste heenvlucht: vanaf maand', 'm')}${fld('vlucht.maandTot', 'Laatste heenvlucht: tot en met maand', 'm')}
+      ${fld('vlucht.exactVan', 'of exacte vroegste heendatum (optioneel)', 'd')}${fld('vlucht.exactTot', 'of exacte laatste heendatum (optioneel)', 'd')}
+      ${fld('vlucht.dagenMin', 'Verblijf: minimaal aantal dagen', 'n', { min: 1 })}${fld('vlucht.dagenMax', 'Verblijf: maximaal aantal dagen', 'n', { min: 1 })}
+      ${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 1, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1, h: 'Get-Roam heeft alleen een veld voor volwassenen.' })}${fld('reis.kindLeeftijden', 'Leeftijden kinderen', 't')}
+      ${fld('vlucht.maxStops', 'Maximaal aantal overstappen per richting', 's', { opts: [['', 'geen voorkeur'], ['0', 'alleen rechtstreeks'], ['1', 'max. 1'], ['2', 'max. 2']] })}${fld('vlucht.maxUren', 'Maximale vliegtijd (uren)', 'n', { min: 0 })}${fld('vlucht.maxPrijsUsd', 'Maximumprijs (in $, zoals Get-Roam vraagt)', 'n', { min: 0 })}
+      ${fld('vlucht.bagage', 'Bagage-eis', 't', { h: 'Get-Roam kan hier niet op filteren: controleer dit bij de boeking.' })}
+    </div><div class="box" data-calc="roam"></div>`);
+  h += sectie('Stap 2: goedkoopste vlucht uit Get-Roam invullen', 'Vul de gekozen vlucht in. Tijden zijn de lokale tijd van de luchthaven. Alleen wat u hier invult wordt gebruikt; de app haalt geen vluchtprijzen op.',
+    `<div class="grid">
+      ${fld('vlucht.maatschappij', 'Maatschappij', 't')}${fld('vlucht.stops', 'Overstappen (heen / terug)', 't', { ph: 'bijv. 1 / 0' })}
+      ${fld('vlucht.van', 'Vertrekluchthaven', 't')}${fld('vlucht.naar', 'Aankomstluchthaven', 't')}${fld('vlucht.terugVan', 'Terugvlucht vanaf (indien anders)', 't')}
+      ${fld('vlucht.heenDatum', 'Heenvlucht: vertrekdatum', 'd')}${fld('vlucht.heenVertrek', 'Vertrektijd (lokaal)', 'h')}${fld('vlucht.heenAankomstDatum', 'Aankomstdatum (lokaal)', 'd', { h: 'Leeg = zelfde dag. Met deze datum begint de rondreis.' })}${fld('vlucht.heenAankomst', 'Aankomsttijd (lokaal)', 'h')}${fld('vlucht.heenNr', 'Vluchtnummer heen', 't')}
+      ${fld('vlucht.terugDatum', 'Terugvlucht: vertrekdatum', 'd', { h: 'Met deze datum eindigt de rondreis.' })}${fld('vlucht.terugVertrek', 'Vertrektijd (lokaal)', 'h')}${fld('vlucht.terugAankomstDatum', 'Aankomstdatum (lokaal)', 'd')}${fld('vlucht.terugAankomst', 'Aankomsttijd (lokaal)', 'h')}${fld('vlucht.terugNr', 'Vluchtnummer terug', 't')}
+      ${fld('vlucht.prijs', 'Prijs zoals Get-Roam toont', 'n', { min: 0 })}${fld('vlucht.prijsValuta', 'Valuta van die prijs', 's', { r: 1, opts: ['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD'] })}${fld('vlucht.prijsPer', 'Geldt de prijs per persoon of voor de hele groep?', 's', { r: 1, opts: [['', 'kies…'], ['pp', 'per persoon'], ['totaal', 'voor de hele groep']], h: 'Controleer dit op de pagina; de app gokt niet.' })}
+      ${fld('vlucht.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld('vlucht.prijsDatum', 'Prijs gezien op', 'd')}${fld('vlucht.bron', 'Bron', 't')}
+      ${fld('vlucht.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld('vlucht.ref', 'Boekingsreferentie (optioneel)', 't', { h: 'Geen paspoort- of kaartnummers.' })}${fld('vlucht.link', 'Link naar de aanbieding/boeking', 'u')}
       ${fld('vlucht.notitie', 'Notities', 'a', { w: 1, rows: 2 })}
-    </div>
-    <h3>Reiskosten naar de luchthaven</h3><div class="grid">
-      ${fld('vlucht.liters', 'Liters brandstof (heen en terug)', 'n', { min: 0 })}${fld('vlucht.literprijs', 'Prijs per liter', 'n', { min: 0, h: 'Voorstel 2,45 – nog controleren (EU Weekly Oil Bulletin of ANWB).' })}${fld('vlucht.literprijsDatum', 'Literprijs gecontroleerd op', 'd')}${fld('vlucht.parkeren', 'Parkeerkosten luchthaven', 'n', { min: 0 })}${fld('vlucht.extra', 'Stoelkeuze / extra bagage (optioneel)', 'n', { min: 0 })}
-    </div>` : '<p class="noot">Vlucht uitgeschakeld: deze post telt niet mee in de kosten.</p>') + kBox('Vlucht'));
+    </div><div class="box" data-calc="vluchtCheck"></div>`);
+  h += sectie('Stap 3: dit zijn nu de data van uw rondreis', '', `<div class="box" style="margin-top:0" data-calc="reisdatums"></div><div class="rij"><button class="prim" data-a="tab" data-t="auto">Verder: autohuur en overnachtingen →</button></div>`);
+  h += sectie('Reiskosten naar de luchthaven', 'Komt alleen in de kostenraming, niet in de vergelijking van vluchten.', `<div class="grid">${fld('vlucht.liters', 'Liters brandstof (heen en terug)', 'n', { min: 0 })}${fld('vlucht.literprijs', 'Prijs per liter', 'n', { min: 0, h: 'Voorstel 2,45 – nog controleren (EU Weekly Oil Bulletin of ANWB).' })}${fld('vlucht.literprijsDatum', 'Literprijs gecontroleerd op', 'd')}${fld('vlucht.parkeren', 'Parkeerkosten luchthaven', 'n', { min: 0 })}${fld('vlucht.extra', 'Stoelkeuze / extra bagage (optioneel)', 'n', { min: 0 })}</div>` + kBox('Vlucht'));
+  return h;
 };
 
-VIEWS.auto = () => {
+const nachtenSectie = () => {
   const t = T();
-  return sectie('3 Autohuur en vervoer', `De autozoeker blijft een apart onderdeel (DiscoverCars via uw dashboard). Hier noteert u de intake en de gekozen huurauto.`,
+  return sectie('2 Autohuur en overnachtingen', 'De data komen uit de gekozen vlucht. Verdeel hier de nachten over de plaatsen; daarna maakt de app de dagen en verblijven aan.',
+    `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>
+    <h3>Verdeling van de nachten</h3>
+    <table class="rtab"><thead><tr><th>Plaats</th><th>Nachten</th><th></th></tr></thead><tbody>${t.stops.map((x, i) => `<tr><td data-l="Plaats"><input type="text" data-b="stops.${i}.plaats" value="${esc(x.plaats)}" placeholder="bijv. Denver"></td><td data-l="Nachten"><input type="number" min="1" data-b="stops.${i}.nachten" value="${esc(x.nachten)}" style="width:90px"></td><td><button class="klein" data-a="omhoog" data-p="stops" data-i="${i}">↑</button> <button class="klein" data-a="omlaag" data-p="stops" data-i="${i}">↓</button> <button class="klein gevaar" data-a="del" data-p="stops" data-i="${i}">✕</button></td></tr>`).join('')}</tbody></table>
+    <div class="rij"><button data-a="add" data-p="stops" data-n="stop">+ Plaats toevoegen</button><button class="prim" data-a="stopsNaarDagen">Dagen en verblijven aanmaken uit deze verdeling</button></div>
+    <div class="box" data-calc="nachtenCheck"></div>`);
+};
+
+const autoSectie = () => {
+  const t = T();
+  return sectie('Autohuur en vervoer', `De autozoeker blijft een apart onderdeel (DiscoverCars via uw dashboard). Ophaal- en inleverdatum en -plaats zijn overgenomen uit de vlucht; u kunt ze aanpassen.`,
     `<div class="grid">${fld('auto.nodig', 'Ik huur een auto', 'c', { r: 1 })}</div>` + (t.auto.nodig ? `
     <h3>Intake</h3><div class="grid">
       ${persVeld('auto.personen', t)}
@@ -493,6 +520,8 @@ VIEWS.auto = () => {
     </div>
     <p class="noot">Let op: bij brokers is “volledige verzekering” vaak een terugbetalingsverzekering (eerst eigen risico/borg betalen). Vergelijk totale kosten, geen dagprijzen. Controleer leeftijds- en rijbewijseisen.</p>` : '<p class="noot">Geen huurauto: de autokosten tellen niet mee.</p>') + kBox('Auto'));
 };
+
+VIEWS.auto = () => nachtenSectie() + autoSectie();
 
 VIEWS.verblijf = () => {
   const t = T(), c = t.hotels.crit;
@@ -732,7 +761,7 @@ function reisboekHTML(t, src) {
   /* boekingen */
   const v = t.vlucht, a = t.auto;
   h += `<div class="bsec"><h2>Vlucht, auto, verblijf en contacten</h2>`;
-  if (v.nodig) h += `<h3>Vlucht</h3>` + tbl(['', 'Heen', 'Terug'], [['Datum', dFmt(v.heenDatum), dFmt(v.terugDatum)], ['Van – naar', esc(v.van) + ' → ' + esc(v.naar), esc(v.terugVan || v.naar) + ' → ' + esc(v.van)], ['Vertrek / aankomst (lokaal)', `${esc(v.heenVertrek || '—')} / ${esc(v.heenAankomst || '—')}`, `${esc(v.terugVertrek || '—')} / ${esc(v.terugAankomst || '—')}`], ['Vluchtnummer', esc(v.heenNr || '—'), esc(v.terugNr || '—')]]) + `<p>${esc(v.maatschappij)} · ${persVoor(t, 'Vlucht')} pers. · bagage: ${esc(v.bagage)} · status ${esc(v.status)} · referentie ${ref(v.ref)}</p>`;
+  if (v.nodig) h += `<h3>Vlucht</h3>` + tbl(['', 'Heen', 'Terug'], [['Vertrekdatum', dFmt(v.heenDatum), dFmt(v.terugDatum)], ['Aankomstdatum (lokaal)', dFmt(v.heenAankomstDatum || v.heenDatum), dFmt(v.terugAankomstDatum || v.terugDatum)], ['Van – naar', esc(v.van) + ' → ' + esc(v.naar), esc(v.terugVan || v.naar) + ' → ' + esc(v.van)], ['Vertrek / aankomst (lokaal)', `${esc(v.heenVertrek || '—')} / ${esc(v.heenAankomst || '—')}`, `${esc(v.terugVertrek || '—')} / ${esc(v.terugAankomst || '—')}`], ['Vluchtnummer', esc(v.heenNr || '—'), esc(v.terugNr || '—')]]) + `<p>${esc(v.maatschappij)} · overstappen: ${esc(v.stops || '—')} · ${persVoor(t, 'Vlucht')} pers. · bagage: ${esc(v.bagage)} · status ${esc(v.status)} · referentie ${ref(v.ref)}</p>`;
   if (a.nodig) h += `<h3>Huurauto</h3><p>${esc(a.verhuurder || '—')} ${esc(a.klasse)} (${esc(a.versnelling)}) · ophalen ${esc(a.ophaalPlaats)} ${dFmt(a.ophaalDatum)} ${esc(a.ophaalTijd)} (lokaal) · inleveren ${esc(a.inleverPlaats)} ${dFmt(a.inleverDatum)} ${esc(a.inleverTijd)} (lokaal)<br>Verzekering: ${esc(a.verzekering)} · eigen risico ${a.eigenRisico != null ? mny(a.eigenRisico) : '—'} · borg ${a.borg != null ? mny(a.borg) : '—'} · brandstofbeleid ${esc(a.brandstofBeleid)} · tweede bestuurder: ${a.tweede ? 'ja' : 'nee'} · status ${esc(a.status)} · reserveringsnr ${ref(a.ref)}</p>`;
   h += `<h3>Verblijf</h3>` + (t.hotels.lijst.length ? tbl(['Plaats / hotel', 'Datums', 'Nachten', 'Prijs/nacht', 'Ontbijt', 'Parkeren', 'Status', 'Bevestiging'], t.hotels.lijst.map(x => [`<b>${esc(x.naam || '—')}</b><br>${esc(x.plaats)}<br><span class="bron">${esc(x.adres)} ${esc(x.tel)}</span>`, `${dFmt(x.van)} – ${dFmt(x.tot)}`, nachten(x), x.prijs != null && x.prijs !== '' ? mny(+x.prijs) : '—', { ja: 'inbegrepen', extra: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.ontbijt], { gratis: 'gratis', betaald: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.parkeren], esc(x.status) + (x.annuleren ? `<br><span class="bron">annuleren: ${esc(x.annuleren)}</span>` : ''), ref(x.ref)])) : '<p>Geen verblijven ingevuld.</p>');
   if (t.contacten.length || t.prakt.verzekeraar) h += `<h3>Contacten en verzekering</h3>` + tbl(['Rol', 'Naam', 'Telefoon', 'Notitie'], t.contacten.map(c => [esc(c.rol), esc(c.naam), esc(c.tel), esc(c.notitie)]).concat(t.prakt.verzekeraar ? [['Reisverzekering', esc(t.prakt.verzekeraar), esc(t.prakt.alarm), 'polis: ' + ref(t.prakt.polis)]] : []));
@@ -790,8 +819,64 @@ VIEWS.data = () => {
   return h;
 };
 
+/* De gekozen vlucht bepaalt de reisdata; autodata volgen mee zolang u ze niet zelf hebt aangepast */
+function syncDatums(t) {
+  const v = t.vlucht; if (!v.nodig) return;
+  const start = okD(v.heenAankomstDatum) ? v.heenAankomstDatum : (okD(v.heenDatum) ? v.heenDatum : ''), eind = okD(v.terugDatum) ? v.terugDatum : '', p = t.sync;
+  if (start) { t.reis.vertrek = start; if (!t.auto.ophaalDatum || t.auto.ophaalDatum === p.start) t.auto.ophaalDatum = start; }
+  if (eind) { t.reis.terug = eind; if (!t.auto.inleverDatum || t.auto.inleverDatum === p.eind) t.auto.inleverDatum = eind; }
+  const tv = v.terugVan || v.naar;
+  if (v.naar && (!t.auto.ophaalPlaats || t.auto.ophaalPlaats === p.naar)) t.auto.ophaalPlaats = v.naar;
+  if (tv && (!t.auto.inleverPlaats || t.auto.inleverPlaats === p.terugVan)) t.auto.inleverPlaats = tv;
+  t.sync = { start: start || p.start, eind: eind || p.eind, naar: v.naar || p.naar, terugVan: tv || p.terugVan };
+}
+const codes = txt => String(txt || '').split(/[,;\n]+/).map(x => x.trim()).filter(Boolean).map(x => /^[a-z]{3}$/i.test(x) ? x.toUpperCase() : x);
+const maandEinde = m => { const [y, mo] = m.split('-').map(Number); return iso(new Date(Date.UTC(y, mo, 0))); };
+function roamZoek(t) {
+  const v = t.vlucht;
+  const vroegste = okD(v.exactVan) ? v.exactVan : (/^\d{4}-\d{2}$/.test(v.maandVan || '') ? v.maandVan + '-01' : '');
+  const laatste = okD(v.exactTot) ? v.exactTot : (/^\d{4}-\d{2}$/.test(v.maandTot || '') ? maandEinde(v.maandTot) : '');
+  return { van: codes(v.zoekVan), naar: codes(v.zoekNaar), vroegste, laatste, dagenMin: num(v.dagenMin), dagenMax: num(v.dagenMax), adults: t.reis.volw || 0, maxPrijs: num(v.maxPrijsUsd), maxStops: v.maxStops, maxUren: num(v.maxUren) };
+}
+
 /* ====================== Berekende blokken (live bijgewerkt) ====================== */
 const CALC = {
+  roam: () => {
+    const t = T(), z = roamZoek(t), rij = [['Starting airport(s)', z.van.join(', ')], ['Where to: specific destination(s)', z.naar.join(', ')], ['Within certain dates: earliest departure date', z.vroegste], ['Latest departure date', z.laatste], ['Length of stay (days): min', z.dagenMin ?? ''], ['Length of stay (days): max', z.dagenMax ?? ''], ['Number of passengers (adults)', z.adults || ''], ['Advanced: max price ($)', z.maxPrijs ?? ''], ['Advanced: max stops per direction', z.maxStops === '' ? '' : ({ 0: 'Nonstop only', 1: '1 stop or fewer', 2: '2 stops or fewer' })[z.maxStops]], ['Advanced: max flight duration (hours)', z.maxUren ?? '']];
+    const ontbr = [!z.van.length && 'vertrekluchthavens', !z.naar.length && 'aankomstluchthavens', (!z.vroegste || !z.laatste) && 'zoekperiode', (z.dagenMin == null || z.dagenMax == null) && 'minimum en maximum aantal dagen'].filter(Boolean);
+    const alles = rij.filter(r => r[1] !== '').map(r => r[0] + ': ' + r[1]).join('\n');
+    const w = [];
+    if (z.vroegste && z.laatste && z.laatste < z.vroegste) w.push('De laatste heendatum ligt vóór de vroegste.');
+    if (z.dagenMin != null && z.dagenMax != null && z.dagenMax < z.dagenMin) w.push('Het maximum aantal dagen is lager dan het minimum.');
+    [...z.van, ...z.naar].filter(x => !/^[A-Z]{3}$/.test(x)).forEach(x => w.push(`“${x}” is geen IATA-code van 3 letters; Get-Roam zoekt dan op naam.`));
+    if (t.reis.kind > 0) w.push(`Get-Roam kent alleen volwassenen: de ${t.reis.kind} kind(eren) staan niet in de zoekopdracht; controleer de prijs voor het hele gezelschap bij de boeking.`);
+    return `<b>Zoekopdracht voor Get-Roam</b>${ontbr.length ? `<div class="banner">Nog in te vullen: ${ontbr.join(', ')}.</div>` : ''}${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}
+      <table class="rtab"><thead><tr><th>Veld in Get-Roam</th><th>Waarde</th><th></th></tr></thead><tbody>${rij.map(r => `<tr><td data-l="Veld">${esc(r[0])}</td><td data-l="Waarde">${r[1] === '' ? '<span class="noot">—</span>' : '<b>' + esc(r[1]) + '</b>'}</td><td>${r[1] === '' ? '' : `<button class="klein" data-a="kopie" data-v="${esc(r[1])}">Kopieer</button>`}</td></tr>`).join('')}</tbody></table>
+      <div class="rij"><a class="knop" target="_blank" rel="noopener" href="${ROAM}">Open Get-Roam flexible search ↗</a><button data-a="kopie" data-v="${esc(alles)}">Kopieer alle velden</button></div>
+      <p class="noot">Get-Roam toont prijzen in dollars en heeft geen bagagefilter. Vul na het zoeken de goedkoopste uitkomst hieronder in bij stap 2.</p>`;
+  },
+  vluchtCheck: () => {
+    const t = T(), v = t.vlucht, z = roamZoek(t), m = [], vp = vluchtPrijs(t);
+    if (okD(v.heenDatum) && z.vroegste && v.heenDatum < z.vroegste) m.push('De heenvlucht ligt vóór de vroegste heendatum van uw zoekopdracht.');
+    if (okD(v.heenDatum) && z.laatste && v.heenDatum > z.laatste) m.push('De heenvlucht ligt na de laatste heendatum van uw zoekopdracht.');
+    if (okD(v.heenDatum) && okD(v.terugDatum)) { const n = diffD(v.terugDatum, v.heenDatum); if (n < 0) m.push('De terugvlucht ligt vóór de heenvlucht.'); else { if (z.dagenMin != null && n < z.dagenMin) m.push(`Verblijf van ${n} dagen is korter dan uw minimum (${z.dagenMin}).`); if (z.dagenMax != null && n > z.dagenMax) m.push(`Verblijf van ${n} dagen is langer dan uw maximum (${z.dagenMax}).`); } }
+    if (v.naar && z.naar.length && !z.naar.includes(v.naar.toUpperCase())) m.push(`Aankomstluchthaven ${v.naar} stond niet in uw zoeklijst.`);
+    if (v.van && z.van.length && !z.van.includes(v.van.toUpperCase())) m.push(`Vertrekluchthaven ${v.van} stond niet in uw zoeklijst.`);
+    const kn = v.prijsValuta !== t.reis.valuta ? `<div class="rij"><button data-a="koersVlucht">Koers ${esc(v.prijsValuta)} → ${esc(t.reis.valuta)} ophalen (ECB)</button><span class="noot">${num(v.koers) ? `1 ${esc(t.reis.valuta)} = ${v.koers} ${esc(v.prijsValuta)} (${dFmt(v.koersDatum)})` : 'Nog geen koers: de prijs wordt pas meegeteld als hij bekend is.'}</span></div>` : '';
+    return `${m.map(x => `<div class="banner">${esc(x)}</div>`).join('')}<div>${vp.b == null ? `<span class="let">Prijs nog niet meetellend.</span> ${esc(vp.opm)}` : `<b>Prijs voor ${persVoor(t, 'Vlucht')} reizigers: ${mny(vp.b)}</b> ${vp.opm ? '<span class="noot">(' + esc(vp.opm) + ')</span>' : ''}`}</div>${kn}`;
+  },
+  reisdatums: () => {
+    const t = T(), r = t.reis; if (!okD(r.vertrek) || !okD(r.terug)) return 'Nog geen reisdata: vul bij de vlucht de heen- en terugdatum in. Die worden automatisch de data van de rondreis.';
+    const d = duurDagen(t); if (d < 1) return '<span class="fout">De einddatum ligt vóór de begindatum.</span>';
+    return `<b>Reisdata van de rondreis:</b> ${wd(r.vertrek)} ${dFmt(r.vertrek)} t/m ${wd(r.terug)} ${dFmt(r.terug)} · ${d} dagen · <b>${d - 1} nachten</b> · ${personen(t)} reizigers${t.vlucht.nodig ? ' <span class="noot">(overgenomen uit de gekozen vlucht)</span>' : ''}`;
+  },
+  nachtenCheck: () => {
+    const t = T(), r = t.reis; if (!okD(r.vertrek) || !okD(r.terug)) return 'Vul eerst de vlucht in; dan is het aantal nachten bekend.';
+    const tot = diffD(r.terug, r.vertrek), nu = sum(t.stops.map(x => num(x.nachten) || 0)), rest = tot - nu, m = [];
+    const g = t.gids; if (num(g.maxWissels) != null && t.stops.length - 1 > g.maxWissels) m.push(`${t.stops.length - 1} hotelwissels is meer dan uw maximum (${g.maxWissels}).`);
+    if (num(g.minNachten) != null) t.stops.filter(x => num(x.nachten) != null && x.nachten < g.minNachten).forEach(x => m.push(`${x.plaats || 'Een plaats'} heeft ${x.nachten} nacht(en), minder dan uw minimum (${g.minNachten}).`));
+    return `Verdeeld: <b>${nu} van ${tot} nachten</b> · ${rest === 0 ? '<span class="goed">alles verdeeld</span>' : rest > 0 ? `<span class="let">nog ${rest} nacht(en) te verdelen</span>` : `<span class="fout">${-rest} nacht(en) te veel</span>`}${m.map(x => `<div class="banner">${esc(x)}</div>`).join('')}`;
+  },
   duur: () => { const t = T(), d = duurDagen(t); return d == null ? 'vul begin- en einddatum in' : `${d} dagen, ${Math.max(0, d - 1)} nachten`; },
   kosten: e => { const t = T(), R = kostenRegels(t), s = kostenSom(R, e.o), pp = persVoor(t, e.o); return `<b>Totaal ${e.o.toLowerCase()}:</b> ${mny(s.bekend)} voor ${pp} pers. · ${pp ? mny(s.bekend / pp) : '—'} per persoon${s.onb ? ` · <span class="let">${s.onb} post(en) nog niet ingevuld (niet meegeteld)</span>` : ''}`; },
   hotelkop: e => { const t = T(), h = t.hotels.lijst[+e.i]; if (!h) return ''; const o = hotelOordeel(t, h); return badge(o.k, o.s); },
@@ -817,7 +902,7 @@ const app = $('#app');
 function melding(t, fout) { const m = $('#melding'); m.textContent = t; m.style.display = 'block'; m.style.borderColor = fout ? 'var(--fout)' : 'var(--lijn)'; clearTimeout(melding.t); melding.t = setTimeout(() => m.style.display = 'none', fout ? 8000 : 3000); }
 function rerender() { const y = scrollY; render(); scrollTo(0, y); }
 A.tab = b => { tab = b.dataset.t; render(); scrollTo(0, 0); };
-A.nieuw = () => { const n = prompt('Naam van de reis:', 'Mijn rondreis'); if (!n) return; const t = nieuweReis(n); DB.reizen[t.id] = t; DB.actief = t.id; opslaan(); tab = 'reis'; render(); };
+A.nieuw = () => { const n = prompt('Naam van de reis:', 'Mijn rondreis'); if (!n) return; const t = nieuweReis(n); DB.reizen[t.id] = t; DB.actief = t.id; opslaan(); tab = 'vlucht'; render(); };
 A.demo = () => { const t = demoReis(); DB.reizen[t.id] = t; DB.actief = t.id; opslaan(); tab = 'start'; render(); melding('Demo-reis geladen. Alle gegevens zijn verzonnen.'); };
 A.add = b => { const arr = getP(T(), b.dataset.p); const n = b.dataset.n === 'dag' ? nieuweDag(arr.length ? addD(arr[arr.length - 1].datum || iso(new Date()), 1) : T().reis.vertrek || iso(new Date())) : NIEUW[b.dataset.n](); arr.push(n); opslaan(); rerender(); };
 A.del = b => { if (!confirm('Verwijderen?')) return; const arr = getP(T(), b.dataset.p), i = +b.dataset.i; const x = arr[i]; if (x && x.dagboek) x.dagboek.fotos.forEach(f => fotoDel(f.id)); arr.splice(i, 1); if (b.dataset.p === 'dagen') dagSel = 0; opslaan(); rerender(); };
@@ -834,6 +919,22 @@ A.hotelsUitRoute = () => {
   const t = T(); if (!t.dagen.length) return melding('Maak eerst dagen aan (tab Route).', true);
   let n = 0; blokken(t).forEach(b => { if (!b.plaats || b.nachten < 1) return; const van = t.dagen[b.van].datum; if (t.hotels.lijst.some(h => h.plaats === b.plaats && h.van === van)) return; const h = nieuwHotel(); h.plaats = b.plaats; h.van = van; h.tot = addD(van, b.nachten); t.hotels.lijst.push(h); n++; });
   opslaan(); rerender(); melding(n + ' verblijf(en) voorgesteld. Vul naam, prijs en reviews zelf in.');
+};
+A.kopie = async b => { const v = b.dataset.v; try { await navigator.clipboard.writeText(v); } catch { const a = document.createElement('textarea'); a.value = v; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch { } a.remove(); } melding('Gekopieerd.'); };
+A.koersVlucht = async () => {
+  const t = T(), v = t.vlucht;
+  try { const j = await haal(`https://api.frankfurter.dev/v1/latest?base=${t.reis.valuta}&symbols=${v.prijsValuta}`); const k = j.rates && j.rates[v.prijsValuta]; if (!k) throw new Error('valuta niet beschikbaar'); v.koers = k; v.koersDatum = j.date; opslaan(); rerender(); }
+  catch (e) { melding('Koers ophalen mislukt (' + e.message + '). Vul de prijs in euro’s in of probeer het later.', true); }
+};
+A.stopsNaarDagen = () => {
+  const t = T(), r = t.reis; if (!okD(r.vertrek) || !okD(r.terug) || r.terug <= r.vertrek) return melding('Vul eerst de vlucht in (stap 1 en 2): de reisdata ontbreken.', true);
+  const st = t.stops.filter(x => x.plaats && num(x.nachten) > 0), tot = diffD(r.terug, r.vertrek);
+  if (!st.length) return melding('Voeg eerst plaatsen met aantal nachten toe.', true);
+  const nu = sum(st.map(x => +x.nachten)); if (nu !== tot) return melding(`De verdeling telt ${nu} nachten, de reis heeft er ${tot}. Pas dit eerst aan.`, true);
+  const pl = []; st.forEach(x => { for (let k = 0; k < +x.nachten; k++) pl.push(x.plaats); }); pl.push(st[st.length - 1].plaats);
+  pl.forEach((p, i) => { const datum = addD(r.vertrek, i); let d = t.dagen.find(x => x.datum === datum); if (!d) { d = nieuweDag(datum); t.dagen.push(d); } d.plaats = p; d.type = i === 0 ? 'aankomst' : i === tot ? 'vertrek' : (p !== pl[i - 1] ? 'rijdag' : 'verblijfsdag'); });
+  t.dagen.sort((a, b) => a.datum.localeCompare(b.datum));
+  A.hotelsUitRoute(); tab = 'route'; render(); melding(`${tot + 1} dagen en de verblijven zijn aangemaakt. Vul nu per dag km en rijtijd in.`);
 };
 A.dagNav = b => { dagSel += +b.dataset.d; rerender(); scrollTo(0, 0); };
 A.vandaag = b => {
@@ -919,7 +1020,7 @@ app.addEventListener('input', e => {
   if (el.dataset.ch === 'rekenhulp') return A.rekenhulp(el);
   if (el.dataset.wk !== undefined) { const v = num(el.value); if (v == null) delete T().werkelijk[el.dataset.wk]; else T().werkelijk[el.dataset.wk] = v; opslaan(); return; }
   if (el.dataset.b === undefined) return;
-  setP(T(), el.dataset.b, el.type === 'checkbox' ? el.checked : el.type === 'number' ? num(el.value) : el.value); opslaan(); refreshCalc();
+  setP(T(), el.dataset.b, el.type === 'checkbox' ? el.checked : el.type === 'number' ? num(el.value) : el.value); syncDatums(T()); opslaan(); refreshCalc();
 });
 app.addEventListener('change', e => {
   const el = e.target;
@@ -933,7 +1034,7 @@ $('#tabs').addEventListener('click', e => { const b = e.target.closest('button')
 
 async function laadFotos() { for (const im of $$('img[data-foto]')) { try { im.src = await fotoUrl(im.dataset.foto); } catch { } } }
 function render() {
-  const t = T();
+  const t = T(); if (t) syncDatums(t);
   $('#reisKeuze').innerHTML = Object.values(DB.reizen).map(x => `<option value="${x.id}" ${x.id === DB.actief ? 'selected' : ''}>${esc(x.naam)}</option>`).join('') || '<option>(geen reis)</option>';
   $('#tabs').innerHTML = TABS.map(([k, n]) => `<button data-t="${k}" class="${k === tab ? 'act' : ''}" ${k === tab ? 'aria-current="page"' : ''}>${n}</button>`).join('');
   if (!t && tab !== 'start') tab = 'start';
@@ -950,7 +1051,8 @@ window.addEventListener('beforeprint', () => { if (tab === 'boek') document.titl
 function demoReis() {
   const t = nieuweReis('DEMO – voorbeeldreis (verzonnen gegevens)'); t.demo = true;
   Object.assign(t.reis, { landen: 'Portugal', startplaats: 'Lissabon', eindplaats: 'Lissabon', vertrek: '2027-05-10', terug: '2027-05-14', volw: 2, kind: 0, budget: 3000, valuta: 'EUR' });
-  Object.assign(t.vlucht, { van: 'AMS', naar: 'LIS', heenDatum: '2027-05-10', heenVertrek: '07:30', heenAankomst: '09:25', terugDatum: '2027-05-14', terugVertrek: '18:00', terugAankomst: '22:05', prijs: 480, prijsType: 'schatting', bron: 'DEMO' });
+  Object.assign(t.vlucht, { zoekVan: 'AMS, DUS, FRA', zoekNaar: 'LIS, OPO', maandVan: '2027-05', maandTot: '2027-05', dagenMin: 4, dagenMax: 6, van: 'AMS', naar: 'LIS', heenDatum: '2027-05-10', heenVertrek: '07:30', heenAankomst: '09:25', terugDatum: '2027-05-14', terugVertrek: '18:00', terugAankomst: '22:05', prijs: 480, prijsValuta: 'EUR', prijsPer: 'totaal', prijsType: 'schatting', bron: 'DEMO' });
+  t.stops = [{ id: uid(), plaats: 'Lissabon', nachten: 2 }, { id: uid(), plaats: 'Porto', nachten: 2 }];
   Object.assign(t.auto, { verhuurder: 'DEMO Verhuur', prijs: 190, prijsType: 'schatting', ophaalPlaats: 'Lissabon', ophaalDatum: '2027-05-11', inleverDatum: '2027-05-14', verbruik: 6, eenheidsprijs: 1.9 });
   Object.assign(t.gids, { interesses: ['stad', 'eten'], maxKm: 350, maxUren: 4.5 }); t.prakt.nationaliteit = 'Nederlandse';
   const plan = [['Lissabon', 'aankomst', null, null, 'Europe/Lisbon'], ['Lissabon', 'verblijfsdag', 0, 0, 'Europe/Lisbon'], ['Porto', 'rijdag', 315, 3.25, 'Europe/Lisbon'], ['Porto', 'verblijfsdag', 0, 0, 'Europe/Lisbon'], ['Lissabon', 'vertrek', 315, 3.25, 'Europe/Lisbon']];
