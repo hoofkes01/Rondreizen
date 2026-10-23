@@ -5,7 +5,10 @@
   "scripts": {
     "test": "node scripts/test.mjs",
     "zoek": "node scripts/zoek.mjs",
-    "plan": "node scripts/plan.mjs"
+    "plan": "node scripts/plan.mjs",
+    "test:gids": "node scripts/test-reisgids.mjs"
   },
-  "dependencies": { "playwright": "^1.48.0" }
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
 }
