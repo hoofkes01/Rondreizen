@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
+const pdfTekst = f => { try { return execFileSync('pdftotext', ['-layout', f, '-'], { encoding: 'utf8' }); } catch { return null; } };
+const pdfPaginas = f => (readFileSync(f, 'latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
 
 
 // geldige PNG (effen rood) zonder extra pakketten
@@ -88,11 +91,11 @@ await page.setViewportSize({ width: 1100, height: 900 });
 console.log('Invoer, opslag en verversen');
 await page.evaluate(() => { location.hash = 'verblijf'; }); await page.reload();
 const vOud = await page.textContent('[data-calc=kosten][data-o=Verblijf]');
-await page.fill('#f_hotels_lijst_0_opties_0_prijs', '100');
+await page.fill('#f_hotels_lijst_0_opties_0_prijsB', '100');
 const vNieuw = await page.textContent('[data-calc=kosten][data-o=Verblijf]');
 check('kostenbox rekent direct mee bij invoer', vOud !== vNieuw && vNieuw.includes('€'), vOud + ' => ' + vNieuw);
 await page.waitForTimeout(400); await page.reload();
-check('invoer blijft na verversen bestaan', (await page.inputValue('#f_hotels_lijst_0_opties_0_prijs')) === '100');
+check('invoer blijft na verversen bestaan', (await page.inputValue('#f_hotels_lijst_0_opties_0_prijsB')) === '100');
 
 console.log('Weer: gemockte bronnen, juiste etikettering');
 await page.evaluate(() => { location.hash = 'dag'; }); await page.reload();
@@ -146,6 +149,30 @@ const pb = readFileSync(pdf, 'latin1'); const paginas = (pb.match(/\/Type\s*\/Pa
 check(`PDF heeft meerdere A4-pagina's (voorblad + secties + 5 dagen): ${paginas}`, paginas >= 9, String(paginas));
 console.log('  (pdf: ' + pdf + ')');
 check('in printweergave verdwijnt de menubalk', printKop === 'none', printKop);
+console.log('Afdrukken per blad en per onderdeel van het reisboek');
+const dir = mkdtempSync(join(tmpdir(), 'rr-blad-'));
+const koppen = { start: 'Welkom', vlucht: '1 Vlucht', auto: '2 Autohuur', reis: '3 Reisgegevens', verblijf: '4 Hotels', gids: '5 Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
+for (const [k, kop] of Object.entries(koppen)) {
+  await page.evaluate(x => { location.hash = x; }, k); await page.reload(); await page.waitForTimeout(250);
+  await page.evaluate(() => { window.__stop = __rr.bereidPrint(); });
+  await page.emulateMedia({ media: 'print' }); const f = join(dir, k + '.pdf'); await page.pdf({ path: f, format: 'A4', printBackground: true }); await page.emulateMedia({ media: 'screen' });
+  await page.evaluate(() => window.__stop());
+  const tx = pdfTekst(f);
+  check(`blad "${k}" apart als PDF (${pdfPaginas(f)} p.)${tx ? '' : ' [geen pdftotext: tekst niet gecontroleerd]'}`, pdfPaginas(f) >= 1 && (!tx || (tx.includes(kop) && !tx.includes('Vluchtplanner') && !/Ik bevestig stap/.test(tx))), tx ? tx.slice(0, 120) : '');
+}
+const vt = pdfTekst(join(dir, 'vlucht.pdf'));
+if (vt) check('ingevulde velden staan als tekst in de PDF van een blad (luchthaven AMS, Lissabon)', /AMS/.test(vt) && /LIS/.test(vt) && !/<input/.test(vt));
+await page.evaluate(() => { location.hash = 'boek'; }); await page.reload(); await page.waitForSelector('#boekUit .voorblad'); await page.waitForTimeout(300);
+const opts = await page.evaluate(() => [...document.querySelectorAll('#boekDeel option')].map(o => o.value));
+check('reisboek heeft een keuze voor elk onderdeel (voorblad, uitgangspunten, route, kosten, hotels, dagen, bronnen)', ['alles', 'voorblad', 'intake', 'route', 'kosten', 'hotels', 'dag1', 'dag5', 'bronnen'].every(x => opts.includes(x)), opts.join());
+for (const [id, wel, niet] of [['route', 'Route in één oogopslag', 'Kostenoverzicht'], ['kosten', 'Kostenoverzicht', 'Route in één oogopslag'], ['dag2', 'Dag 2', 'Dag 3'], ['intake', 'Uitgangspunten', 'Dag 1']]) {
+  await page.evaluate(x => { window.__stop = __rr.kiesBoekDeel(x); }, id);
+  await page.emulateMedia({ media: 'print' }); const f = join(dir, 'deel-' + id + '.pdf'); await page.pdf({ path: f, format: 'A4', printBackground: true }); await page.emulateMedia({ media: 'screen' });
+  await page.evaluate(() => window.__stop());
+  const tx = pdfTekst(f);
+  check(`reisboek-onderdeel "${id}" apart als PDF`, pdfPaginas(f) >= 1 && pdfPaginas(f) <= 2 && (!tx || (tx.includes(wel) && !tx.includes(niet))), (tx || '').slice(0, 100));
+}
+check('na het afdrukken is het volledige reisboek weer zichtbaar', await page.evaluate(() => !document.querySelector('#boekUit').classList.contains('deelprint') && !document.querySelector('#printBlad')));
 const [dl] = await Promise.all([page.waitForEvent('download'), page.evaluate(() => { location.hash = 'data'; }).then(() => page.reload()).then(() => page.click('[data-a=export][data-f="1"]'))]);
 const backup = JSON.parse(readFileSync(await dl.path(), 'utf8'));
 check('back-up bevat reis en foto', Object.keys(backup.reizen).length === 1 && Object.keys(backup.fotos).length === 1);
@@ -230,6 +257,9 @@ check('patroon 1x2+3x3+3x4 = 23 nachten klopt', /23 nachten[^.]*: klopt/.test(pc
 await page.click('[data-a=patroonRijen]');
 const rijen = await page.evaluate(() => __rr.T().stops.map(x => x.nachten));
 check('7 lege plaatsen aangemaakt met nachten 2,3,3,3,4,4,4', rijen.join() === '2,3,3,3,4,4,4', rijen.join());
+await page.fill('#f_route_n1', '1'); await page.click('[data-a=patroonRijen]');
+check('1 nacht komt ook voor: patroon met 1 nacht maakt een rij van 1 nacht', (await page.evaluate(() => __rr.T().stops.map(x => x.nachten))).join() === '1,2,3,3,3,4,4,4');
+await page.fill('#f_route_n1', ''); await page.click('[data-a=patroonRijen]');
 const namen = ['Santa Fe', 'Albuquerque', 'Flagstaff', 'Page', 'Moab', 'Salt Lake City', 'Estes Park'];
 for (let i = 0; i < 7; i++) await page.fill(`input[data-b="stops.${i}.plaats"]`, namen[i]);
 await page.fill('#f_reis_startplaats', 'Denver'); await page.fill('#f_gids_maxKm', '400');
@@ -257,25 +287,39 @@ check('rijdagen krijgen geschatte km en rijtijd; tijdzones uit de locaties', dg.
 
 // hotels: toets en bevestiging per verblijf
 const H = '#f_hotels_lijst_0_opties_0_';
-await page.fill(H + 'naam', 'Hotel A'); await page.fill(H + 'prijs', '160');
+await page.fill(H + 'naam', 'Hotel A'); await page.fill(H + 'adres', '123 Main Street'); await page.fill(H + 'prijsB', '160');
+let lp = await page.evaluate(() => { const t = __rr.T(), st = t.hotels.lijst[0], x = __rr.hotelToets(t, st.opties[0], st); return x.C.find(c => c.label === 'Laagste prijs').s; });
+check('prijs bij slechts 1 van de 3 bronnen: laagste prijs nog onbekend', lp === 'o', lp);
 let ht = await page.evaluate(() => { const t = __rr.T(), st = t.hotels.lijst[0], x = __rr.hotelToets(t, st.opties[0], st); return { f: x.f, prijs: x.C[0].s }; });
 check('160 per nacht is boven het absolute maximum van 150: voldoet niet', ht.f >= 1 && ht.prijs === 'f', JSON.stringify(ht));
 check('knop bevestigen is geblokkeerd bij een hotel dat niet voldoet', await page.locator('[data-a=bevestigHotel][data-i="0"][data-k="0"]').isDisabled());
-await page.fill(H + 'prijs', '120');
+await page.fill(H + 'prijsB', '120');
 ht = await page.evaluate(() => { const t = __rr.T(), st = t.hotels.lijst[0]; return __rr.hotelToets(t, st.opties[0], st).C[0]; });
 check('120 per nacht: alleen met bevestigde uitzondering', ht.s === 'l' && /uitzondering/.test(ht.tekst), JSON.stringify(ht));
 await page.click('[data-a=bevestigHotel][data-i="0"][data-k="0"]'); await page.waitForTimeout(150);
 check('zonder uitzondering kan het hotel van 120 niet worden bevestigd', await page.evaluate(() => !__rr.T().hotels.lijst[0].bevestigd) && /uitzondering/.test(await page.textContent('#melding')));
 await page.check('#f_hotels_lijst_0_uitzondering');
+await page.fill(H + 'prijsA', '125'); await page.fill(H + 'prijsH', '130');
+const low = await page.evaluate(() => { const o = __rr.T().hotels.lijst[0].opties[0]; return [o.prijs, o.bron]; });
+check('laagste prijs van Booking.com (120), Agoda.com (125) en hotelwebsite (130) = 120 bij Booking.com', low.join() === '120,Booking.com', low.join());
 for (const [id, v] of [['bScore', '8.5'], ['gScore', '4.3'], ['bN', '100'], ['bNeg', '5'], ['gN', '100'], ['gNeg', '5'], ['afstandCentrum', '1']]) await page.fill(H + id, v);
 await page.selectOption(H + 'ontbijt', 'ja'); await page.selectOption(H + 'parkeren', 'gratis'); await page.selectOption(H + 'wifi', 'ja'); await page.selectOption(H + 'badkamer', 'eigen'); await page.selectOption(H + 'wijk', 'goed'); await page.selectOption(H + 'veilig', 'geen');
 ht = await page.evaluate(() => { const t = __rr.T(), st = t.hotels.lijst[0], x = __rr.hotelToets(t, st.opties[0], st); return { k: x.k, f: x.f, l: x.l, labels: x.C.map(c => c.label) }; });
-check('alle criteria ok (prijs, waardering, reviews, ontbijt, parkeren, wifi, badkamer, veiligheid, wijk)', ht.k === 'g' && ['Prijs', 'Waardering', 'Slechte reviews', 'Ontbijt', 'Parkeren', 'Wifi', 'Eigen badkamer', 'Veiligheid', 'Wijk'].every(l => ht.labels.includes(l)), JSON.stringify(ht));
+check('alle criteria ok (prijs, waardering, reviews, ontbijt, parkeren, wifi, badkamer, veiligheid, wijk)', ht.k === 'g' && ['Prijs', 'Laagste prijs', 'Waardering', 'Slechte reviews', 'Ontbijt', 'Parkeren', 'Wifi', 'Eigen badkamer', 'Veiligheid', 'Wijk'].every(l => ht.labels.includes(l)), JSON.stringify(ht));
 await page.click('[data-a=bevestigHotel][data-i="0"][data-k="0"]'); await page.waitForTimeout(200);
 const bv = await page.evaluate(() => { const st = __rr.T().hotels.lijst[0]; return [st.bevestigd, st.naam, st.gekozen, st.prijs]; });
 check('hotel bevestigd: naam en prijs staan bij het verblijf', bv.join() === 'true,Hotel A,0,120', bv.join());
-await page.fill(H + 'prijs', '130');
-check('wijziging van het gekozen hotel werkt direct door', await page.evaluate(() => __rr.T().hotels.lijst[0].prijs === 130));
+const ban = await page.textContent('section.card:has(h2:has-text("Verblijf 1")) .banner');
+check('na bevestiging staat het adres op de pagina', /Adres:\s*123 Main Street/.test(ban), ban.slice(0, 200));
+await page.setInputFiles('input[type=file][data-ch=hotelFoto][data-i="0"][data-k="0"]', png); await page.waitForSelector('.banner img[data-foto]', { state: 'attached' }); await page.waitForTimeout(300);
+check('na bevestiging staat de foto van het hotel op de pagina', (await page.locator('.banner img[data-foto]').count()) === 1 && await page.evaluate(() => !!__rr.T().hotels.lijst[0].foto));
+await page.click('[data-t=dag]'); await page.waitForTimeout(300);
+const dagh = await page.textContent('#app');
+check('dagpagina toont hotel, adres en foto', /Hotel A/.test(dagh) && /123 Main Street/.test(dagh) && (await page.locator('img[data-foto]').count()) === 1);
+await page.click('[data-t=verblijf]');
+await page.fill(H + 'prijsA', '110');
+const syn = await page.evaluate(() => { const st = __rr.T().hotels.lijst[0]; return [st.prijs, st.bron]; });
+check('wijziging van het gekozen hotel werkt direct door (laagste prijs nu Agoda.com, 110)', syn.join() === '110,Agoda.com', syn.join());
 const opt = await page.evaluate(() => { const t = __rr.T(), st = t.hotels.lijst[0], o = Object.assign(st.opties[1], { naam: 'Hotel B', prijs: 90, bScore: 8.2, gScore: 4.1, bN: 100, bNeg: 20, gN: 100, gNeg: 5, ontbijt: 'ja', parkeren: 'gratis', wifi: 'ja', badkamer: 'eigen', wijk: 'goed', veilig: 'geen' }); const o2 = Object.assign(st.opties[2], { naam: 'Hotel C', prijs: 80, bScore: 8.1, gScore: 4.2, bN: 100, bNeg: 3, gN: 100, gNeg: 3, ontbijt: 'ja', parkeren: 'gratis', wifi: 'ja', badkamer: 'gedeeld', wijk: 'goed', veilig: 'onvoldoende' }); return [__rr.hotelToets(t, o, st).C.find(c => c.label === 'Slechte reviews').s, __rr.hotelToets(t, o2, st).C.filter(c => c.s === 'f').map(c => c.label), __rr.hotelToets(t, o2, st).C.find(c => c.label === 'Veiligheid').s]; });
 check('optie B: 20% slechte reviews = afgewezen; optie C: gedeelde badkamer afgewezen en veiligheid onvoldoende = onbekend', opt[0] === 'f' && opt[1].join() === 'Eigen badkamer' && opt[2] === 'o', JSON.stringify(opt));
 await page.click('[data-a=hotelTerug][data-i="0"]');
@@ -285,6 +329,21 @@ const brief = await page.evaluate(() => document.querySelector('[data-a=kopie][d
 check('hotelopdracht bevat plaats, data, maximumprijs, uitzondering en criteria', /Zoek 3 hotels in/.test(brief) && /Maximumprijs 100/.test(brief) && /tot 150/.test(brief) && /Booking minimaal 8/.test(brief) && /Eigen badkamer: ja/.test(brief) && /veiligheid is altijd een eis/.test(brief), brief);
 
 console.log('Auto-intake: soort auto per land, voorwaarden, extra kosten');
+await page.click('[data-t=auto]');
+for (const [land, verwacht] of [['Japan', /trein en bus overwegen/], ['Verenigde Staten', /huurauto is meestal verstandig/], ['Portugal', /combinatie van openbaar vervoer en huurauto/]]) {
+  await page.fill('#f_auto_land', land);
+  const ad = await page.textContent('[data-calc=vervoerAdvies]');
+  check(`vervoersadvies voor ${land}`, verwacht.test(ad), ad.slice(0, 150));
+}
+await page.fill('#f_auto_land', '');
+check('advies staat vóór de autointake', await page.evaluate(() => { const a = document.querySelector('[data-calc=vervoerAdvies]'), b = document.querySelector('#f_auto_klasse'); return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING); }));
+await page.selectOption('#f_auto_vervoer', 'ov');
+check('keuze trein en bus: huurauto-intake vervalt en autokosten tellen niet', await page.evaluate(() => !__rr.T().auto.nodig && !document.querySelector('#f_auto_klasse') && !!document.querySelector('#f_auto_ovKosten') && !__rr.kostenRegels(__rr.T()).some(x => x.key === 'auto-huur')));
+await page.fill('#f_auto_ovKosten', '600');
+check('kosten trein en bus komen in het totaal', await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'auto-ov').b === 600) && /600/.test(await page.textContent('[data-calc=vervoerVergelijk]')));
+await page.selectOption('#f_auto_vervoer', 'auto');
+check('terug naar huurauto: intake komt terug', await page.evaluate(() => __rr.T().auto.nodig && !!document.querySelector('#f_auto_klasse')));
+await page.fill('#f_auto_ovKosten', '');
 await page.evaluate(() => { const t = __rr.T(); t.reis.landen = 'Verenigde Staten, Canada'; t.reis.kind = 1; t.reis.kindLeeftijden = '4'; });
 await page.click('[data-t=auto]');
 const al = await page.textContent('[data-calc=autoLand]');

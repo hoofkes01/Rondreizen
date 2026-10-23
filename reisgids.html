@@ -82,10 +82,18 @@
   .boek .vak { border:1px solid #bbb; border-radius:4px; padding:6px 10px; margin:6px 0; break-inside:avoid; }
   .boek .lijnen { height:60px; background:repeating-linear-gradient(#fff 0 19px,#bbb 19px 20px); }
   .boek .bron { font-size:.78rem; color:#555; }
+  #printBlad { display:none; }
+  .pv { white-space:pre-wrap; border-bottom:1px dotted #999; display:inline-block; min-width:2ch; }
+  .boek.deelprint > [data-sec]:not(.kies) { display:none !important; }
   @page { size:A4; margin:14mm 12mm; }
   @media print {
     body { background:#fff; color:#000; }
     header.top, .noprint, #melding, .banner.noprint { display:none !important; }
+    body.print-blad main { display:none !important; }
+    body.print-blad #printBlad { display:block; }
+    #printBlad .card { border:0; padding:0; margin:8px 0; }
+    #printBlad .grid { grid-template-columns:repeat(2,1fr); }
+    #printBlad h2 { break-after:avoid; }
     main { padding:0; max-width:none; }
     .boek { border:0; padding:0; border-radius:0; font-size:11pt; }
     .boek .bdag, .boek .bsec { break-before:page; }
@@ -127,6 +135,11 @@ const num = v => (v === '' || v == null || !isFinite(+v)) ? null : +v;
 const sum = a => a.reduce((x, y) => x + y, 0);
 const NF = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 0 });
 const NF1 = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 1 });
+const VERVOER = [
+  { re: /japan|zwitserland|zuid-korea|zuid korea|taiwan|singapore|nederland|belgi[ëe]|luxemburg/i, advies: 'ov', naam: 'land met sterk openbaar vervoer', tekst: 'Treinen en bussen zijn hier doorgaans zeer goed; in steden is een huurauto vaak duur en lastig (parkeren, verkeer). Overweeg trein en bus als hoofdvervoer.' },
+  { re: /verenigde staten|\busa\b|\bvs\b|amerika|canada|australi[ëe]|nieuw[- ]zeeland|zuid[- ]afrika|namibi[ëe]|botswana/i, advies: 'auto', naam: 'groot land met lange afstanden', tekst: 'Buiten de grote steden is openbaar vervoer beperkt; voor een rondreis is een huurauto meestal de praktische keuze.' },
+  { re: /portugal|spanje|frankrijk|ital[ië]e?|duitsland|oostenrijk|griekenland|kroati[ëe]|ierland|verenigd koninkrijk|engeland|schotland|noorwegen|zweden|denemarken|finland|ijsland|polen|tsjechi[ëe]|hongarije|sloveni[ëe]|malta|cyprus|bulgarije|roemeni[ëe]|europa/i, advies: 'mix', naam: 'Europees land', tekst: 'Trein en bus verbinden steden vaak goed en zijn soms sneller en goedkoper dan een huurauto (met parkeren, tol en milieuzones). Een auto is handiger voor platteland, nationale parken en kleine plaatsen. Een combinatie kan het beste zijn: openbaar vervoer tussen steden, een auto voor de rest.' }
+];
 const KLASSEN = [['economy', 'Economy / mini', 'Mini / Economy'], ['compact', 'Compact', 'Compact'], ['intermediate', 'Intermediate (middenklasse)', 'Intermediate'], ['standard', 'Standard / full-size', 'Standard / Full-size'], ['stationwagen', 'Stationwagen', 'Estate'], ['suv', 'SUV', 'SUV'], ['minivan', 'Minivan / 7-persoons', 'Minivan / People carrier'], ['pickup', 'Pick-up', 'Pickup'], ['cabrio', 'Cabrio', 'Convertible'], ['premium', 'Premium / luxe', 'Premium / Luxury']];
 const BRANDSTOF = { 'vol-vol': ['vol-vol (full-to-full)', 'Full to full'], 'vol-leeg': ['vol-leeg (vooruitbetaald)', 'Full to empty (prepaid fuel)'], gelijk: ['zelfde niveau als bij ophalen', 'Same to same'], anders: ['anders / nog niet bekend', ''] };
 const kmTekst = a => a.kmType === 'beperkt' ? `maximaal ${a.kmLimiet || '?'} km per ${a.kmPer === 'dag' ? 'dag' : 'huurperiode'}` : a.kmType === 'onbeperkt' ? 'onbeperkt' : '—';
@@ -238,11 +251,11 @@ function nieuweReis(naam) {
     vlucht: { nodig: true, personen: null, zoekVan: '', zoekNaar: '', maandVan: '', maandTot: '', exactVan: '', exactTot: '', dagenMin: null, dagenMax: null, maxStops: '', maxUren: null, maxPrijsUsd: null, bagage: '1 koffer van 23 kg per persoon',
       van: '', naar: '', terugVan: '', maatschappij: '', stops: '', heenDatum: '', heenVertrek: '', heenAankomstDatum: '', heenAankomst: '', heenNr: '', terugDatum: '', terugVertrek: '', terugAankomstDatum: '', terugAankomst: '', terugNr: '',
       prijs: null, prijsValuta: 'EUR', prijsPer: '', koers: null, koersDatum: '', prijsType: 'schatting', bron: 'Get-Roam', prijsDatum: '', status: 'idee', ref: '', link: '', liters: 30, literprijs: 2.45, literprijsDatum: '', parkeren: 200, extra: null, notitie: '' },
-    auto: { nodig: true, personen: null, land: '', verhuurder: '', klasse: 'intermediate', versnelling: 'automaat', koffers: 2, ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '',
+    auto: { nodig: true, vervoer: '', personen: null, land: '', verhuurder: '', klasse: 'intermediate', versnelling: 'automaat', koffers: 2, ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '',
       kmType: 'onbeperkt', kmLimiet: null, kmPer: 'dag', kmExtra: null, zitjes: '', zitjesAantal: null, zitjesKosten: null, grens: 'nee', grensLanden: '', grensToeslag: null, grensOk: false, eenrichtingToeslag: null, creditcard: false,
       verzekeringKeuze: voorkeurVerz(), volledigIncl: '', leeftijd: null, bufferOphaal: 60, bufferInlever: 180, verzekering: '', eigenRisico: null, borg: null, tweede: false, tweedeKosten: null, extraVerz: null, brandstofBeleid: 'vol-vol', brandstofSoort: 'benzine', verbruik: null, eenheidsprijs: null, eenheidsprijsDatum: '', ovWens: '', ovKosten: null, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', notitie: '' },
     hotels: { personen: null, crit: { maxPrijs: 100, maxUitz: 150, minBooking: 8, minGoogle: 4, minReviews: 25, maxNegPct: 10, ontbijt: 'ja', parkeren: 'ja', wifi: 'ja', badkamer: 'ja', wijk: 'ja', maxAfstand: null, annuleren: 'voorkeur', kamers: 1, bedden: '', ligging: '', wensen: '', def: REVDEF }, lijst: [] },
-    route: { wegfactor: 1.3, snelheid: 75, start: null, eind: null, n2: null, n3: null, n4: null },
+    route: { wegfactor: 1.3, snelheid: 75, start: null, eind: null, n1: null, n2: null, n3: null, n4: null },
     gids: { interesses: [], maxKm: null, maxUren: null, vertrektijd: '09:00', uiterstAankomst: '18:00', pauze: '', minTijd: '', maxWissels: null, minNachten: null, rustdagen: '', eten: '', uitgaan: '', muziek: '', cultuur: '', sport: '', winkelen: '', extra: '' },
     prakt: { nationaliteit: '', document: 'paspoort', doel: 'vakantie', rijbewijsLand: 'Nederland', ipr: false, apparaten: '', esim: '', betalen: '', verzekering: '', gezondheid: '', verzekeraar: '', alarm: '', polis: '' },
     bevestigd: {}, dagen: [], stops: [], sync: { start: '', eind: '', naar: '', terugVan: '', od: '', ot: '', id: '', it: '' }, buffer: 10, extra: standaardExtra(), valutaLokaal: { code: '', koers: null, datum: '', bron: '' },
@@ -267,9 +280,15 @@ function vul(t, d = nieuweReis(), pad = []) { /* ontbrekende velden aanvullen bi
   }
   return t;
 }
-const nieuwHotel = () => ({ id: uid(), plaats: '', naam: '', adres: '', tel: '', site: '', van: '', tot: '', kamers: 1, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', ontbijt: 'onbekend', ontbijtPp: null, parkeren: 'onbekend', parkeerPerNacht: null, belasting: null, annuleren: '', status: 'idee', ref: '', link: '', gN: null, gNeg: null, gScore: null, bN: null, bNeg: null, bScore: null, revDatum: '', gLink: '', bLink: '', veilig: 'onvoldoende', veiligNotitie: '', ligging: '', notitie: '', wifi: 'onbekend', badkamer: 'onbekend', wijk: 'onbekend', afstandCentrum: null, uitzondering: false, gekozen: null, bevestigd: false, bevestigdOp: '' });
+const nieuwHotel = () => ({ id: uid(), plaats: '', naam: '', adres: '', tel: '', site: '', van: '', tot: '', kamers: 1, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', ontbijt: 'onbekend', ontbijtPp: null, parkeren: 'onbekend', parkeerPerNacht: null, belasting: null, annuleren: '', status: 'idee', ref: '', link: '', gN: null, gNeg: null, gScore: null, bN: null, bNeg: null, bScore: null, revDatum: '', gLink: '', bLink: '', veilig: 'onvoldoende', veiligNotitie: '', ligging: '', notitie: '', wifi: 'onbekend', badkamer: 'onbekend', wijk: 'onbekend', afstandCentrum: null, prijsB: null, prijsA: null, prijsH: null, linkB: '', linkA: '', foto: '', uitzondering: false, gekozen: null, bevestigd: false, bevestigdOp: '' });
 const nieuwVerblijf = () => { const h = nieuwHotel(); h.opties = [nieuwHotel(), nieuwHotel(), nieuwHotel()]; return h; };
-const OPTVELDEN = ['naam', 'adres', 'tel', 'site', 'prijs', 'prijsType', 'bron', 'prijsDatum', 'ontbijt', 'ontbijtPp', 'parkeren', 'parkeerPerNacht', 'belasting', 'annuleren', 'link', 'gN', 'gNeg', 'gScore', 'bN', 'bNeg', 'bScore', 'revDatum', 'gLink', 'bLink', 'veilig', 'veiligNotitie', 'ligging', 'wifi', 'badkamer', 'wijk', 'afstandCentrum', 'notitie'];
+const OPTVELDEN = ['naam', 'adres', 'tel', 'site', 'prijs', 'prijsType', 'bron', 'prijsDatum', 'ontbijt', 'ontbijtPp', 'parkeren', 'parkeerPerNacht', 'belasting', 'annuleren', 'link', 'gN', 'gNeg', 'gScore', 'bN', 'bNeg', 'bScore', 'revDatum', 'gLink', 'bLink', 'veilig', 'veiligNotitie', 'ligging', 'wifi', 'badkamer', 'wijk', 'afstandCentrum', 'notitie', 'prijsB', 'prijsA', 'prijsH', 'linkB', 'linkA', 'foto'];
+/* laagste prijs van de drie toegestane bronnen: Booking.com, Agoda.com en de website van het hotel zelf */
+function herprijs(o) {
+  const c = [['Booking.com', num(o.prijsB), o.linkB], ['Agoda.com', num(o.prijsA), o.linkA], ['Website hotel', num(o.prijsH), o.site]].filter(x => x[1] != null);
+  if (!c.length) { o.prijs = null; o.bron = ''; return; }
+  const m = c.reduce((a, b) => b[1] < a[1] ? b : a); o.prijs = m[1]; o.bron = m[0]; if (m[2]) o.link = m[2];
+}
 const kopieerOptie = (h, k) => { OPTVELDEN.forEach(f => { h[f] = h.opties[k][f]; }); h.gekozen = k; };
 const wisKeuze = h => { const l = nieuwHotel(); OPTVELDEN.forEach(f => { h[f] = l[f]; }); h.gekozen = null; h.bevestigd = false; h.bevestigdOp = ''; };
 const nieuwItem = () => ({ id: uid(), tijd: '', soort: 'activiteit', titel: '', adres: '', pv: null, pk: null, munt: 'basis', status: 'controleren', prijsDatum: '', link: '', openingstijden: '', notitie: '' });
@@ -400,6 +419,8 @@ function hotelToets(t, o, st) {
   else if (pe <= mp) add('Prijs', 'ok', `${mny(pe)} p.n. per kamer, alles inbegrepen, binnen ${mny(mp)}`);
   else if (pe <= mu) add('Prijs', st.uitzondering ? 'ok' : 'l', st.uitzondering ? `${mny(pe)} p.n.: boven ${mny(mp)}, uitzondering tot ${mny(mu)} door u bevestigd` : `${mny(pe)} p.n. is boven ${mny(mp)}: bevestig eerst de uitzondering (tot ${mny(mu)}) voor deze plaats`);
   else add('Prijs', 'f', `${mny(pe)} p.n. is boven het absolute maximum van ${mny(mu)}`);
+  const np = [o.prijsB, o.prijsA, o.prijsH].filter(x => num(x) != null).length;
+  add('Laagste prijs', np === 3 ? 'ok' : 'o', np === 3 ? `laagste van drie bronnen: ${mny(num(o.prijs))} bij ${o.bron}` : `alleen ${np} van de 3 bronnen ingevuld: controleer Booking.com, Agoda.com en de hotelwebsite`);
   const mb = num(c.minBooking), mg = num(c.minGoogle), sb = num(o.bScore), sg = num(o.gScore), w = [];
   if (mb != null) w.push(sb == null ? 'o' : sb >= mb ? 'ok' : 'f'); if (mg != null) w.push(sg == null ? 'o' : sg >= mg ? 'ok' : 'f');
   const ws = w.includes('f') ? 'f' : w.includes('o') ? 'o' : 'ok';
@@ -485,7 +506,7 @@ function voortgang(t) {
   const chk = (naam, items) => { const ontbreekt = items.filter(([, ok]) => !ok).map(([l]) => l); S.push({ naam, ontbreekt, totaal: items.length, klaar: items.length - ontbreekt.length }); };
   const reisChk = () => chk('Reis', [['naam', !!t.naam], ['landen/regio', !!r.landen], ['startplaats', !!r.startplaats], ['vertrekdatum', okD(r.vertrek)], ['einddatum', okD(r.terug)], ['aantal reizigers', (r.volw || 0) > 0], ['totaalbudget', num(r.budget) != null]]);
   if (v.nodig) chk('Vlucht', [['luchthavens om te zoeken', !!(v.zoekVan && v.zoekNaar)], ['zoekperiode', !!((v.maandVan && v.maandTot) || (v.exactVan && v.exactTot))], ['aantal dagen (min en max)', num(v.dagenMin) != null && num(v.dagenMax) != null], ['gekozen vlucht: heen- en terugdatum', okD(v.heenDatum) && okD(v.terugDatum)], ['prijs en prijsbasis', num(v.prijs) != null && !!v.prijsPer]]);
-  if (a.nodig) chk('Auto', [['ophaalplaats', !!a.ophaalPlaats], ['ophaal- en inleverdatum', okD(a.ophaalDatum) && okD(a.inleverDatum)], ['soort auto', !!a.klasse], ['kilometers', !!a.kmType && (a.kmType === 'onbeperkt' || num(a.kmLimiet) != null)], ['kinderzitjes (bij kinderen)', !(r.kind > 0) || !!a.zitjes], ['grensoverschrijding bepaald', !!a.grens], ['huurprijs', num(a.prijs) != null]]);
+  { const it = [['vervoerskeuze (huurauto, trein/bus of combinatie)', !!a.vervoer]]; if (a.nodig) it.push(['ophaalplaats', !!a.ophaalPlaats], ['ophaal- en inleverdatum', okD(a.ophaalDatum) && okD(a.inleverDatum)], ['soort auto', !!a.klasse], ['kilometers', !!a.kmType && (a.kmType === 'onbeperkt' || num(a.kmLimiet) != null)], ['kinderzitjes (bij kinderen)', !(r.kind > 0) || !!a.zitjes], ['grensoverschrijding bepaald', !!a.grens], ['huurprijs', num(a.prijs) != null]); else it.push(['kosten trein en bus', num(a.ovKosten) != null]); chk('Auto', it); }
   reisChk();
   chk('Verblijf', [['plaatsen met nachten (klopt met het aantal nachten)', t.stops.length > 0 && okD(r.vertrek) && okD(r.terug) && sum(t.stops.map(x => num(x.nachten) || 0)) === diffD(r.terug, r.vertrek)], ['locaties van de plaatsen opgezocht', t.stops.length > 0 && t.stops.every(x => x.geo)], ['drie hotelopties per verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => h.opties.filter(o => o.naam).length >= 3)], ['hotel bevestigd bij elk verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => h.bevestigd)]]);
   chk('Reisgids', [['interesses', g.interesses.length > 0], ['limiet km per dag', num(g.maxKm) != null], ['limiet rijtijd per dag', num(g.maxUren) != null], ['nationaliteit (voor inreisregels)', !!p.nationaliteit]]);
@@ -606,9 +627,8 @@ const nachtenSectie = () => sectie('2 Autohuur', 'De data komen uit de gekozen v
 const autoSectie = () => {
   const t = T(), au = t.auto, eenrichting = au.ophaalPlaats && au.inleverPlaats && au.ophaalPlaats.trim().toLowerCase() !== au.inleverPlaats.trim().toLowerCase();
   return sectie('Autohuur en vervoer', `De autozoeker blijft een apart onderdeel (DiscoverCars). Vul hier zo veel mogelijk vooraf in: daarmee kunt u op de website snel en gericht zoeken. Datums, tijden en plaatsen zijn overgenomen uit de vlucht.`,
-    `<div class="grid">${fld('auto.nodig', 'Ik huur een auto', 'c', { r: 1 })}</div>` + (au.nodig ? `
+    `<h3 style="margin-top:0">Eerst: is een huurauto verstandig?</h3><div class="grid">${fld('auto.land', 'Land waar u reist', 't', { r: 1, ph: t.reis.landen || 'bijv. Verenigde Staten', h: 'Leeg = landen van de reis.' })}${fld('auto.vervoer', 'Mijn keuze', 's', { r: 1, opts: [['', 'kies…'], ['auto', 'huurauto'], ['ov', 'trein en bus, geen huurauto'], ['beide', 'combinatie: trein/bus én huurauto']] })}</div><div class="box" data-calc="vervoerAdvies"></div>` + (au.nodig ? `
     <h3>Soort auto (afhankelijk van het land)</h3><div class="grid">
-      ${fld('auto.land', 'Land waar u rijdt', 't', { r: 1, ph: t.reis.landen || 'bijv. Verenigde Staten', h: 'Leeg = landen van de reis.' })}
       ${fld('auto.klasse', 'Voertuigklasse', 's', { opts: KLASSEN.map(k => [k[0], k[1]]) })}${fld('auto.versnelling', 'Versnelling', 's', { opts: [['automaat', 'automaat'], ['schakel', 'handgeschakeld'], ['maakt niet uit', 'maakt niet uit']] })}
       ${fld('auto.koffers', 'Aantal koffers (groot)', 'n', { min: 0, r: 1 })}${fld('auto.brandstofSoort', 'Aandrijving', 's', { opts: ['benzine', 'diesel', 'hybride', 'elektrisch'] })}${persVeld('auto.personen', t)}
     </div><div class="box" data-calc="autoLand"></div>
@@ -631,12 +651,12 @@ const autoSectie = () => {
     <h3>Brandstof en overige vervoerskosten</h3><div class="grid">
       ${fld('auto.verbruik', 'Verbruik per 100 km (liter of kWh)', 'n', { min: 0 })}${fld('auto.eenheidsprijs', `Prijs per liter/kWh (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('auto.eenheidsprijsDatum', 'Prijs gecontroleerd op', 'd')}
       ${fld('auto.ovWens', 'Openbaar vervoer / taxi / veerboot (wensen)', 'a', { w: 1, rows: 2 })}${fld('auto.ovKosten', 'Kosten OV/taxi/veerboot', 'n', { min: 0 })}
-    </div>
+    </div><div class="box" data-calc="vervoerVergelijk"></div>
     <h3>Gekozen huurauto</h3><div class="grid">
       ${fld('auto.verhuurder', 'Verhuurder', 't')}${fld('auto.prijs', `Totale huurprijs (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('auto.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld('auto.prijsDatum', 'Prijs gecontroleerd op', 'd')}${fld('auto.bron', 'Bron', 't')}${fld('auto.extraVerz', 'Extra verzekering (optioneel)', 'n', { min: 0 })}
       ${fld('auto.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld('auto.ref', 'Reserveringsnummer (optioneel)', 't')}${fld('auto.link', 'Link', 'u')}
       ${fld('auto.notitie', 'Notities', 'a', { w: 1, rows: 2 })}
-    </div>` : '<p class="noot">Geen huurauto: de autokosten tellen niet mee.</p>') + kBox('Auto'));
+    </div>` : `<h3>Trein en bus</h3><div class="grid">${fld('auto.ovWens', 'Welke ritten met trein of bus? (van–naar, datum)', 'a', { w: 1, rows: 3 })}${fld('auto.ovKosten', `Totale kosten trein en bus (${esc(t.reis.valuta)})`, 'n', { min: 0 })}</div><div class="box" data-calc="vervoerVergelijk"></div><p class="noot">Boek treinen en bussen bij de vervoerder zelf (nationale spoorwegen of busmaatschappij) en noteer prijs en datum. Zonder huurauto vervallen de autokosten.</p>`) + kBox('Auto'));
 };
 
 VIEWS.auto = () => nachtenSectie() + autoSectie();
@@ -645,8 +665,11 @@ const JN = [['ja', 'ja, nodig'], ['nee', 'nee, niet nodig']];
 function optieVelden(i, k) {
   const t = T(), o = t.hotels.lijst[i].opties[k], p = `hotels.lijst.${i}.opties.${k}`;
   return `<div class="grid">
-    ${fld(p + '.naam', 'Naam hotel', 't')}${fld(p + '.adres', 'Adres', 't')}${fld(p + '.tel', 'Telefoon', 't')}${fld(p + '.site', 'Officiële website', 'u')}${fld(p + '.link', 'Boekingslink', 'u')}
-    ${fld(p + '.prijs', `Prijs per kamer per nacht (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld(p + '.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld(p + '.prijsDatum', 'Prijs gezien op', 'd')}${fld(p + '.bron', 'Bron prijs', 't')}
+    ${fld(p + '.naam', 'Naam hotel', 't')}${fld(p + '.adres', 'Adres', 't')}${fld(p + '.tel', 'Telefoon', 't')}${fld(p + '.site', 'Website van het hotel zelf', 'u')}
+    <div class="wide"><label>Foto van het hotel</label><div class="rij" style="margin-top:0">${o.foto ? `<img data-foto="${esc(o.foto)}" alt="hotel" style="width:160px;border-radius:6px"><button class="klein gevaar" data-a="hotelFotoDel" data-i="${i}" data-k="${k}">Foto verwijderen</button>` : ''}<label class="knop" style="margin:0">${o.foto ? 'Andere foto' : '+ Foto toevoegen'}<input type="file" accept="image/*" data-ch="hotelFoto" data-i="${i}" data-k="${k}" hidden></label></div><div class="hint">Sla een foto op van de hotelpagina en voeg die hier toe; hij blijft op dit apparaat.</div></div>
+    <div class="wide noot">Zoek alleen bij <b>Booking.com</b>, <b>Agoda.com</b> en op de <b>website van het hotel zelf</b>. Vul de prijs per bron in (zelfde voorwaarden); de app neemt de laagste.</div>
+    ${fld(p + '.prijsB', `Prijs op Booking.com per kamer per nacht (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld(p + '.linkB', 'Link Booking.com', 'u')}${fld(p + '.prijsA', 'Prijs op Agoda.com per kamer per nacht', 'n', { min: 0 })}${fld(p + '.linkA', 'Link Agoda.com', 'u')}${fld(p + '.prijsH', 'Prijs op de website van het hotel zelf', 'n', { min: 0 })}
+    <div><label>Laagste prijs</label><div class="box" style="margin:0" data-calc="laagste" data-i="${i}" data-k="${k}"></div></div>${fld(p + '.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld(p + '.prijsDatum', 'Prijzen gezien op', 'd')}
     ${fld(p + '.ontbijt', 'Ontbijt', 's', { r: 1, opts: [['onbekend', 'niet bevestigd'], ['ja', 'inbegrepen'], ['extra', 'tegen betaling'], ['nee', 'niet beschikbaar']] })}${o.ontbijt === 'extra' ? fld(p + '.ontbijtPp', 'Ontbijt per persoon per dag', 'n', { min: 0 }) : ''}
     ${fld(p + '.parkeren', 'Parkeren', 's', { r: 1, opts: [['onbekend', 'niet bevestigd'], ['gratis', 'gratis'], ['betaald', 'betaald'], ['nee', 'niet beschikbaar']] })}${o.parkeren === 'betaald' ? fld(p + '.parkeerPerNacht', 'Parkeerkosten per nacht', 'n', { min: 0 }) : ''}
     ${fld(p + '.wifi', 'Wifi', 's', { opts: [['onbekend', 'niet bevestigd'], ['ja', 'ja'], ['nee', 'nee']] })}${fld(p + '.badkamer', 'Badkamer', 's', { opts: [['onbekend', 'niet bevestigd'], ['eigen', 'eigen badkamer'], ['gedeeld', 'gedeeld']] })}
@@ -661,11 +684,12 @@ function optieVelden(i, k) {
 function hotelBrief(t, i) {
   const h = t.hotels.lijst[i], c = t.hotels.crit, jn = v => eis(v) ? 'ja' : 'nee';
   return [`Zoek 3 hotels in ${h.plaats}`, `Aankomst ${h.van}, vertrek ${h.tot} (${nachten(h)} nachten), ${persVoor(t, 'Verblijf')} reizigers, ${h.kamers || 1} kamer(s)`,
+    `Zoek alleen bij Agoda.com, Booking.com en op de officiële website van het hotel zelf, en neem de laagste prijs voor dezelfde voorwaarden (annuleren, ontbijt).`,
     `Maximumprijs ${c.maxPrijs} ${t.reis.valuta} per kamer per nacht, alles inbegrepen (ontbijt, parkeren, belasting). Een duurder hotel (tot ${c.maxUitz}) alleen als ik dat eerst bevestig.`,
     `Waardering: Booking minimaal ${c.minBooking}, Google minimaal ${c.minGoogle}; minimaal ${c.minReviews} reviews per bron en maximaal ${c.maxNegPct}% negatieve reviews`,
     `Ontbijt: ${jn(c.ontbijt)} · Parkeren: ${jn(c.parkeren)} · Wifi: ${jn(c.wifi)} · Eigen badkamer: ${jn(c.badkamer)} · Goede wijk: ${jn(c.wijk)} (veiligheid is altijd een eis)`,
     num(c.maxAfstand) != null ? `Maximaal ${c.maxAfstand} km van het centrum` : null, c.ligging ? `Ligging: ${c.ligging}` : null,
-    'Geef per hotel: adres, prijs per nacht (alles inbegrepen), Booking- en Google-score met aantal reviews en % negatief, ontbijt, parkeren, wifi, badkamer, wijk/veiligheid, afstand tot het centrum en een link.'].filter(Boolean).join('\n');
+    'Geef per hotel: adres, prijs per nacht per bron (Booking.com, Agoda.com, hotelwebsite; alles inbegrepen), Booking- en Google-score met aantal reviews en % negatief, ontbijt, parkeren, wifi, badkamer, wijk/veiligheid, afstand tot het centrum en een link.'].filter(Boolean).join('\n');
 }
 
 VIEWS.verblijf = () => {
@@ -681,18 +705,18 @@ VIEWS.verblijf = () => {
       ${fld('hotels.crit.ligging', 'Gewenste ligging', 't', { ph: 'dicht bij de “place to be”, niet te druk, avondleven, openbaar vervoer…', w: 1 })}${fld('hotels.crit.wensen', 'Overige wensen (toegankelijkheid e.d.)', 't', { w: 1 })}
       ${fld('hotels.crit.def', 'Definitie van “negatieve review” (vastgelegd)', 'a', { w: 1, rows: 3, h: 'Pas dit bewust aan; het wordt in het reisboek vermeld.' })}
     </div>`);
-  h += sectie('Rondreisvoorstel', 'U geeft de plaatsen en hoe vaak u er 2, 3 of 4 nachten wilt blijven. De app stelt de volgorde voor, met de grens van maximaal kilometers per dag. Afstanden zijn een schatting (hemelsbreed × wegfactor).',
+  h += sectie('Rondreisvoorstel', 'U geeft de plaatsen en hoe vaak u er 1, 2, 3 of 4 nachten wilt blijven; per plaats bepaalt u dat zelf. De app stelt de volgorde voor, met de grens van maximaal kilometers per dag. Afstanden zijn een schatting (hemelsbreed × wegfactor).',
     `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>
     <div class="grid" style="margin-top:12px">
       ${fld('reis.startplaats', 'Beginpunt: plaats bij de aankomstluchthaven', 't', { ph: 'bijv. Denver' })}${fld('reis.eindplaats', 'Eindpunt: plaats bij de terugvlucht', 't', { h: 'Leeg = zelfde als beginpunt.' })}
       ${fld('gids.maxKm', 'Maximum kilometers per dag', 'n', { min: 0 })}${fld('gids.maxUren', 'Maximum rijtijd per dag (uren)', 'n', { min: 0 })}
       ${fld('route.snelheid', 'Gemiddelde snelheid (km/u, voor de rijtijd)', 'n', { min: 20 })}${fld('route.wegfactor', 'Wegfactor (weg = hemelsbreed × factor)', 'n', { min: 1 })}
     </div>
-    <h3>Hoe vaak 2, 3 of 4 nachten op één plek?</h3>
-    <div class="grid">${fld('route.n2', 'Aantal plaatsen met 2 nachten', 'n', { min: 0 })}${fld('route.n3', 'Aantal plaatsen met 3 nachten', 'n', { min: 0 })}${fld('route.n4', 'Aantal plaatsen met 4 nachten', 'n', { min: 0 })}</div>
+    <h3>Hoe vaak 1, 2, 3 of 4 nachten op één plek?</h3>
+    <div class="grid">${fld('route.n1', 'Aantal plaatsen met 1 nacht', 'n', { min: 0 })}${fld('route.n2', 'Aantal plaatsen met 2 nachten', 'n', { min: 0 })}${fld('route.n3', 'Aantal plaatsen met 3 nachten', 'n', { min: 0 })}${fld('route.n4', 'Aantal plaatsen met 4 nachten', 'n', { min: 0 })}</div>
     <div class="rij"><button data-a="patroonRijen">Lege plaatsen aanmaken uit dit patroon</button></div>
     <div class="box" data-calc="patroonCheck"></div>
-    <h3>Uw plaatsen en waar u 2, 3 of 4 nachten blijft</h3>
+    <h3>Uw plaatsen en waar u 1, 2, 3 of 4 nachten blijft</h3>
     <table class="rtab"><thead><tr><th>Plaats</th><th>Nachten</th><th>Locatie</th><th></th></tr></thead><tbody>${t.stops.map((x, i) => `<tr><td data-l="Plaats"><input type="text" data-b="stops.${i}.plaats" value="${esc(x.plaats)}" placeholder="bijv. Santa Fe"></td><td data-l="Nachten"><input type="number" min="1" data-b="stops.${i}.nachten" value="${esc(x.nachten)}" style="width:90px"></td><td data-l="Locatie" class="noot">${x.geo ? esc(x.geo.naam) : '—'}</td><td><button class="klein" data-a="omhoog" data-p="stops" data-i="${i}">↑</button> <button class="klein" data-a="omlaag" data-p="stops" data-i="${i}">↓</button> <button class="klein gevaar" data-a="del" data-p="stops" data-i="${i}">✕</button></td></tr>`).join('')}</tbody></table>
     <div class="rij"><button data-a="add" data-p="stops" data-n="stop">+ Plaats toevoegen</button><button data-a="geoStops">Locaties opzoeken</button></div>
     <h3>Voorstel voor de route</h3><div class="box" style="margin-top:0" data-calc="routeVoorstel"></div>
@@ -701,7 +725,7 @@ VIEWS.verblijf = () => {
   t.hotels.lijst.forEach((hh, i) => {
     const p = `hotels.lijst.${i}`;
     h += `<section class="card"><h2>Verblijf ${i + 1}: ${esc(hh.plaats || '?')} · ${nachten(hh)} nacht${nachten(hh) === 1 ? '' : 'en'} (${dFmt(hh.van)} – ${dFmt(hh.tot)})</h2>
-      ${hh.bevestigd ? `<div class="banner" style="border-color:var(--goed)">✔ Bevestigd: <b>${esc(hh.naam)}</b> (optie ${'ABC'[hh.gekozen]}) op ${esc(new Date(hh.bevestigdOp).toLocaleString('nl-NL'))} <button class="klein" data-a="hotelTerug" data-i="${i}">Keuze intrekken</button></div>` : '<p class="noot">Kies hieronder één van de drie hotels en bevestig het. Zonder uw bevestiging wordt er geen hotel gekozen.</p>'}
+      ${hh.bevestigd ? `<div class="banner" style="border-color:var(--goed)"><div class="rij" style="margin:0;align-items:flex-start">${hh.foto ? `<img data-foto="${esc(hh.foto)}" alt="${esc(hh.naam)}" style="width:240px;max-width:100%;border-radius:8px">` : '<div class="noot" style="width:240px;max-width:100%;border:1px dashed var(--lijn);border-radius:8px;padding:30px 10px;text-align:center">Nog geen foto. Voeg die toe bij de gekozen optie hieronder.</div>'}<div style="flex:1;min-width:220px">✔ Bevestigd: <b>${esc(hh.naam)}</b> (optie ${'ABC'[hh.gekozen]}) op ${esc(new Date(hh.bevestigdOp).toLocaleString('nl-NL'))}<br><b>Adres:</b> ${esc(hh.adres || 'nog invullen')} ${hh.adres ? `<a target="_blank" rel="noopener" href="${esc(mapsZoek(hh.naam + ' ' + hh.adres))}">kaart</a>` : ''}${hh.tel ? ` · ${esc(hh.tel)}` : ''}<br>${mny(num(hh.prijs))} per kamer per nacht (laagste prijs${hh.bron ? ' bij ' + esc(hh.bron) : ''})${hh.link ? ` · <a target="_blank" rel="noopener" href="${esc(hh.link)}">boekingslink</a>` : ''}<br><button class="klein" data-a="hotelTerug" data-i="${i}">Keuze intrekken</button></div></div></div>` : '<p class="noot">Kies hieronder één van de drie hotels en bevestig het. Zonder uw bevestiging wordt er geen hotel gekozen.</p>'}
       <div class="grid">${fld(p + '.plaats', 'Plaats', 't')}${fld(p + '.van', 'Incheckdatum', 'd')}${fld(p + '.tot', 'Uitcheckdatum', 'd')}${fld(p + '.kamers', 'Aantal kamers', 'n', { min: 1 })}${fld(p + '.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld(p + '.ref', 'Bevestigingsnummer (optioneel)', 't')}
         ${fld(p + '.uitzondering', `Uitzondering voor deze plaats: een hotel tot ${mny(num(c.maxUitz))} p.n. is toegestaan (normaal maximaal ${mny(num(c.maxPrijs))})`, 'c', { w: 1 })}</div>
       <div class="rij"><button class="klein" data-a="kopie" data-v="${esc(hotelBrief(t, i))}">Kopieer hotelopdracht (voor Booking.com of Claude)</button><a class="knop klein" target="_blank" rel="noopener" href="${esc(mapsZoek('hotels in ' + (hh.plaats || '')))}">Hotels op de kaart</a><button class="klein gevaar" data-a="del" data-p="hotels.lijst" data-i="${i}">Verblijf verwijderen</button></div>
@@ -806,7 +830,7 @@ VIEWS.dag = () => {
   overLimiet(t, d).forEach(m => h += `<div class="banner fout">${esc(m)}. Overweeg een tussenstop, extra overnachting of andere route.</div>`);
   const z = tzWissel(t, i); if (z) h += `<div class="banner">${esc(z)} Alle tijden hieronder zijn lokale tijd.</div>`;
   h += `<div class="grid">${fld(p + '.titel', 'Titel (optioneel)', 't')}${fld(p + '.vertrek', 'Vertrektijd (lokaal)', 'h')}${fld(p + '.aankomst', 'Aankomsttijd (lokaal)', 'h')}</div></section>`;
-  h += `<section class="card"><h2>Hotel voor deze nacht</h2>` + (hotel ? `<p><b>${esc(hotel.naam || '(naamloos)')}</b> · ${esc(hotel.adres || hotel.plaats)} · ${nachten(hotel)} nacht(en) (${dFmt(hotel.van)} – ${dFmt(hotel.tot)})<br>Prijs per kamer per nacht: ${mny(num(hotel.prijs))} (${PTL[hotel.prijsType]}) · ontbijt: ${{ ja: 'inbegrepen', extra: 'tegen betaling', nee: 'niet beschikbaar', onbekend: 'niet bevestigd' }[hotel.ontbijt]} · parkeren: ${{ gratis: 'gratis', betaald: 'betaald', nee: 'niet beschikbaar', onbekend: 'niet bevestigd' }[hotel.parkeren]}<br>Status: ${badge(hotel.status === 'betaald' || hotel.status === 'geboekt' ? 'g' : 'n', hotel.status)} · annuleren: ${esc(hotel.annuleren || 'niet ingevuld')}${hotel.site ? ` · <a target="_blank" rel="noopener" href="${esc(hotel.site)}">website</a>` : ''}${hotel.link ? ` · <a target="_blank" rel="noopener" href="${esc(hotel.link)}">boeking</a>` : ''}</p>` : d.type === 'vertrek' ? '<p class="noot">Vertrekdag: geen overnachting.</p>' : '<p class="noot">Geen hotel gekoppeld aan deze nacht. Voeg een verblijf toe (tab 4) met in- en uitcheckdatum.</p>') + `</section>`;
+  h += `<section class="card"><h2>Hotel voor deze nacht</h2>` + (hotel ? `${hotel.foto ? `<img data-foto="${esc(hotel.foto)}" alt="${esc(hotel.naam)}" style="width:240px;max-width:100%;border-radius:8px;float:right;margin:0 0 8px 12px">` : ''}<p><b>${esc(hotel.naam || '(naamloos)')}</b> · ${esc(hotel.adres || hotel.plaats)} ${hotel.adres ? `<a target="_blank" rel="noopener" href="${esc(mapsZoek(hotel.naam + ' ' + hotel.adres))}">kaart</a>` : ''} · ${nachten(hotel)} nacht(en) (${dFmt(hotel.van)} – ${dFmt(hotel.tot)})<br>Prijs per kamer per nacht: ${mny(num(hotel.prijs))} (${PTL[hotel.prijsType]}) · ontbijt: ${{ ja: 'inbegrepen', extra: 'tegen betaling', nee: 'niet beschikbaar', onbekend: 'niet bevestigd' }[hotel.ontbijt]} · parkeren: ${{ gratis: 'gratis', betaald: 'betaald', nee: 'niet beschikbaar', onbekend: 'niet bevestigd' }[hotel.parkeren]}<br>Status: ${badge(hotel.status === 'betaald' || hotel.status === 'geboekt' ? 'g' : 'n', hotel.status)} · annuleren: ${esc(hotel.annuleren || 'niet ingevuld')}${hotel.site ? ` · <a target="_blank" rel="noopener" href="${esc(hotel.site)}">website</a>` : ''}${hotel.link ? ` · <a target="_blank" rel="noopener" href="${esc(hotel.link)}">boeking</a>` : ''}</p>` : d.type === 'vertrek' ? '<p class="noot">Vertrekdag: geen overnachting.</p>' : '<p class="noot">Geen hotel gekoppeld aan deze nacht. Voeg een verblijf toe (tab 4) met in- en uitcheckdatum.</p>') + `</section>`;
   h += `<section class="card"><h2>Programma (lokale tijd)</h2><p class="noot">Zet alleen betaalde of geplande onderdelen met prijs in het programma. Items van het soort “eten” tellen niet mee in de kosten; gebruik daarvoor het dagbudget hieronder (voorkomt dubbel tellen).</p>` +
     d.programma.map((it, k) => { const q = `${p}.programma.${k}`; return `<div class="item"><div class="grid">${fld(q + '.tijd', 'Tijd (lokaal)', 'h')}${fld(q + '.soort', 'Soort', 's', { r: 1, opts: [['activiteit', 'activiteit/attractie'], ['eten', 'eten/drinken'], ['avond', 'café/avond/livemuziek'], ['winkel', 'winkel/outlet'], ['pauze', 'pauze/stop']] })}${fld(q + '.titel', 'Wat', 't')}${fld(q + '.adres', 'Adres/plaats', 't')}
       ${fld(q + '.pv', 'Prijs p.p. volwassene', 'n', { min: 0, h: 'Leeg = onbekend, 0 = gratis' })}${fld(q + '.pk', 'Prijs p.p. kind', 'n', { min: 0 })}${fld(q + '.munt', 'Munt', 's', { opts: [['basis', t.reis.valuta], ['lokaal', 'lokale valuta' + (t.valutaLokaal.code ? ' (' + t.valutaLokaal.code + ')' : '')]] })}${fld(q + '.status', 'Prijsstatus', 's', { opts: PRIJSTYPE })}${fld(q + '.prijsDatum', 'Prijs gecontroleerd op', 'd')}
@@ -883,15 +907,16 @@ VIEWS.boek = () => {
   setTimeout(() => bouwBoek(false), 0);
   return `<section class="card noprint"><h2>Reisboek (printbaar, ook als PDF)</h2><p class="noot">Het reisboek wordt samengesteld uit alle gegevens van deze reis: voorblad, route, kosten, voorbereiding, boekingen, praktische informatie en één pagina per dag, na afloop aangevuld met dagboek, foto’s en werkelijk weer en uitgaven. Kies <b>Afdrukken</b> en dan “Opslaan als PDF” in uw browser (A4, links blijven klikbaar).</p>
     <div class="tw">${fld('boek.dagboek', 'Dagboek en werkelijk verloop opnemen', 'c', { r: 1 })}${fld('boek.foto', 'Foto’s opnemen', 'c', { r: 1 })}${fld('boek.refs', 'Boekings- en polisnummers opnemen', 'c', { r: 1, h: 'Staan dan op papier; bewaar het reisboek veilig.' })}${fld('boek.bronnen', 'Bronnen en peildata vermelden', 'c', { r: 1 })}</div>
-    <div class="rij"><button class="prim" data-a="print">Afdrukken / opslaan als PDF</button><button data-a="boekHTML">Download als één HTML-bestand (met foto’s)</button></div></section><div id="boekUit" class="boek"><p class="noot">Reisboek wordt samengesteld…</p></div>`;
+    <div class="rij"><label for="boekDeel" style="margin:0">Onderdeel:</label><select id="boekDeel" style="width:auto"><option value="alles">Hele reisboek</option></select><button class="prim" data-a="printDeel">Afdrukken / opslaan als PDF</button></div>
+    <div class="rij"><button data-a="print">Hele reisboek afdrukken</button><button data-a="boekHTML">Download als één HTML-bestand (met foto’s)</button></div></section><div id="boekUit" class="boek"><p class="noot">Reisboek wordt samengesteld…</p></div>`;
 };
 async function bouwBoek(dataUrls) {
   const t = T(), uit = $('#boekUit'); if (!t) return ''; const o = t.boek;
-  const ids = o.foto && o.dagboek ? t.dagen.flatMap(d => d.dagboek.fotos.map(f => f.id)) : [];
+  const ids = [...(o.foto && o.dagboek ? t.dagen.flatMap(d => d.dagboek.fotos.map(f => f.id)) : []), ...(o.foto ? t.hotels.lijst.filter(h => h.bevestigd && h.foto).map(h => h.foto) : [])];
   const src = {};
   for (const id of ids) { try { src[id] = dataUrls ? await blobNaarData(await fotoGet(id)) : await fotoUrl(id); } catch { src[id] = ''; } }
   const html = reisboekHTML(t, src);
-  if (uit && !dataUrls) { uit.innerHTML = html; await Promise.all($$('img', uit).map(im => im.decode ? im.decode().catch(() => { }) : 0)); }
+  if (uit && !dataUrls) { uit.innerHTML = html; const sel = $('#boekDeel'); if (sel) { const cur = sel.value; sel.innerHTML = '<option value="alles">Hele reisboek</option>' + $$('[data-sec]', uit).map(e => `<option value="${esc(e.dataset.sec)}">${esc(e.dataset.naam)}</option>`).join(''); if ([...sel.options].some(o => o.value === cur)) sel.value = cur; } await Promise.all($$('img', uit).map(im => im.decode ? im.decode().catch(() => { }) : 0)); }
   return html;
 }
 function reisboekHTML(t, src) {
@@ -900,36 +925,47 @@ function reisboekHTML(t, src) {
   const plaatsen = [...new Set(t.dagen.map(d => d.plaats).filter(Boolean))];
   const tbl = (kop, rijen, kl = []) => `<table><thead><tr>${kop.map((k, i) => `<th class="${kl[i] || ''}">${k}</th>`).join('')}</tr></thead><tbody>${rijen.map(rw => `<tr>${rw.map((c, i) => `<td class="${kl[i] || ''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const ref = x => o.refs && x ? esc(x) : (x ? '<i>(niet opgenomen)</i>' : '—');
-  let h = `<div class="voorblad"><div class="meta">REISBOEK</div><h1>${esc(t.naam)}</h1><p style="font-size:1.1rem">${dFmt(r.vertrek)} – ${dFmt(r.terug)}</p><p>${duurDagen(t) ?? '—'} dagen · ${nachtenTot ?? '—'} nachten · ${pers} reizigers${r.landen ? ' · ' + esc(r.landen) : ''}</p><p>${plaatsen.map(esc).join(' → ') || '<i>route nog niet ingevuld</i>'}</p>${t.demo ? '<p><b>DEMO – verzonnen voorbeeldgegevens</b></p>' : ''}<p class="bron">Samengesteld op ${esc(nu.toLocaleString('nl-NL'))}. Weer, waarschuwingen, prijzen en openingstijden kunnen veranderen; controleer ze vóór gebruik.</p></div>`;
+  let h = `<div class="voorblad" data-sec="voorblad" data-naam="Voorblad"><div class="meta">REISBOEK</div><h1>${esc(t.naam)}</h1><p style="font-size:1.1rem">${dFmt(r.vertrek)} – ${dFmt(r.terug)}</p><p>${duurDagen(t) ?? '—'} dagen · ${nachtenTot ?? '—'} nachten · ${pers} reizigers${r.landen ? ' · ' + esc(r.landen) : ''}</p><p>${plaatsen.map(esc).join(' → ') || '<i>route nog niet ingevuld</i>'}</p>${t.demo ? '<p><b>DEMO – verzonnen voorbeeldgegevens</b></p>' : ''}<p class="bron">Samengesteld op ${esc(nu.toLocaleString('nl-NL'))}. Weer, waarschuwingen, prijzen en openingstijden kunnen veranderen; controleer ze vóór gebruik.</p></div>`;
+  /* uitgangspunten (intake) */
+  { const z = roamZoek(t), a = t.auto, c = t.hotels.crit, g = t.gids, rt = t.route, vv = t.vlucht;
+    const rijen = [
+      ['Vlucht (zoekopdracht)', vv.nodig ? `${esc(z.van.join(', ') || '—')} → ${esc(z.naar.join(', ') || '—')} · heenvlucht ${z.vroegste ? dFmt(z.vroegste) : '—'} t/m ${z.laatste ? dFmt(z.laatste) : '—'} · verblijf ${z.dagenMin ?? '?'}–${z.dagenMax ?? '?'} dagen · ${r.volw} volwassene(n)${r.kind ? ', ' + r.kind + ' kind(eren)' : ''} · bagage: ${esc(vv.bagage)}` : 'geen vlucht'],
+      ['Vervoer', { auto: 'huurauto', ov: 'trein en bus', beide: 'combinatie van huurauto en trein/bus', '': 'niet gekozen' }[a.vervoer || '']],
+      a.nodig ? ['Huurauto', `${esc((KLASSEN.find(k => k[0] === a.klasse) || [])[1] || '—')}, ${esc(a.versnelling)} · kilometers: ${esc(kmTekst(a))} · brandstofbeleid: ${esc((BRANDSTOF[a.brandstofBeleid] || [a.brandstofBeleid])[0])} · kinderzitjes: ${a.zitjes === 'ja' ? 'ja' : a.zitjes === 'nee' ? 'nee' : '—'} · grensoverschrijding: ${a.grens === 'ja' ? 'ja (' + esc(a.grensLanden || '?') + ')' : 'nee'} · verzekering: ${a.verzekeringKeuze === 'volledig' ? 'volledig' : 'basis'}`] : null,
+      ['Hotelcriteria', `maximaal ${mny(num(c.maxPrijs))} p.n. alles inbegrepen (uitzondering tot ${mny(num(c.maxUitz))} alleen na mijn bevestiging) · Booking ≥ ${c.minBooking}, Google ≥ ${c.minGoogle} · ≥ ${c.minReviews} reviews, ≤ ${c.maxNegPct}% slecht · ontbijt ${eis(c.ontbijt) ? 'ja' : 'nee'}, parkeren ${eis(c.parkeren) ? 'ja' : 'nee'}, wifi ${eis(c.wifi) ? 'ja' : 'nee'}, eigen badkamer ${eis(c.badkamer) ? 'ja' : 'nee'}, goede wijk ${eis(c.wijk) ? 'ja' : 'nee'} · veiligheid altijd een eis · prijzen alleen bij Booking.com, Agoda.com of de hotelwebsite`],
+      ['Route', `maximaal ${g.maxKm ?? '—'} km en ${g.maxUren ?? '—'} uur per dag · patroon: ${[1, 2, 3, 4].filter(k => num(rt['n' + k])).map(k => rt['n' + k] + '×' + k + ' nacht(en)').join(', ') || '—'}`],
+      ['Interesses', esc(g.interesses.map(k => (INTERESSES.find(x => x[0] === k) || [])[1]).filter(Boolean).join('; ') || '—')]
+    ].filter(Boolean);
+    h += `<div class="bsec" data-sec="intake" data-naam="Uitgangspunten (intake)"><h2>Uitgangspunten</h2>` + tbl(['Onderdeel', 'Gegevens'], rijen) + `</div>`; }
   /* route */
-  h += `<div class="bsec"><h2>Route in één oogopslag</h2>${kaartSVG(t)}` + (t.dagen.length ? tbl(['Dag(en)', 'Datum', 'Plaats', 'Nachten', 'Afstand', 'Rijtijd (netto)', 'Tijdzone'], blokken(t).map(b => [b.van === b.tot ? b.van + 1 : (b.van + 1) + '–' + (b.tot + 1), b.van === b.tot ? dFmt(t.dagen[b.van].datum) : dFmt(t.dagen[b.van].datum) + ' – ' + dFmt(t.dagen[b.tot].datum), esc(b.plaats || '?'), b.nachten, b.km ? NF.format(b.km) + ' km' + (r.toonMijl ? kmMi(b.km) : '') : '—', b.uren ? urenFmt(b.uren) : '—', esc(b.tz || '—')]), ['', '', '', 'r', 'r', 'r', '']) + `<p class="bron">Totaal ${NF.format(totaalKm(t))} km${r.toonMijl ? kmMi(totaalKm(t)) : ''}, netto rijtijd ${urenFmt(sum(t.dagen.map(d => num(d.uren) || 0)))}. Alle tijden zijn lokale tijd.</p>` : '<p>Geen dagen ingevuld.</p>') + `</div>`;
+  h += `<div class="bsec" data-sec="route" data-naam="Route in één oogopslag"><h2>Route in één oogopslag</h2>${kaartSVG(t)}` + (t.dagen.length ? tbl(['Dag(en)', 'Datum', 'Plaats', 'Nachten', 'Afstand', 'Rijtijd (netto)', 'Tijdzone'], blokken(t).map(b => [b.van === b.tot ? b.van + 1 : (b.van + 1) + '–' + (b.tot + 1), b.van === b.tot ? dFmt(t.dagen[b.van].datum) : dFmt(t.dagen[b.van].datum) + ' – ' + dFmt(t.dagen[b.tot].datum), esc(b.plaats || '?'), b.nachten, b.km ? NF.format(b.km) + ' km' + (r.toonMijl ? kmMi(b.km) : '') : '—', b.uren ? urenFmt(b.uren) : '—', esc(b.tz || '—')]), ['', '', '', 'r', 'r', 'r', '']) + `<p class="bron">Totaal ${NF.format(totaalKm(t))} km${r.toonMijl ? kmMi(totaalKm(t)) : ''}, netto rijtijd ${urenFmt(sum(t.dagen.map(d => num(d.uren) || 0)))}. Alle tijden zijn lokale tijd.</p>` : '<p>Geen dagen ingevuld.</p>') + `</div>`;
   /* kosten */
   const wk = k => num(t.werkelijk[k]);
-  h += `<div class="bsec"><h2>Kostenoverzicht</h2>` + tbl(['Onderdeel', 'Post', 'Bedrag', 'p.p.', 'Status', 'Werkelijk'], R.map(x => [x.o, esc(x.post) + (x.opm ? `<div class="bron">${esc(x.opm)}</div>` : ''), x.b == null ? 'nog in te vullen' : mny(x.b), x.b == null ? '—' : mny(x.b / persVoor(t, x.o)), PTL[x.type] || x.type, wk(x.key) != null ? mny(wk(x.key)) : '—']).concat([['<b>Totaal</b>', '(bekende posten, excl. borg)', `<b>${mny(ks.bekend)}</b>`, pers ? mny(ks.bekend / pers) : '—', '', Object.keys(t.werkelijk).length ? `<b>${mny(sum(Object.values(t.werkelijk).map(num).filter(x => x != null)))}</b>` : '—']]), ['', '', 'r', 'r', '', 'r']) +
+  h += `<div class="bsec" data-sec="kosten" data-naam="Kostenoverzicht"><h2>Kostenoverzicht</h2>` + tbl(['Onderdeel', 'Post', 'Bedrag', 'p.p.', 'Status', 'Werkelijk'], R.map(x => [x.o, esc(x.post) + (x.opm ? `<div class="bron">${esc(x.opm)}</div>` : ''), x.b == null ? 'nog in te vullen' : mny(x.b), x.b == null ? '—' : mny(x.b / persVoor(t, x.o)), PTL[x.type] || x.type, wk(x.key) != null ? mny(wk(x.key)) : '—']).concat([['<b>Totaal</b>', '(bekende posten, excl. borg)', `<b>${mny(ks.bekend)}</b>`, pers ? mny(ks.bekend / pers) : '—', '', Object.keys(t.werkelijk).length ? `<b>${mny(sum(Object.values(t.werkelijk).map(num).filter(x => x != null)))}</b>` : '—']]), ['', '', 'r', 'r', '', 'r']) +
     `<p class="bron">Aannames en uitsluitingen: ${ks.onb ? `${ks.onb} post(en) zijn niet ingevuld en niet meegeteld. ` : ''}Borg, persoonlijke uitgaven en fooien zijn niet opgenomen. Geen prijsstijging aangenomen. Valuta ${esc(r.valuta)}${t.valutaLokaal.code && t.valutaLokaal.koers ? `; koers ${t.valutaLokaal.koers} ${esc(t.valutaLokaal.code)} per ${esc(r.valuta)} (${dFmt(t.valutaLokaal.datum)}, ${esc(t.valutaLokaal.bron || 'bron niet vermeld')})` : ''}. ${num(r.budget) != null ? `Budget ${mny(r.budget)}.` : ''}</p></div>`;
   /* voorbereiding */
-  h += `<div class="bsec"><h2>Voorbereiding</h2>` + tbl(['', 'Taak', 'Uiterlijk (richtlijn)', 'Kosten'], t.voorbereiding.map(x => [x.klaar ? '☑' : '☐', esc(x.tekst) + (x.link ? ` <span class="bron">${esc(x.link)}</span>` : ''), okD(r.vertrek) ? dFmt(addD(r.vertrek, -x.dagenVoor)) : '—', x.kosten != null && x.kosten !== '' ? mny(+x.kosten) : '—'])) + `</div>`;
+  h += `<div class="bsec" data-sec="voorbereiding" data-naam="Voorbereiding"><h2>Voorbereiding</h2>` + tbl(['', 'Taak', 'Uiterlijk (richtlijn)', 'Kosten'], t.voorbereiding.map(x => [x.klaar ? '☑' : '☐', esc(x.tekst) + (x.link ? ` <span class="bron">${esc(x.link)}</span>` : ''), okD(r.vertrek) ? dFmt(addD(r.vertrek, -x.dagenVoor)) : '—', x.kosten != null && x.kosten !== '' ? mny(+x.kosten) : '—'])) + `</div>`;
   /* boekingen */
   const v = t.vlucht, a = t.auto;
-  h += `<div class="bsec"><h2>Vlucht, auto, verblijf en contacten</h2>`;
+  h += `<div class="bsec" data-sec="boekingen" data-naam="Vlucht, auto, verblijf en contacten"><h2>Vlucht, auto, verblijf en contacten</h2>`;
   if (v.nodig) h += `<h3>Vlucht</h3>` + tbl(['', 'Heen', 'Terug'], [['Vertrekdatum', dFmt(v.heenDatum), dFmt(v.terugDatum)], ['Aankomstdatum (lokaal)', dFmt(v.heenAankomstDatum || v.heenDatum), dFmt(v.terugAankomstDatum || v.terugDatum)], ['Van – naar', esc(v.van) + ' → ' + esc(v.naar), esc(v.terugVan || v.naar) + ' → ' + esc(v.van)], ['Vertrek / aankomst (lokaal)', `${esc(v.heenVertrek || '—')} / ${esc(v.heenAankomst || '—')}`, `${esc(v.terugVertrek || '—')} / ${esc(v.terugAankomst || '—')}`], ['Vluchtnummer', esc(v.heenNr || '—'), esc(v.terugNr || '—')]]) + `<p>${esc(v.maatschappij)} · overstappen: ${esc(v.stops || '—')} · ${persVoor(t, 'Vlucht')} pers. · bagage: ${esc(v.bagage)} · status ${esc(v.status)} · referentie ${ref(v.ref)}</p>`;
   if (a.nodig) h += `<h3>Huurauto</h3><p>${esc(a.verhuurder || '—')} ${esc((KLASSEN.find(k => k[0] === a.klasse) || [])[1] || a.klasse)} (${esc(a.versnelling)}) · kilometers ${esc(kmTekst(a))} · kinderzitjes: ${a.zitjes === 'ja' ? 'ja, ' + (a.zitjesAantal ?? '?') : a.zitjes === 'nee' ? 'nee' : '—'} · grensoverschrijding: ${a.grens === 'ja' ? 'ja (' + esc(a.grensLanden || '?') + ')' + (a.grensOk ? ', toestemming bevestigd' : ', toestemming nog niet bevestigd') : 'nee'} · ophalen ${esc(a.ophaalPlaats)} ${dFmt(a.ophaalDatum)} ${esc(a.ophaalTijd)} (lokaal) · inleveren ${esc(a.inleverPlaats)} ${dFmt(a.inleverDatum)} ${esc(a.inleverTijd)} (lokaal)<br>Verzekering: ${a.verzekeringKeuze === 'volledig' ? 'volledige verzekering gewenst' : 'basisdekking'}${a.verzekering ? ' (' + esc(a.verzekering) + ')' : ''} · eigen risico ${a.eigenRisico != null ? mny(a.eigenRisico) : '—'} · borg ${a.borg != null ? mny(a.borg) : '—'} · brandstofbeleid ${esc((BRANDSTOF[a.brandstofBeleid] || [a.brandstofBeleid])[0])} · tweede bestuurder: ${a.tweede ? 'ja' : 'nee'} · status ${esc(a.status)} · reserveringsnr ${ref(a.ref)}</p>`;
-  h += `<h3>Verblijf</h3>` + (t.hotels.lijst.length ? tbl(['Plaats / hotel', 'Datums', 'Nachten', 'Prijs/nacht', 'Ontbijt', 'Parkeren', 'Status', 'Bevestiging'], t.hotels.lijst.map(x => [`<b>${esc(x.naam || '—')}</b><br>${esc(x.plaats)}<br><span class="bron">${esc(x.adres)} ${esc(x.tel)}</span>`, `${dFmt(x.van)} – ${dFmt(x.tot)}`, nachten(x), x.prijs != null && x.prijs !== '' ? mny(+x.prijs) : '—', { ja: 'inbegrepen', extra: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.ontbijt], { gratis: 'gratis', betaald: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.parkeren], esc(x.status) + (x.annuleren ? `<br><span class="bron">annuleren: ${esc(x.annuleren)}</span>` : ''), ref(x.ref)])) : '<p>Geen verblijven ingevuld.</p>');
+  h += `<h3>Verblijf</h3>` + (t.hotels.lijst.length ? tbl(['Plaats / hotel', 'Datums', 'Nachten', 'Prijs/nacht', 'Ontbijt', 'Parkeren', 'Status', 'Bevestiging'], t.hotels.lijst.map(x => [`<b>${esc(x.naam || '—')}</b><br>${esc(x.plaats)}<br><span class="bron">${esc(x.adres)} ${esc(x.tel)}</span>${src[x.foto] ? `<br><img src="${src[x.foto]}" alt="" style="max-width:130px;max-height:90px;margin-top:4px">` : ''}`, `${dFmt(x.van)} – ${dFmt(x.tot)}`, nachten(x), x.prijs != null && x.prijs !== '' ? mny(+x.prijs) : '—', { ja: 'inbegrepen', extra: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.ontbijt], { gratis: 'gratis', betaald: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[x.parkeren], esc(x.status) + (x.annuleren ? `<br><span class="bron">annuleren: ${esc(x.annuleren)}</span>` : ''), ref(x.ref)])) : '<p>Geen verblijven ingevuld.</p>');
   if (t.contacten.length || t.prakt.verzekeraar) h += `<h3>Contacten en verzekering</h3>` + tbl(['Rol', 'Naam', 'Telefoon', 'Notitie'], t.contacten.map(c => [esc(c.rol), esc(c.naam), esc(c.tel), esc(c.notitie)]).concat(t.prakt.verzekeraar ? [['Reisverzekering', esc(t.prakt.verzekeraar), esc(t.prakt.alarm), 'polis: ' + ref(t.prakt.polis)]] : []));
   h += `</div>`;
   /* hotelreviews */
-  if (t.hotels.lijst.length) h += `<div class="bsec"><h2>Hotelbeoordeling</h2>` + tbl(['Hotel', 'Google (n / negatief)', 'Booking.com (n / negatief)', 'Oordeel', 'Veiligheid'], t.hotels.lijst.map(x => { const q = hotelOordeel(t, x), pc = b => b.p != null ? ` ${NF1.format(b.p)}%` : ''; return [esc(x.naam || x.plaats), `${x.gN ?? '—'} / ${x.gNeg ?? '—'}${pc(q.g)} (${q.g.s})`, `${x.bN ?? '—'} / ${x.bNeg ?? '—'}${pc(q.b)} (${q.b.s})`, `<b>${q.s}</b>`, { onvoldoende: 'onvoldoende informatie', geen: 'geen duidelijke waarschuwingen gevonden', aandacht: 'aandachtspunten gevonden' }[x.veilig] + (x.veiligNotitie ? ': ' + esc(x.veiligNotitie) : '')]; })) + `<p class="bron">Norm: minimaal ${t.hotels.crit.minReviews} reviews per bron en maximaal ${t.hotels.crit.maxNegPct}% negatief. ${esc(t.hotels.crit.def)} Reviewgegevens zijn handmatig ingevoerd.</p></div>`;
+  if (t.hotels.lijst.length) h += `<div class="bsec" data-sec="hotels" data-naam="Hotelbeoordeling"><h2>Hotelbeoordeling</h2>` + tbl(['Hotel', 'Google (n / negatief)', 'Booking.com (n / negatief)', 'Oordeel', 'Veiligheid'], t.hotels.lijst.map(x => { const q = hotelOordeel(t, x), pc = b => b.p != null ? ` ${NF1.format(b.p)}%` : ''; return [esc(x.naam || x.plaats), `${x.gN ?? '—'} / ${x.gNeg ?? '—'}${pc(q.g)} (${q.g.s})`, `${x.bN ?? '—'} / ${x.bNeg ?? '—'}${pc(q.b)} (${q.b.s})`, `<b>${q.s}</b>`, { onvoldoende: 'onvoldoende informatie', geen: 'geen duidelijke waarschuwingen gevonden', aandacht: 'aandachtspunten gevonden' }[x.veilig] + (x.veiligNotitie ? ': ' + esc(x.veiligNotitie) : '')]; })) + `<p class="bron">Norm: minimaal ${t.hotels.crit.minReviews} reviews per bron en maximaal ${t.hotels.crit.maxNegPct}% negatief. ${esc(t.hotels.crit.def)} Reviewgegevens zijn handmatig ingevoerd.</p></div>`;
   /* praktisch */
   const info = t.info.filter(x => x.waarde || x.geverifieerd);
-  h += `<div class="bsec"><h2>Praktische informatie</h2>` + (info.length ? tbl(['Onderwerp', 'Waarde', 'Bron', 'Gecontroleerd'], info.map(x => [esc(x.onderwerp), esc(x.waarde), esc(x.bron), x.geverifieerd ? '✔ ' + dFmt(x.datum) : 'niet geverifieerd'])) : '<p>Geen praktische gegevens ingevuld.</p>') +
+  h += `<div class="bsec" data-sec="praktisch" data-naam="Praktische informatie"><h2>Praktische informatie</h2>` + (info.length ? tbl(['Onderwerp', 'Waarde', 'Bron', 'Gecontroleerd'], info.map(x => [esc(x.onderwerp), esc(x.waarde), esc(x.bron), x.geverifieerd ? '✔ ' + dFmt(x.datum) : 'niet geverifieerd'])) : '<p>Geen praktische gegevens ingevuld.</p>') +
     `<p>Nationaliteit: ${esc(t.prakt.nationaliteit || '—')} · rijbewijs: ${esc(t.prakt.rijbewijsLand)}${t.prakt.ipr ? ' + internationaal rijbewijs' : ''}. Controleer inreisregels vóór vertrek: <span class="bron">${OFF.reisadvies}</span>. Officiële waarschuwingen: <span class="bron">${OFF.wmo} · ${OFF.meteoalarm} · ${OFF.nws}</span></p></div>`;
   /* dagen */
   t.dagen.forEach((d, i) => {
     const hot = okD(d.datum) ? hotelVoorNacht(t, d.datum) : null, b = dagBudget(t, d), lm = overLimiet(t, d), z = tzWissel(t, i), db = d.dagboek;
-    h += `<div class="bdag"><h2>Dag ${i + 1} · ${wd(d.datum)} ${dFmt(d.datum)} · ${esc(d.titel || d.plaats || '')}</h2>
+    h += `<div class="bdag" data-sec="dag${i + 1}" data-naam="Dag ${i + 1} ${esc(d.plaats || '')}"><h2>Dag ${i + 1} · ${wd(d.datum)} ${dFmt(d.datum)} · ${esc(d.titel || d.plaats || '')}</h2>
       <div class="meta">${{ aankomst: 'Aankomstdag', rijdag: 'Rijdag', verblijfsdag: 'Verblijfsdag', vertrek: 'Vertrekdag' }[d.type]} · ${d.km != null ? NF.format(d.km) + ' km' + (r.toonMijl ? kmMi(d.km) : '') : '— km'} · netto rijtijd ${urenFmt(num(d.uren))} · vertrek ${esc(d.vertrek || '—')} · aankomst ${esc(d.aankomst || '—')} (lokale tijd${d.tz ? ', ' + esc(d.tz) : ''})</div>
       ${lm.map(m => `<div class="vak"><b>Let op:</b> ${esc(m)}.</div>`).join('')}${z ? `<div class="vak"><b>${esc(z)}</b></div>` : ''}
-      <div class="vak"><b>Hotel:</b> ${hot ? `${esc(hot.naam)} – ${esc(hot.adres || hot.plaats)} ${hot.tel ? '· ' + esc(hot.tel) : ''} · ${nachten(hot)} nacht(en) · ${hot.prijs != null && hot.prijs !== '' ? mny(+hot.prijs) + ' p.n. (' + PTL[hot.prijsType] + ')' : 'prijs onbekend'} · ontbijt ${{ ja: 'inbegrepen', extra: 'tegen betaling', nee: 'nee', onbekend: 'onbevestigd' }[hot.ontbijt]} · parkeren ${{ gratis: 'gratis', betaald: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[hot.parkeren]} · ${esc(hot.status)}` : d.type === 'vertrek' ? 'geen overnachting' : '<i>geen hotel gekoppeld</i>'}</div>`;
+      <div class="vak">${hot && src[hot.foto] ? `<img src="${src[hot.foto]}" alt="" style="float:right;max-width:150px;max-height:100px;margin:0 0 4px 8px">` : ''}<b>Hotel:</b> ${hot ? `${esc(hot.naam)} – ${esc(hot.adres || hot.plaats)} ${hot.tel ? '· ' + esc(hot.tel) : ''} · ${nachten(hot)} nacht(en) · ${hot.prijs != null && hot.prijs !== '' ? mny(+hot.prijs) + ' p.n. (' + PTL[hot.prijsType] + ')' : 'prijs onbekend'} · ontbijt ${{ ja: 'inbegrepen', extra: 'tegen betaling', nee: 'nee', onbekend: 'onbevestigd' }[hot.ontbijt]} · parkeren ${{ gratis: 'gratis', betaald: 'betaald', nee: 'nee', onbekend: 'onbevestigd' }[hot.parkeren]} · ${esc(hot.status)}` : d.type === 'vertrek' ? 'geen overnachting' : '<i>geen hotel gekoppeld</i>'}</div>`;
     if (d.programma.length) h += tbl(['Tijd (lokaal)', 'Programma', 'Adres', 'Prijs', 'Status'], d.programma.map(it => { const k = itemKosten(t, it); return [esc(it.tijd || ''), `${esc(it.titel)}${it.openingstijden ? `<br><span class="bron">${esc(it.openingstijden)}</span>` : ''}${it.link ? `<br><span class="bron">${esc(it.link)}</span>` : ''}`, esc(it.adres), it.soort === 'eten' || it.soort === 'pauze' ? '—' : (k == null ? 'onbekend' : mny(k) + ' (groep)'), it.soort === 'eten' || it.soort === 'pauze' ? '' : PTL[it.status] + (it.prijsDatum ? ' ' + dFmt(it.prijsDatum) : '')]; }));
     h += `<div class="vak"><b>Dagbudget (hele groep):</b> activiteiten ${b.act == null ? 'onbekend' : mny(b.act)}${b.onb ? ` (+${b.onb} onbekend)` : ''} · eten ${b.eten == null ? 'onbekend' : mny(b.eten)} · overig ${b.ov == null ? '—' : mny(b.ov)}${d.overigOmschr ? ' (' + esc(d.overigOmschr) + ')' : ''} · <b>totaal bekend ${mny(b.tot)}</b>${d.avond ? `<br><b>Avondadresje:</b> ${esc(d.avond)}` : ''}</div>`;
     if (d.weer) h += `<div class="vak"><b>Weer:</b> ${d.weer.tmin != null ? NF.format(d.weer.tmin) : '—'}–${d.weer.tmax != null ? NF.format(d.weer.tmax) : '—'} °C · ${d.weer.regen != null ? NF1.format(d.weer.regen) + ' mm' : '—'} neerslag · wind max. ${d.weer.wind != null ? NF.format(d.weer.wind) + ' km/u' : '—'} <span class="bron">(${esc(d.weer.label)}; ${esc(d.weer.bron)}; opgehaald ${esc(new Date(d.weer.opgehaald).toLocaleString('nl-NL'))})</span></div>`;
@@ -941,7 +977,7 @@ function reisboekHTML(t, src) {
     }
     h += `<div class="vak"><b>Notities:</b> ${d.notitie ? esc(d.notitie).replace(/\n/g, '<br>') : '<div class="lijnen"></div>'}</div></div>`;
   });
-  if (o.bronnen) h += `<div class="bsec"><h2>Bronnen, peildata en kanttekeningen</h2><ul>${BRONNEN.map(b => `<li><b>${esc(b.naam)}</b> – ${esc(b.gebruik)} (${esc(b.url)})</li>`).join('')}</ul><p class="bron">Prijzen en reviews zijn handmatig ingevoerd met het genoemde prijstype en de peildatum. Visum-, inreis-, gezondheids- en verkeersregels moet u vóór vertrek zelf bij de officiële bron bevestigen. Weer is een voorspelling, modelgegeven of historische analyse en geen officiële waarschuwing. Exportmoment: ${esc(nu.toLocaleString('nl-NL'))}.</p></div>`;
+  if (o.bronnen) h += `<div class="bsec" data-sec="bronnen" data-naam="Bronnen, peildata en kanttekeningen"><h2>Bronnen, peildata en kanttekeningen</h2><ul>${BRONNEN.map(b => `<li><b>${esc(b.naam)}</b> – ${esc(b.gebruik)} (${esc(b.url)})</li>`).join('')}</ul><p class="bron">Prijzen en reviews zijn handmatig ingevoerd met het genoemde prijstype en de peildatum. Visum-, inreis-, gezondheids- en verkeersregels moet u vóór vertrek zelf bij de officiële bron bevestigen. Weer is een voorspelling, modelgegeven of historische analyse en geen officiële waarschuwing. Exportmoment: ${esc(nu.toLocaleString('nl-NL'))}.</p></div>`;
   return h;
 }
 
@@ -1003,6 +1039,24 @@ const metBalk = k => { const f = VIEWS[k]; VIEWS[k] = () => f() + `<section clas
 /* ====================== Berekende blokken (live bijgewerkt) ====================== */
 const engDatum = d => okD(d) ? dt(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '';
 const CALC = {
+  laagste: e => { const t = T(), st = t.hotels.lijst[+e.i]; if (!st) return ''; const o = st.opties[+e.k]; return num(o.prijs) == null ? '<span class="noot">nog geen prijs</span>' : `<b>${mny(num(o.prijs))}</b> bij ${esc(o.bron)}`; },
+  vervoerAdvies: () => {
+    const t = T(), a = t.auto, land = a.land || t.reis.landen, pr = VERVOER.find(v => v.re.test(land || '')), w = [];
+    if (num(a.koffers) >= 3) w.push(`U hebt veel bagage (${a.koffers} koffers): trein en bus zijn dan minder handig.`);
+    if (t.reis.kind > 0) w.push('U reist met kinderen: een huurauto geeft meer gemak (kinderzitjes zijn dan nodig).');
+    if (t.reis.toegang) w.push('U gaf toegankelijkheidswensen op: controleer of stations en bussen daarvoor geschikt zijn.');
+    const km = totaalKm(t), n = t.stops.filter(x => x.plaats).length; if (n || km) w.push(`Uw route: ${n ? n + ' plaatsen' : 'nog geen plaatsen'}${km ? `, ongeveer ${NF.format(km)} km in totaal` : ''} (de plaatsen geeft u in stap 4 op).`);
+    const ad = pr ? { ov: 'Advies (richtlijn): trein en bus overwegen', auto: 'Advies (richtlijn): een huurauto is meestal verstandig', mix: 'Advies (richtlijn): combinatie van openbaar vervoer en huurauto overwegen' }[pr.advies] : 'Geen richtlijn voor dit land: vul het land in of beoordeel het zelf met de vragen hieronder';
+    const keuze = { auto: 'U koos voor een huurauto.', ov: 'U koos voor trein en bus: de huurauto-intake vervalt.', beide: 'U koos voor een combinatie: vul de huurauto alleen in voor het deel dat u rijdt.', '': 'U hebt nog geen keuze gemaakt.' }[a.vervoer || ''];
+    return `<div><b>${ad}</b>${pr ? ` <span class="noot">(${esc(pr.naam)})</span>` : ''}</div>${pr ? `<p>${esc(pr.tekst)}</p>` : ''}
+      <div class="noot">Vragen om te beantwoorden: zijn alle plaatsen op uw route met trein of bus bereikbaar? Hoe vaak rijden ze en hoe laat? Past uw bagage? Wat kosten parkeren en tol met een huurauto? Hoeveel reistijd scheelt het?</div>
+      ${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}<div class="noot">Algemene richtlijn, niet voor elk land of elke route geldig. ${keuze}</div>`;
+  },
+  vervoerVergelijk: () => {
+    const t = T(), a = t.auto, R = kostenRegels(t).filter(x => x.o === 'Auto' && x.key !== 'auto-ov'), c = R.filter(x => x.b != null), ov = num(a.ovKosten), onb = R.filter(x => x.b == null).length;
+    if (!c.length && ov == null) return '<span class="noot">Vul de kosten in om huurauto en openbaar vervoer te vergelijken.</span>';
+    return `<b>Vergelijking (hele groep):</b> huurauto ${c.length ? mny(sum(c.map(x => x.b))) + (onb ? ` (+ ${onb} onbekende post(en))` : '') : 'nog onbekend'} · trein en bus ${ov != null ? mny(ov) : 'nog onbekend'}<div class="noot">Huurauto = huur, brandstof en toeslagen; parkeren en tol per dag staan bij Reisgids. Vergelijk ook reistijd en gemak.</div>`;
+  },
   optiebadge: e => { const t = T(), st = t.hotels.lijst[+e.i]; if (!st) return ''; const o = st.opties[+e.k]; if (!o.naam && num(o.prijs) == null) return ''; const x = hotelToets(t, o, st); return (st.gekozen === +e.k && st.bevestigd ? badge('g', '✔ bevestigd') + ' ' : '') + badge(x.k, x.s); },
   optie: e => {
     const t = T(), st = t.hotels.lijst[+e.i]; if (!st) return ''; const k = +e.k, o = st.opties[k], x = hotelToets(t, o, st), ico = { ok: '✔', f: '✖', l: '⚠', o: '?' }, kl = { ok: 'goed', f: 'fout', l: 'let', o: 'n' };
@@ -1023,12 +1077,13 @@ const CALC = {
   dagHotels: () => { const t = T(); if (!t.dagen.length) return '<p class="noot">Nog geen dagen: maak ze aan met “Maak dagen en verblijven aan” hierboven.</p>'; return `<table class="rtab"><thead><tr><th>Dag</th><th>Datum</th><th>Plaats</th><th>Hotel</th><th>Status</th></tr></thead><tbody>${t.dagen.filter(d => d.type !== 'vertrek').map(d => { const h = hotelVoorNacht(t, d.datum), i = t.dagen.indexOf(d) + 1; return `<tr><td data-l="Dag">${i}</td><td data-l="Datum">${dFmt(d.datum)}</td><td data-l="Plaats">${esc(d.plaats)}</td><td data-l="Hotel">${h && h.naam ? esc(h.naam) : '—'}</td><td data-l="Status">${!h ? badge('l', 'geen verblijf') : h.bevestigd ? badge('g', '✔ bevestigd') : badge('n', 'nog te bevestigen')}</td></tr>`; }).join('')}</tbody></table>`; },
   patroonCheck: () => {
     const t = T(), r = t.route; if (!okD(t.reis.vertrek) || !okD(t.reis.terug)) return 'Vul eerst de vlucht in; dan is het aantal nachten bekend.';
-    const tot = diffD(t.reis.terug, t.reis.vertrek), n2 = num(r.n2) || 0, n3 = num(r.n3) || 0, n4 = num(r.n4) || 0, som = 2 * n2 + 3 * n3 + 4 * n4, aantal = n2 + n3 + n4;
-    const rijen = t.stops.filter(x => x.plaats || num(x.nachten) != null), tel = n => rijen.filter(x => +x.nachten === n).length, rsom = sum(rijen.map(x => num(x.nachten) || 0)), overig = rijen.filter(x => ![2, 3, 4].includes(+x.nachten)).length, w = [];
-    let uit = `<div>Het patroon geeft <b>${som} nachten</b> op ${aantal} plaatsen (${n2}×2 + ${n3}×3 + ${n4}×4); de reis heeft <b>${tot} nachten</b>: ${som === tot ? '<span class="goed">klopt</span>' : `<span class="let">verschil ${tot - som > 0 ? '+' : ''}${tot - som}</span>`}.</div>`;
-    if (som !== tot && aantal > 0) { const C = []; for (let a = 0; a <= aantal; a++) for (let b = 0; a + b <= aantal; b++) { const c = aantal - a - b; if (2 * a + 3 * b + 4 * c === tot) C.push(`${a}×2 + ${b}×3 + ${c}×4`); } uit += `<div class="noot">${C.length ? 'Met ' + aantal + ' plaatsen kan het precies zo: ' + C.slice(0, 6).join(' · ') : 'Met ' + aantal + ' plaatsen is ' + tot + ' nachten niet precies te maken met 2, 3 en 4 nachten: pas het aantal plaatsen aan.'}</div>`; }
-    uit += `<div>Uw plaatsen: ${tel(2)}× 2, ${tel(3)}× 3, ${tel(4)}× 4 nachten${overig ? `, ${overig} met een ander aantal` : ''}; samen <b>${rsom} van ${tot} nachten</b> · ${rsom === tot ? '<span class="goed">alles verdeeld</span>' : rsom < tot ? `<span class="let">nog ${tot - rsom} nacht(en) te verdelen</span>` : `<span class="fout">${rsom - tot} nacht(en) te veel</span>`}</div>`;
-    if (aantal && rijen.length && (tel(2) !== n2 || tel(3) !== n3 || tel(4) !== n4)) w.push('Uw plaatsen wijken af van het opgegeven patroon.');
+    const tot = diffD(t.reis.terug, t.reis.vertrek), n = [1, 2, 3, 4].map(k => num(r['n' + k]) || 0), som = n.reduce((x, c, i) => x + c * (i + 1), 0), aantal = sum(n);
+    const rijen = t.stops.filter(x => x.plaats || num(x.nachten) != null), tel = k => rijen.filter(x => +x.nachten === k).length, rsom = sum(rijen.map(x => num(x.nachten) || 0)), overig = rijen.filter(x => ![1, 2, 3, 4].includes(+x.nachten)).length, w = [];
+    const term = [1, 2, 3, 4].filter(k => n[k - 1]).map(k => `${n[k - 1]}×${k}`).join(' + ') || '0';
+    let uit = `<div>Het patroon geeft <b>${som} nachten</b> op ${aantal} plaatsen (${term}); de reis heeft <b>${tot} nachten</b>: ${som === tot ? '<span class="goed">klopt</span>' : `<span class="let">verschil ${tot - som > 0 ? '+' : ''}${tot - som}</span>`}.</div>`;
+    if (som !== tot && aantal > 0) { const C = []; for (let a = 0; a <= aantal; a++) for (let b = 0; a + b <= aantal; b++) for (let c = 0; a + b + c <= aantal; c++) { const d = aantal - a - b - c; if (a + 2 * b + 3 * c + 4 * d === tot) C.push(`${a}×1 + ${b}×2 + ${c}×3 + ${d}×4`); } uit += `<div class="noot">${C.length ? 'Met ' + aantal + ' plaatsen kan het precies zo: ' + C.slice(0, 6).join(' · ') : 'Met ' + aantal + ' plaatsen is ' + tot + ' nachten niet precies te maken met 1, 2, 3 en 4 nachten: pas het aantal plaatsen aan.'}</div>`; }
+    uit += `<div>Uw plaatsen: ${tel(1)}× 1, ${tel(2)}× 2, ${tel(3)}× 3, ${tel(4)}× 4 nachten${overig ? `, ${overig} met een ander aantal` : ''}; samen <b>${rsom} van ${tot} nachten</b> · ${rsom === tot ? '<span class="goed">alles verdeeld</span>' : rsom < tot ? `<span class="let">nog ${tot - rsom} nacht(en) te verdelen</span>` : `<span class="fout">${rsom - tot} nacht(en) te veel</span>`}</div>`;
+    if (aantal && rijen.length && [1, 2, 3, 4].some(k => tel(k) !== n[k - 1])) w.push('Uw plaatsen wijken af van het opgegeven patroon.');
     const g = t.gids; if (num(g.maxWissels) != null && t.stops.length - 1 > g.maxWissels) w.push(`${t.stops.length - 1} hotelwissels is meer dan uw maximum (${g.maxWissels}).`);
     return uit + w.map(x => `<div class="banner">${esc(x)}</div>`).join('');
   },
@@ -1164,7 +1219,7 @@ A.tab = b => { tab = b.dataset.t; render(); scrollTo(0, 0); };
 A.nieuw = () => { const n = prompt('Naam van de reis:', 'Mijn rondreis'); if (!n) return; const t = nieuweReis(n); DB.reizen[t.id] = t; DB.actief = t.id; opslaan(); tab = 'vlucht'; render(); };
 A.demo = () => { const t = demoReis(); DB.reizen[t.id] = t; DB.actief = t.id; opslaan(); tab = 'start'; render(); melding('Demo-reis geladen. Alle gegevens zijn verzonnen.'); };
 A.add = b => { const arr = getP(T(), b.dataset.p); const n = b.dataset.n === 'dag' ? nieuweDag(arr.length ? addD(arr[arr.length - 1].datum || iso(new Date()), 1) : T().reis.vertrek || iso(new Date())) : NIEUW[b.dataset.n](); arr.push(n); opslaan(); rerender(); };
-A.del = b => { if (!confirm('Verwijderen?')) return; const arr = getP(T(), b.dataset.p), i = +b.dataset.i; const x = arr[i]; if (x && x.dagboek) x.dagboek.fotos.forEach(f => fotoDel(f.id)); arr.splice(i, 1); if (b.dataset.p === 'dagen') dagSel = 0; opslaan(); rerender(); };
+A.del = b => { if (!confirm('Verwijderen?')) return; const arr = getP(T(), b.dataset.p), i = +b.dataset.i; const x = arr[i]; if (x && x.dagboek) x.dagboek.fotos.forEach(f => fotoDel(f.id)); if (x && x.opties) x.opties.forEach(o => { if (o.foto) fotoDel(o.foto); }); arr.splice(i, 1); if (b.dataset.p === 'dagen') dagSel = 0; opslaan(); rerender(); };
 A.omhoog = b => { const arr = getP(T(), b.dataset.p), i = +b.dataset.i; if (i > 0) { [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; opslaan(); rerender(); } };
 A.omlaag = b => { const arr = getP(T(), b.dataset.p), i = +b.dataset.i; if (i < arr.length - 1) { [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]]; opslaan(); rerender(); } };
 A.maakDagen = () => {
@@ -1202,7 +1257,7 @@ A.stopsNaarDagen = () => {
   melding(`${tot + 1} dagen en ${t.hotels.lijst.length} verblijven aangemaakt. Afstanden zijn geschat: controleer ze in Google Maps. Kies daarna per verblijf een hotel.`);
 };
 A.patroonRijen = () => {
-  const t = T(), r = t.route, rijen = []; [[2, r.n2], [3, r.n3], [4, r.n4]].forEach(([n, c]) => { for (let k = 0; k < (num(c) || 0); k++) rijen.push(Object.assign(NIEUW.stop(), { nachten: n })); });
+  const t = T(), r = t.route, rijen = []; [[1, r.n1], [2, r.n2], [3, r.n3], [4, r.n4]].forEach(([n, c]) => { for (let k = 0; k < (num(c) || 0); k++) rijen.push(Object.assign(NIEUW.stop(), { nachten: n })); });
   if (!rijen.length) return melding('Vul eerst in hoe vaak 2, 3 of 4 nachten.', true);
   if (t.stops.some(x => x.plaats) && !confirm('De bestaande plaatsen vervangen door lege rijen uit het patroon?')) return;
   t.stops = rijen; opslaan(); rerender();
@@ -1229,6 +1284,13 @@ A.bevestigHotel = b => {
   if (onb.length && !confirm(`Nog niet bevestigd of let op: ${onb.map(c => c.label).join(', ')}.\n\nToch dit hotel bevestigen voor ${st.plaats}?`)) return;
   kopieerOptie(st, k); st.bevestigd = true; st.bevestigdOp = new Date().toISOString(); opslaan(); rerender(); melding(`Hotel voor ${st.plaats} bevestigd.`);
 };
+A.hotelFoto = async el => {
+  const f = el.files[0]; if (!f) return; const st = T().hotels.lijst[+el.dataset.i], k = +el.dataset.k, o = st.opties[k];
+  try { const bl = await verklein(f), id = uid(); await fotoPut(id, bl); if (o.foto) await fotoDel(o.foto).catch(() => { }); o.foto = id; if (st.gekozen === k) kopieerOptie(st, k); opslaan(); rerender(); melding('Foto opgeslagen op dit apparaat.'); }
+  catch (e) { melding('Foto niet toegevoegd: ' + e.message, true); }
+  el.value = '';
+};
+A.hotelFotoDel = async b => { const st = T().hotels.lijst[+b.dataset.i], k = +b.dataset.k, o = st.opties[k]; if (!confirm('Foto verwijderen?')) return; if (o.foto) await fotoDel(o.foto).catch(() => { }); o.foto = ''; if (st.gekozen === k) kopieerOptie(st, k); opslaan(); rerender(); };
 A.hotelTerug = b => { const st = T().hotels.lijst[+b.dataset.i]; wisKeuze(st); opslaan(); rerender(); };
 A.bevestig = b => {
   const t = T(), k = b.dataset.s, i = STAPPEN.indexOf(k), S = voortgang(t).find(x => x.naam === STAPCHK[k]);
@@ -1244,6 +1306,30 @@ A.vandaag = b => {
   if (!gevonden) { i = 0; melding('Vandaag valt niet binnen de reis; eerste dag getoond.'); }
   dagSel = i; tab = (b && b.dataset.t) || 'dag'; render(); scrollTo(0, 0);
 };
+function bereidPrint() {
+  const t = T(), src = $('#app'); const oud = $('#printBlad'); if (oud) oud.remove();
+  const blad = (TABS.find(x => x[0] === tab) || [0, ''])[1], kl = src.cloneNode(true); kl.removeAttribute('id');
+  const o = $$('input,select,textarea', src), c = $$('input,select,textarea', kl);
+  c.forEach((el, i) => {
+    const b = o[i]; if (el.type === 'file') { el.remove(); return; }
+    let txt = el.tagName === 'SELECT' ? (b.selectedOptions[0] ? b.selectedOptions[0].text : '') : el.type === 'checkbox' ? (b.checked ? '☑' : '☐') : el.type === 'date' ? (b.value ? dFmt(b.value) : '') : b.value;
+    const sp = document.createElement('span'); sp.className = 'pv'; sp.textContent = txt || '—'; el.replaceWith(sp);
+  });
+  $$('.noprint, button, label.knop', kl).forEach(e => e.remove());
+  $$('details', kl).forEach(d => d.setAttribute('open', ''));
+  const w = document.createElement('div'); w.id = 'printBlad'; w.className = 'boek';
+  w.innerHTML = `<div class="meta">${esc(t ? t.naam : 'Reisgids')} · ${esc(blad)} · afgedrukt op ${esc(new Date().toLocaleString('nl-NL'))}</div>`; w.append(...kl.childNodes);
+  document.body.append(w); document.body.classList.add('print-blad');
+  const titel = document.title; document.title = `${t ? t.naam : 'Reisgids'} – ${blad}`;
+  return () => { w.remove(); document.body.classList.remove('print-blad'); document.title = titel; };
+}
+function kiesBoekDeel(id) {
+  const uit = $('#boekUit'), el = uit.querySelector(`[data-sec="${id}"]`); if (!el) return () => { };
+  uit.classList.add('deelprint'); el.classList.add('kies'); const titel = document.title; document.title = `${T().naam} – ${el.dataset.naam}`;
+  return () => { uit.classList.remove('deelprint'); el.classList.remove('kies'); document.title = titel; };
+}
+A.printBlad = () => { const klaar = bereidPrint(); window.addEventListener('afterprint', klaar, { once: true }); window.print(); };
+A.printDeel = async () => { await bouwBoek(false); const id = $('#boekDeel').value; if (id === 'alles') return A.print(); const klaar = kiesBoekDeel(id); window.addEventListener('afterprint', klaar, { once: true }); window.print(); };
 A.print = async () => { await bouwBoek(false); const o = document.title; document.title = T().naam + ' – reisboek'; window.print(); setTimeout(() => document.title = o, 1000); };
 A.boekHTML = async () => {
   melding('Reisboek wordt samengesteld…'); const html = await bouwBoek(true); const css = $$('style')[0].textContent;
@@ -1318,6 +1404,8 @@ A.koers = async () => {
 function hooks(path) {
   const t = T(); let m;
   if ((m = /^hotels\.lijst\.(\d+)\.opties\.(\d+)\./.exec(path))) { const st = t.hotels.lijst[+m[1]]; if (st.gekozen === +m[2]) kopieerOptie(st, +m[2]); }
+  if ((m = /^hotels\.lijst\.(\d+)\.opties\.(\d+)\.(prijsB|prijsA|prijsH|linkB|linkA|site)$/.exec(path))) { const st = t.hotels.lijst[+m[1]]; herprijs(st.opties[+m[2]]); if (st.gekozen === +m[2]) kopieerOptie(st, +m[2]); }
+  if (path === 'auto.vervoer') t.auto.nodig = t.auto.vervoer !== 'ov';
   if ((m = /^stops\.(\d+)\.plaats$/.exec(path))) t.stops[+m[1]].geo = null;
   if (/^reis\.(startplaats|eindplaats)$/.test(path)) { t.route.start = null; t.route.eind = null; }
   if ((m = /^dagen\.(\d+)\.(km|uren)$/.exec(path))) t.dagen[+m[1]].kmGeschat = false;
@@ -1348,6 +1436,7 @@ function render() {
   $('#tabs').innerHTML = TABS.map(([k, n]) => { const stap = STAPPEN.includes(k) && t, slot = stap && !toegang(t, k), ok = stap && stapOk(t, k); return `<button data-t="${k}" class="${k === tab ? 'act' : ''}${slot ? ' slot' : ''}" ${k === tab ? 'aria-current="page"' : ''} ${slot ? 'aria-disabled="true" title="Eerst de vorige stap bevestigen"' : ''}>${slot ? '🔒 ' : ok ? '✔ ' : ''}${n}</button>`; }).join('');
   if (!t && tab !== 'start') tab = 'start';
   let pre = '';
+  if (t && tab !== 'boek') pre += '<div class="rij noprint" style="justify-content:flex-end;margin:0 0 4px"><button data-a="printBlad">🖨 Dit blad afdrukken / opslaan als PDF</button></div>';
   if (!navigator.onLine) pre += '<div class="banner noprint">U bent offline: weer en koersen kunnen niet worden opgehaald. Getoond wordt de laatst opgehaalde informatie met de datum erbij.</div>';
   if (!opslagOK) pre += '<div class="banner fout noprint">Opslaan in de browser werkt niet (privévenster of geblokkeerd). Wijzigingen gaan verloren: maak een back-up.</div>';
   app.innerHTML = pre + VIEWS[tab]();
@@ -1381,7 +1470,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
-window.__rr = { voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>
