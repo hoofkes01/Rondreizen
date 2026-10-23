@@ -39,6 +39,10 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
 - scripts/plan.mjs: de volledige routine in twee fasen (fase 1 alleen Frankfurt; fase 2 alle vertrekpunten x aankomsten binnen 1000 km).
 - scripts/browser.mjs: zichtbare Chrome met vast profiel (.browser-profiel); gebruiker doet de robotcontrole.
 - scripts/test.mjs: test alles wat zonder Skyscanner kan (`npm test`).
+- reisgids.html: de reisgids-app (één bestand, geen build): intake per onderdeel (reis, vlucht, auto, verblijf, reisgids), route, dagpagina's
+  onderweg, dagboek met foto's, kostenoverzicht en printbaar reisboek (PDF via afdrukken). Gegevens staan alleen in de browser
+  (localStorage + IndexedDB), niet in de repo. sw.js = offline-schil. Bronnen: docs/databronnen.md. Test: `npm run test:gids`
+  (Playwright; zet `CHROMIUM=<pad naar chrome>` als de standaardbrowser ontbreekt).
 
 ## Werkwijze op de pc (zuinig met tokens)
 Het script leest de pagina's uit en Claude beoordeelt alleen de uitkomst. Claude leest NIET zelf hele
@@ -69,6 +73,12 @@ Stand van zaken: planner (index.html) werkt; zoeken op Skyscanner is nog nooit u
 URL-parameters zijn ongetest. Eerste taak op de pc: één testzoekopdracht (bijv. FRA-LIS, 23 dagen)
 en controleren of de links, de maandkalender en het bagagefilter (2 x 23 kg) kloppen.
 Daarna: Frankfurt-eerst-routine voor meerdere bestemmingen binnen 500 km uitvoeren.
+
+## Stand reisgids (stap 4)
+Eerste versie gebouwd op uitdrukkelijk verzoek van de gebruiker (bouwspecificatie rondreisapp_v01), vóór goedkeuring van stap 1.
+Werkend: intake, route, dagpagina's, kosten, dagboek met foto's, reisboek, back-up. Handmatig (geen API): reviews, prijzen, routeafstand.
+Online op verzoek: plaats/tijdzone en weer (Open-Meteo), koers (Frankfurter/ECB). Alleen links: waarschuwingen, verkeer, Google Maps.
+Nog niet gebouwd: zie tab Gegevens in de app. Vluchtzoeker en autozoeker blijven aparte modules.
 
 ## Roadmap (door gebruiker aangegeven, in deze volgorde)
 1. Vluchten zoeken (nu in aanbouw, zie boven).
