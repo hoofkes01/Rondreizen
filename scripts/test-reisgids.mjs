@@ -157,6 +157,9 @@ check('lege reis: geen bedragen verzonnen (geen € 0-posten behalve eigen invoe
 
 console.log('Nieuwe vluchtflow: zoekopdracht, gekozen vlucht, data, auto en nachten');
 await page.click('[data-t=vlucht]');
+for (const k of ['reis', 'verblijf', 'route']) { await page.click(`[data-t=${k}]`, { force: true }); }
+check('latere stappen zijn vergrendeld zolang stap 1 niet is bevestigd', (await page.textContent('#tabs .act')).includes('1 Vlucht') && /Bevestig eerst stap 1/.test(await page.textContent('#melding')));
+check('vergrendelde tabbladen zijn zichtbaar gemarkeerd', (await page.locator('#tabs button.slot').count()) === 5);
 await page.fill('#f_vlucht_zoekVan', 'ams, DUS, FRA, BRU'); await page.fill('#f_vlucht_zoekNaar', 'DEN, COS');
 await page.fill('#f_vlucht_maandVan', '2027-03'); await page.fill('#f_vlucht_maandTot', '2027-05');
 await page.fill('#f_vlucht_dagenMin', '21'); await page.fill('#f_vlucht_dagenMax', '25');
@@ -179,7 +182,13 @@ await page.fill('#f_vlucht_terugDatum', '2027-04-26');
 await page.fill('#f_vlucht_heenAankomst', '23:30'); await page.fill('#f_vlucht_terugVertrek', '06:00');
 const at = await page.evaluate(() => { const a = __rr.T().auto; return [a.ophaalDatum, a.ophaalTijd, a.inleverDatum, a.inleverTijd]; });
 check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00 - 180 min = 03:00', at.join() === '2027-04-04,00:30,2027-04-26,03:00', at.join());
-await page.click('[data-t=auto]');
+let dialoogTekst = '';
+page.once('dialog', d => { dialoogTekst = d.message(); d.accept(); });
+await page.click('[data-a=bevestig][data-s=vlucht]');
+check('bevestigen met ontbrekende gegevens vraagt eerst toestemming en noemt wat ontbreekt', /ontbreekt nog/.test(dialoogTekst) && /prijs/.test(dialoogTekst), dialoogTekst);
+check('na uw bevestiging opent stap 2 en is stap 1 gemarkeerd', (await page.textContent('#tabs .act')).includes('2 Auto en nachten') && (await page.textContent('#tabs')).includes('✔ 1 Vlucht'));
+await page.click('[data-t=reis]', { force: true });
+check('stap 3 blijft dicht tot stap 2 is bevestigd', /Bevestig eerst stap 2/.test(await page.textContent('#melding')) && (await page.textContent('#tabs .act')).includes('2 Auto'));
 const tijden = await page.textContent('[data-calc=autoTijden]');
 check('huurperiode 530,5 uur = 23 dagen van 24 uur', /23 dag\(en\)/.test(tijden), tijden.slice(0, 300));
 check('voorlopig-melding zolang de vlucht niet als geboekt staat', /nog niet als geboekt/.test(tijden));
@@ -189,6 +198,7 @@ check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis
 check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
 await page.fill('#f_auto_ophaalTijd', '12:00');
 await page.click('[data-t=vlucht]'); await page.fill('#f_vlucht_heenAankomst', '22:00');
+check('wijziging na bevestiging vraagt om opnieuw bevestigen', /Bevestig stap 1 opnieuw/.test(await page.textContent('[data-calc=stapbalk]')));
 const hand = await page.evaluate(() => __rr.T().auto.ophaalTijd);
 check('zelf aangepaste ophaaltijd wordt niet overschreven door de vlucht', hand === '12:00', hand);
 await page.fill('#f_vlucht_heenAankomst', '09:25');
