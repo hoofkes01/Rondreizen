@@ -217,6 +217,42 @@ check('24 dagen aangemaakt van 3 april t/m 26 april', dg.n === 24 && dg.eerste.j
 check('rijdag op de wisseldag (13 april) en twee verblijven', dg.wissel === '2027-04-13' && dg.hotels.length === 2 && dg.hotels[0].join() === 'Denver,2027-04-03,2027-04-13' && dg.hotels[1].join() === 'Santa Fe,2027-04-13,2027-04-26', JSON.stringify(dg.hotels));
 
 
+console.log('Auto-intake: soort auto per land, voorwaarden, extra kosten');
+await page.evaluate(() => { const t = __rr.T(); t.reis.landen = 'Verenigde Staten, Canada'; t.reis.kind = 1; t.reis.kindLeeftijden = '4'; });
+await page.click('[data-t=auto]');
+const al = await page.textContent('[data-calc=autoLand]');
+check('landprofiel Verenigde Staten/Canada met automaat-richtlijn', /Verenigde Staten \/ Canada/.test(al) && /Automaat is de gewoonte/.test(al), al.slice(0, 200));
+check('voorstel klasse bij 3 personen en 2 koffers = Intermediate', /Voorstel voor 3 personen en 2 koffers: Intermediate/.test(al), al.slice(0, 160));
+check('reist u met kinderen: melding om kinderzitjes te kiezen', /kies hierboven of kinderzitjes nodig zijn/.test(al));
+const prof0 = await page.textContent('[data-calc=dcZoek]');
+check('zoekprofiel: onbeperkt, vol-vol, automaat, Intermediate, geen grens', /Unlimited mileage/.test(prof0) && /Full to full/.test(prof0) && /Automatic/.test(prof0) && /Intermediate/.test(prof0) && /Cross-border[\s\S]*no/.test(prof0), prof0.slice(0, 200));
+await page.selectOption('#f_auto_zitjes', 'ja'); await page.fill('#f_auto_zitjesAantal', '1');
+let z = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'auto-zitjes'));
+check('kinderzitjes zonder bedrag = onbekend, niet 0', z && z.b === null && /onbekend/.test(z.opm), JSON.stringify(z));
+await page.fill('#f_auto_zitjesKosten', '30');
+z = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'auto-zitjes'));
+check('kinderzitjes 30 telt mee', z.b === 30);
+await page.selectOption('#f_auto_grens', 'ja'); await page.fill('#f_auto_grensLanden', 'Canada'); await page.fill('#f_auto_grensToeslag', '45');
+const gl = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'auto-grens'));
+check('grenstoeslag 45 telt mee', gl && gl.b === 45, JSON.stringify(gl));
+const dcg = await page.textContent('[data-calc=dcZoek]');
+check('zoekprofiel en checklist noemen grensoverschrijding naar Canada', /Cross-border[\s\S]*yes: Canada/.test(dcg) && /toegestaan naar Canada/.test(dcg));
+await page.selectOption('#f_auto_kmType', 'beperkt'); await page.fill('#f_auto_kmLimiet', '300'); await page.selectOption('#f_auto_kmPer', 'totaal');
+await page.evaluate(() => { const t = __rr.T(); t.dagen[2].km = 500; t.dagen[3].km = 0; for (const d of t.dagen) if (d !== t.dagen[2]) d.km = 0; });
+await page.fill('#f_auto_kmExtra', '0.25');
+const kx = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'auto-km'));
+check('500 km route bij limiet 300 totaal x 0,25 = 50 extra', kx && Math.abs(kx.b - 50) < 0.001 && /200 km boven/.test(kx.post), JSON.stringify(kx));
+check('zoekprofiel toont gelimiteerde kilometers', /Limited: 300 km per rental/.test(await page.textContent('[data-calc=dcZoek]')));
+await page.selectOption('#f_auto_kmPer', 'dag'); await page.fill('#f_auto_kmLimiet', '100');
+const kd = await page.evaluate(() => { const t = __rr.T(); return [__rr.kostenRegels(t).some(x => x.key === 'auto-km'), t.auto.ophaalDatum, t.auto.inleverDatum]; });
+check('100 km per dag over 23 dagen = 2.300 km limiet: geen extra kosten', kd[0] === false, JSON.stringify(kd));
+await page.fill('#f_auto_inleverPlaats', 'Santa Fe');
+const eg = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'auto-eenrichting'));
+check('andere inleverplaats: eenrichtingstoeslag onbekend zolang niet ingevuld', eg && eg.b === null, JSON.stringify(eg));
+await page.fill('#f_auto_inleverPlaats', 'DEN');
+check('Europa-profiel voor Portugal', await page.evaluate(() => { const t = __rr.T(); t.reis.landen = 'Portugal'; t.auto.land = ''; return true; }) && (await (async () => { await page.click('[data-t=vlucht]'); await page.click('[data-t=auto]'); return /Europa/.test(await page.textContent('[data-calc=autoLand]')) && /Handgeschakeld is in veel landen/.test(await page.textContent('[data-calc=autoLand]')); })()));
+await page.evaluate(() => { const t = __rr.T(); t.reis.kind = 0; t.auto.grens = 'nee'; t.auto.zitjes = ''; t.auto.kmType = 'onbeperkt'; });
+
 console.log('Verzekeringskeuze per reiziger');
 const kk = await page.evaluate(() => __rr.T().auto.verzekeringKeuze);
 check('nieuwe reis: volledige verzekering is de standaard', kk === 'volledig', kk);
