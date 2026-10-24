@@ -285,6 +285,26 @@ await page.fill('#f_vlucht_heenOverstapVia', 'Frankfurt'); await page.fill('#f_v
 check('105 minuten in Frankfurt (één ticket): geen te-korte-melding, wel advies 2 uur', /net genoeg[\s\S]*2 uur/.test(await page.textContent('[data-calc=vluchtCheck]')) && !/te kort/.test(await page.textContent('[data-calc=vluchtCheck]')));
 await page.fill('#f_vlucht_heenOverstapVia', ''); await page.fill('#f_vlucht_heenOverstapMin', '');
 
+console.log('Rondreis: niet dezelfde weg heen en terug; per se zien');
+const hr = await page.evaluate(() => {
+  const g = (plaats, lat, lon) => ({ plaats, geo: { lat, lon, plaats } });
+  const dal = { plaats: 'Dallas', lat: 32.78, lon: -96.8 };
+  const t = { route: { start: dal, eind: null, wegfactor: 1.3 } };
+  const aus = g('Austin', 30.27, -97.74), sa = g('San Antonio', 29.42, -98.49), hou = g('Houston', 29.76, -95.37), waco = g('Waco', 31.55, -97.15);
+  return { lus: __rr.routeHerhaling(t, [aus, sa, hou]).length, heenTerug: __rr.routeHerhaling(t, [aus, waco]).length, uitEnTerug: __rr.routeHerhaling(t, [waco, aus, waco]).length };
+});
+check('een lus Dallas → Austin → San Antonio → Houston → Dallas is een rondreis (geen herhaling)', hr.lus === 0, JSON.stringify(hr));
+check('Dallas → Austin → Waco (Waco ligt langs de weg naar Austin) wordt als dezelfde weg gemeld', hr.heenTerug >= 1, JSON.stringify(hr));
+check('heen en terug langs dezelfde plaats wordt gemeld', hr.uitEnTerug >= 1, JSON.stringify(hr));
+await page.evaluate(() => { location.hash = 'verblijf'; }); await page.reload();
+await page.click('[data-a=add][data-p="gids.perse"]');
+await page.fill('[data-b="gids.perse.0.naam"]', 'Alamo'); await page.fill('[data-b="gids.perse.0.plaats"]', 'San Antonio');
+await page.waitForTimeout(300);
+check('per se zien: bezienswaardigheid in een plaats buiten de route wordt gemeld met knop om de plaats toe te voegen', /San Antonio, dat niet in uw route staat/.test(await page.textContent('[data-calc=perseCheck]')) && await page.locator('[data-calc=perseCheck] [data-a=perseStop]').count() === 1);
+await page.click('[data-calc=perseCheck] [data-a=perseStop]'); await page.waitForTimeout(300);
+check('plaats wordt aan de route toegevoegd en de melding verdwijnt', await page.evaluate(() => __rr.T().stops.some(x => x.plaats === 'San Antonio')) && !/niet in uw route staat/.test(await page.textContent('[data-calc=perseCheck]')));
+await page.evaluate(() => { const t = __rr.T(); t.gids.perse = []; t.stops = t.stops.filter(x => x.plaats !== 'San Antonio'); __rr.opslaan(); });
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));

@@ -21,7 +21,7 @@ Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft t
 3. **Hotels:** criteria (max € 100; uitzondering tot € 150 alleen na bevestiging per plaats; Booking ≥ 8, Google ≥ 4; ≥ 25 reviews per
    bron; ≤ 10% slecht; gratis annuleerbaar met uiterste datum; ontbijt, parkeren, wifi, eigen badkamer, goede wijk; veiligheid altijd een
    eis), patroon van 1/2/3/4 nachten per plaats, routevoorstel met max km per dag, per verblijf 3 hotelopties; de gebruiker bevestigt er
-   één. Prijzen alleen bij Booking.com, Agoda.com of de hotelwebsite (laagste telt). Na bevestiging staan adres en foto bij het verblijf.
+   één. Een lijst "Wat wilt u per se zien?" (bezienswaardigheid + plaats; de app controleert of de plaats in de route staat en toont ze op de dagpagina; verzint niets). De route moet een echte rondreis zijn: `routeHerhaling` meldt ritten die over dezelfde weg lopen als een eerdere rit (schatting op hemelslijn) en het routevoorstel straft dat af. Prijzen alleen bij Booking.com, Agoda.com of de hotelwebsite (laagste telt). Na bevestiging staan adres en foto bij het verblijf.
 4. **Interactieve reisgids:** dagpagina's met actieve dagboekvragen (hoogtepunt, wat deden jullie, eten en drinken, weer, onthouden) en
    een herinnering als het dagboek van vandaag leeg is; foto's per dag via in-app camera (elke foto direct bewaard), telefooncamera of
    galerij (verdeeld over de dagen op opnamedatum/EXIF); verwijderen gaat naar een prullenbak (herstelbaar). Een webpagina kan niet
