@@ -252,10 +252,29 @@ const pl2 = await page.evaluate(() => __rr.leesVlucht('Prijs 2,345 USD, 12 maart
 check('plakken: bedrag met duizendtal, datum zonder jaar gebruikt zoekjaar; niet-herkende velden blijven leeg', pl2.prijs === 2345 && pl2.prijsValuta === 'USD' && pl2.heenDatum === '2027-03-12' && !pl2.prijsPer && !pl2.van);
 check('plakken: lege tekst vult niets behalve de bron', JSON.stringify(await page.evaluate(() => Object.keys(__rr.leesVlucht('hallo', '').velden))) === '["bron"]');
 await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
-await page.fill('#plakVlucht', 'AMS DFW 12 Mar 2027 10:00 18:00 Return 02 Apr 2027 12:00 06:00 $1,500 total'); await page.click('[data-a=plakLees]');
-check('plakken: voorbeeld toont wat is gevonden voordat er iets wordt ingevuld', (await page.locator('[data-a=plakNeem]').count()) === 1 && !(await page.evaluate(() => __rr.T().vlucht.heenDatum === '2027-03-12')));
-await page.evaluate(() => { window.__bevVoor = JSON.stringify(__rr.T().bevestigd); }); await page.click('[data-a=plakNeem]');
+await page.fill('#plakVlucht', 'AMS DFW 12 Mar 2027 10:00 18:00 Return 02 Apr 2027 12:00 06:00 $1,500 total'); await page.click('[data-a=plakLees][data-s=vlucht]');
+check('plakken: voorbeeld toont wat is gevonden voordat er iets wordt ingevuld', (await page.locator('[data-a=plakNeem][data-s=vlucht]').count()) === 1 && !(await page.evaluate(() => __rr.T().vlucht.heenDatum === '2027-03-12')));
+await page.evaluate(() => { window.__bevVoor = JSON.stringify(__rr.T().bevestigd); }); await page.click('[data-a=plakNeem][data-s=vlucht]');
 { const dbg = await page.evaluate(() => JSON.stringify([__rr.T().vlucht, __rr.T().bevestigd])); check('plakken: Neem over vult stap 2, bevestigt niets', await page.evaluate(() => { const v = __rr.T().vlucht; return v.van === 'AMS' && v.naar === 'DFW' && v.heenDatum === '2027-03-12' && v.prijs === 1500 && v.prijsPer === 'totaal' && JSON.stringify(__rr.T().bevestigd) === window.__bevVoor; }), dbg.slice(0, 300)); }
+
+console.log('Huurauto plakken en screenshots bewaren');
+const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
+check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
+check('auto plakken: klasse, versnelling, km, brandstof, verzekering, prijs, borg', au1.klasse === 'intermediate' && au1.versnelling === 'automaat' && au1.kmType === 'onbeperkt' && au1.brandstofBeleid === 'vol-vol' && au1.verzekeringKeuze === 'volledig' && au1.prijs === 1890 && au1.borg === 500, JSON.stringify(au1));
+const au2 = await page.evaluate(() => __rr.leesAuto('Sixt 500 km per day. Total $2,000', '2027-03-01', 'EUR'));
+check('auto plakken: andere valuta wordt niet overgenomen maar gemeld; km-limiet per dag', au2.velden.prijs === undefined && au2.velden.kmType === 'beperkt' && au2.velden.kmLimiet === 500 && au2.velden.kmPer === 'dag' && au2.nota.some(x => /USD/.test(x)), JSON.stringify(au2));
+await page.evaluate(() => { location.hash = 'auto'; }); await page.reload();
+await page.fill('#plakAuto', 'Avis Pick-up: Dallas 12 Mar 2027 10:00 Drop-off: Dallas 02 Apr 2027 09:00 SUV Total \u20ac1.500'); await page.click('[data-a=plakLees][data-s=auto]');
+check('auto plakken: voorbeeld eerst, nog niets ingevuld', (await page.locator('[data-a=plakNeem][data-s=auto]').count()) === 1 && await page.evaluate(() => __rr.T().auto.verhuurder !== 'Avis'));
+await page.click('[data-a=plakNeem][data-s=auto]');
+check('auto plakken: Neem over vult de gekozen huurauto', await page.evaluate(() => { const a = __rr.T().auto; return a.verhuurder === 'Avis' && a.prijs === 1500 && a.klasse === 'suv'; }));
+await page.setInputFiles('input[data-ch=bewijsToe]', { name: 'keuze.png', mimeType: 'image/png', buffer: maakPng(16, 16) });
+await page.waitForSelector('img[data-foto][alt=screenshot]');
+check('screenshot bij de auto bewaard (op dit apparaat) en zichtbaar', await page.evaluate(() => __rr.T().bewijs.length === 1 && __rr.T().bewijs[0].voor === 'auto'));
+await page.evaluate(() => { __rr.T().boek.modus = 'gids'; __rr.T().boek.refs = true; __rr.T().boek.foto = true; __rr.opslaan(); location.hash = 'boek'; }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
+check('screenshot staat in het reisboek bij "boekingsnummers opnemen"', await page.locator('#boekUit [data-sec=bewijzen] img').count() === 1, await page.evaluate(() => JSON.stringify([__rr.T().boek, __rr.T().bewijs, document.querySelectorAll('#boekUit [data-sec]').length])));
+await page.evaluate(() => { __rr.T().boek.refs = false; __rr.opslaan(); }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
+check('zonder die keuze blijft het screenshot uit het reisboek', await page.locator('#boekUit [data-sec=bewijzen]').count() === 0);
 
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
