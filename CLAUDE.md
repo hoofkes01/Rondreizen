@@ -11,17 +11,22 @@ Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen ve
 De gebruiker beoordeelt prijzen en kiest zelf: toon altijd bron, datum en link; verzin geen prijzen, reviews of waarschuwingen.
 
 ## Werkwijze in de app (leidend)
-Zes planningsstappen: 1 Vlucht → 2 Auto → 3 Reis → 4 Verblijf → 5 Reisgids → 6 Route. Elke stap moet door de gebruiker worden bevestigd;
-de volgende stap blijft tot dan vergrendeld. Nooit automatisch doorgaan. Onderweg, Dagboek, Kosten, Reisboek en Gegevens zijn altijd open.
-1. **Vlucht:** zoekcriteria voor Get-Roam (meerdere vertrek- en aankomstluchthavens, periode, min/max dagen); luchthavens binnen een
-   straal komen uit de eigen lijst in de app (LUCHTHAVENS). De gekozen vlucht bepaalt de reisdata; de auto-tijden volgen de vluchttijden.
-2. **Auto:** eerst advies huurauto versus trein/bus; de huurperiode (plaats, datum, tijd) volgt automatisch uit de goedgekeurde vlucht en wordt niet gevraagd (alleen als de gebruiker afwijkt); intake (klasse, versnelling, kilometers, brandstofbeleid, kinderzitjes, grens,
+Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft tot dan vergrendeld. Nooit automatisch doorgaan.
+1. **Vlucht** → 2. **Auto** → 3. **Hotels**. Pas na bevestiging van de hotels opent de **interactieve reisgids**: Reisgids (intake, praktisch,
+   voorbereiding), Route, Onderweg (dagpagina's), Dagboek en Reisboek/verslag. Start, Kosten en Gegevens zijn altijd open.
+1. **Vlucht:** zoekcriteria voor Get-Roam (meerdere vertrek- en aankomstluchthavens als blokjes, periode, min/max dagen); luchthavens
+   binnen een straal komen uit de eigen lijst (LUCHTHAVENS). De gekozen vlucht bepaalt de reisdata en de huurperiode (niet gevraagd).
+2. **Auto:** eerst advies huurauto versus trein/bus; intake (klasse, versnelling, kilometers, brandstofbeleid, kinderzitjes, grens,
    volledige verzekering) en DiscoverCars-zoekprofiel. Full Coverage van DiscoverCars is een vergoedingspolis (eerst zelf betalen).
-3. **Reis**, 4. **Verblijf:** hotelcriteria (max € 100; uitzondering tot € 150 alleen na bevestiging per plaats; Booking ≥ 8, Google ≥ 4;
-   ≥ 25 reviews per bron; ≤ 10% slecht; gratis annuleerbaar (verplicht, met uiterste datum); ontbijt, parkeren, wifi, eigen badkamer, goede wijk; veiligheid altijd een eis), patroon van
-   1/2/3/4 nachten per plaats, routevoorstel met max km per dag, per verblijf 3 hotelopties; de gebruiker bevestigt er één. Na bevestiging
-   staan adres en foto bij het verblijf, op de dagpagina en in het reisboek.
-5. **Reisgids**, 6. **Route**, dagpagina's, dagboek met foto's (per dag meerdere foto's met onderschrift, hoogtepunt, tekst), kosten. Uitvoer: tab "Reisboek en verslag": de reisgids (plan) of het reisverslag (verhaal na afloop, met omslagfoto, voorwoord, cijfers, hoogtepunten, per dag tekst en foto's). Elk blad en elk onderdeel is apart af te drukken of als PDF op te slaan.
+3. **Hotels:** criteria (max € 100; uitzondering tot € 150 alleen na bevestiging per plaats; Booking ≥ 8, Google ≥ 4; ≥ 25 reviews per
+   bron; ≤ 10% slecht; gratis annuleerbaar met uiterste datum; ontbijt, parkeren, wifi, eigen badkamer, goede wijk; veiligheid altijd een
+   eis), patroon van 1/2/3/4 nachten per plaats, routevoorstel met max km per dag, per verblijf 3 hotelopties; de gebruiker bevestigt er
+   één. Prijzen alleen bij Booking.com, Agoda.com of de hotelwebsite (laagste telt). Na bevestiging staan adres en foto bij het verblijf.
+4. **Interactieve reisgids:** dagpagina's met actieve dagboekvragen (hoogtepunt, wat deden jullie, eten en drinken, weer, onthouden) en
+   een herinnering als het dagboek van vandaag leeg is; foto's per dag via in-app camera (elke foto direct bewaard), telefooncamera of
+   galerij (verdeeld over de dagen op opnamedatum/EXIF); verwijderen gaat naar een prullenbak (herstelbaar). Een webpagina kan niet
+   zelf in de fotorol kijken: volledig automatisch uploaden bestaat niet. Uitvoer: tab "Reisboek en verslag" (reisgids of verhalend
+   reisverslag), elk blad en onderdeel apart af te drukken of als PDF op te slaan.
 
 ## Vaste voorkeuren vluchten (gelden voor de keuze in Get-Roam)
 - Altijd 2 volwassenen, per persoon 1 koffer van 23 kg (Get-Roam kan daar niet op filteren: controleren bij de boeking).
@@ -30,7 +35,7 @@ de volgende stap blijft tot dan vergrendeld. Nooit automatisch doorgaan. Onderwe
 - Reiskosten naar de luchthaven: 30 liter benzine + € 200 parkeren, alleen in de kostenraming.
 
 ## Bestanden
-- reisgids.html: de app. sw.js: offline-schil. index.html: doorverwijzing naar reisgids.html.
+- reisgids.html: de app. sw.js + manifest.webmanifest + icoon*: offline en installeerbaar op het beginscherm (alleen via https, bijv. GitHub Pages). index.html: doorverwijzing.
 - scripts/test-reisgids.mjs: browsertest (`npm test`; Playwright; zet `CHROMIUM=<pad naar chrome>` als de standaardbrowser ontbreekt).
 - docs/databronnen.md: bronnenregister. docs/*.md: wensen per onderdeel (lees alleen het onderdeel waar je aan werkt):
   vluchten.md, autohuur.md, hotels.md, reisgids.md.

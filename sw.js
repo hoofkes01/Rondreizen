@@ -1,7 +1,7 @@
 // Offline-schil voor de reisgids: bewaart alleen de eigen pagina's van deze site.
 // Weer, koersen en plaatszoekopdrachten (andere herkomst) gaan nooit via de cache.
-const NAAM = 'reisgids-v1';
-const SCHIL = ['reisgids.html'];
+const NAAM = 'reisgids-v2';
+const SCHIL = ['reisgids.html', 'manifest.webmanifest', 'icoon.svg', 'icoon-192.png', 'icoon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(NAAM).then(c => c.addAll(SCHIL).catch(() => { }))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(n => n !== NAAM).map(n => caches.delete(n)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

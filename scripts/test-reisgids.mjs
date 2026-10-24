@@ -28,8 +28,8 @@ let fouten = 0, ok = 0;
 const check = (naam, waar, extra = '') => { if (waar) { ok++; console.log('  ok   ' + naam); } else { fouten++; console.log('  FOUT ' + naam + (extra ? ' – ' + extra : '')); } };
 const bijna = (a, b) => Math.abs(a - b) < 0.01;
 
-const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
-const ctx = await browser.newContext({ viewport: { width: 1100, height: 900 }, acceptDownloads: true });
+const browser = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+const ctx = await browser.newContext({ viewport: { width: 1100, height: 900 }, acceptDownloads: true, permissions: ['camera'] });
 const page = await ctx.newPage();
 const hosts = new Set(); page.on('request', r => { try { hosts.add(new URL(r.url()).host); } catch { } });
 await ctx.route('https://get-roam.com/**', r => r.fulfill({ body: '<p>Get-Roam</p>', contentType: 'text/html' })); await ctx.route('https://www.discovercars.com/**', r => r.fulfill({ body: '<p>DiscoverCars</p>', contentType: 'text/html' }));
@@ -81,7 +81,7 @@ await page.evaluate(() => { __rr.T().dagen[3].tz = 'Europe/Lisbon'; });
 
 console.log('Alle tabbladen, mobiel zonder horizontaal scrollen');
 await page.setViewportSize({ width: 375, height: 800 });
-for (const t of ['start', 'reis', 'vlucht', 'auto', 'verblijf', 'gids', 'route', 'dag', 'dagboek', 'kosten', 'boek', 'data']) {
+for (const t of ['start', 'vlucht', 'auto', 'verblijf', 'gids', 'route', 'dag', 'dagboek', 'kosten', 'boek', 'data']) {
   await page.evaluate(x => { location.hash = x; }, t);
   await page.reload();
   await page.waitForTimeout(150);
@@ -134,6 +134,47 @@ const geladen = await page.evaluate(async () => { const im = document.querySelec
 check('foto staat na verversen nog in IndexedDB en wordt getoond', geladen > 0, String(geladen));
 check('onderschrift bewaard', (await page.inputValue('input[data-b$=".fotos.0.cap"]')) === 'Eerste foto');
 
+console.log('Dagboek ter plaatse: verwijderen en herstellen, verdelen over dagen, camera, actieve herinnering');
+await page.click('[data-a=fotoDel]'); await page.waitForTimeout(150);
+let ft = await page.evaluate(() => { const b = __rr.T().dagen[0].dagboek; return [b.fotos.length, b.prullenbak.length]; });
+check('foto verwijderen zet hem in de prullenbak, zonder bevestigingsvraag', ft.join() === '0,1', ft.join());
+check('verwijderde foto’s staan apart met herstel- en wisknop', /Verwijderde foto’s \(1\)/.test(await page.textContent('#app')));
+await page.click('summary:has-text("Verwijderde foto")'); await page.click('[data-a=fotoHerstel]'); await page.waitForTimeout(150);
+ft = await page.evaluate(() => { const b = __rr.T().dagen[0].dagboek; return [b.fotos.length, b.prullenbak.length, b.fotos[0].cap]; });
+check('herstellen brengt de foto terug met zijn onderschrift', ft.join() === '1,0,Eerste foto', ft.join());
+await page.setInputFiles('input[type=file][data-ch=fotoToevoegen]', png); await page.waitForFunction(() => __rr.T().dagen[0].dagboek.fotos.length === 2);
+const tweede = await page.evaluate(() => __rr.T().dagen[0].dagboek.fotos[1].id);
+await page.click('[data-a=fotoDel][data-i="1"]'); await page.waitForTimeout(150); await page.click('summary:has-text("Verwijderde foto")'); await page.click('[data-a=fotoWis]'); await page.waitForTimeout(250);
+check('definitief wissen haalt de foto ook uit de opslag van de browser', await page.evaluate(async id => { const b = __rr.T().dagen[0].dagboek; return b.prullenbak.length === 0 && !(await __rr.fotoGet(id)); }, tweede));
+const gal = await page.evaluate(async () => {
+  const c = document.createElement('canvas'); c.width = c.height = 24; c.getContext('2d').fillRect(0, 0, 24, 24);
+  const png = await new Promise(r => c.toBlob(r, 'image/png')), jpg = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', .8))).arrayBuffer());
+  const s = new TextEncoder().encode('2027:05:12 10:00:00\0');
+  const tiff = [0x49, 0x49, 0x2A, 0, 8, 0, 0, 0, 1, 0, 0x69, 0x87, 4, 0, 1, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0x03, 0x90, 2, 0, 20, 0, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0, ...s];
+  const app1 = new Uint8Array([0xFF, 0xE1, 0, 2 + 6 + tiff.length, 0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff]);
+  const metExif = new File([new Uint8Array([0xFF, 0xD8, ...app1, ...jpg.slice(2)])], 'exif.jpg', { type: 'image/jpeg', lastModified: Date.UTC(2020, 0, 1, 12) });
+  const f = (naam, jaar, mnd, dag) => new File([png], naam, { type: 'image/png', lastModified: Date.UTC(jaar, mnd, dag, 12) });
+  const r = await __rr.verdeelFotos([f('a.png', 2027, 4, 11), f('b.png', 2027, 4, 11), f('c.png', 2027, 4, 13), f('oud.png', 2020, 0, 1), metExif], 4);
+  return { r, n: __rr.T().dagen.map(d => d.dagboek.fotos.length) };
+});
+check('galerij: foto’s worden over de dagen verdeeld op opnamedatum (11 mei x2, 13 mei x1), EXIF-datum gaat voor (12 mei), zonder datum naar de gekozen dag', gal.n.join() === '1,2,1,1,1' && gal.r.n === 5 && gal.r.zonder === 1, JSON.stringify(gal));
+await page.reload(); await page.waitForSelector('[data-a=cameraOpen]');
+await page.click('[data-a=cameraOpen]');
+await page.waitForFunction(() => { const v = document.querySelector('#camV'); return v && v.videoWidth > 0; }, null, { timeout: 15000 });
+await page.click('#camKnop'); await page.waitForTimeout(400); await page.click('#camKnop'); await page.waitForFunction(() => document.querySelector('#camN').textContent === '2');
+await page.click('#camSluit'); await page.waitForTimeout(300);
+check('camera: elke foto wordt direct bewaard (2 foto’s extra bij dag 1), scherm sluit netjes', await page.evaluate(() => __rr.T().dagen[0].dagboek.fotos.length === 3 && !document.querySelector('#cam')));
+await page.evaluate(() => { localStorage.setItem('rr_herinnering_uur', '0'); const d = __rr.T().dagen[2]; window.__oud = d.datum; d.datum = new Intl.DateTimeFormat('sv-SE').format(new Date()); d.tz = ''; d.dagboek.fotos = []; __rr.opslaan(); });
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('actief vragen: banner als het dagboek van vandaag nog leeg is', /Het dagboek van vandaag \(dag 3/.test(await page.textContent('#app')) && /nog leeg/.test(await page.textContent('#app')));
+await page.click('[data-a=dagboekVandaag]');
+const kaart = await page.textContent('#app');
+check('de dagpagina stelt de dagboekvragen (hoogtepunt, wat deden jullie, eten en drinken, weer, onthouden)', (await page.textContent('#tabs .act')).includes('Onderweg') && /Dagboek van vandaag/.test(kaart) && /hoogtepunt van deze dag/.test(kaart) && /gegeten of gedronken/.test(kaart) && /Hoe was het weer/.test(kaart));
+await page.fill('#f_dagen_2_dagboek_hoogtepunt', 'Zwemmen in zee'); await page.waitForTimeout(100);
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('na een invulling verdwijnt de herinnering', !/dagboek van vandaag \(dag 3/.test(await page.textContent('#app')));
+await page.evaluate(() => { __rr.T().dagen[2].datum = window.__oud; __rr.T().dagen[2].dagboek.hoogtepunt = ''; localStorage.removeItem('rr_herinnering_uur'); __rr.opslaan(); });
+
 console.log('Reisboek, PDF en back-up');
 await page.evaluate(() => { location.hash = 'boek'; }); await page.reload();
 await page.waitForSelector('#boekUit .voorblad');
@@ -153,7 +194,7 @@ console.log('  (pdf: ' + pdf + ')');
 check('in printweergave verdwijnt de menubalk', printKop === 'none', printKop);
 console.log('Afdrukken per blad en per onderdeel van het reisboek');
 const dir = mkdtempSync(join(tmpdir(), 'rr-blad-'));
-const koppen = { start: 'Welkom', vlucht: '1 Vlucht', auto: '2 Autohuur', reis: '3 Reisgegevens', verblijf: '4 Hotels', gids: '5 Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
+const koppen = { start: 'Welkom', vlucht: '1 Vlucht', auto: '2 Autohuur', verblijf: '3 Hotels', gids: 'Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
 for (const [k, kop] of Object.entries(koppen)) {
   await page.evaluate(x => { location.hash = x; }, k); await page.reload(); await page.waitForTimeout(250);
   await page.evaluate(() => { window.__stop = __rr.bereidPrint(); });
@@ -184,7 +225,7 @@ await page.selectOption('#f_verslag_omslag', { index: 1 }); await page.waitForTi
 const vtxt = await page.textContent('#boekUit');
 for (const s of ['REISVERSLAG', 'Onze reis door Portugal', 'Voorwoord', 'Dit is het verhaal', 'De reis in cijfers', 'De route', 'Hoogtepunten en favorieten', 'Zonsondergang aan de rivier', 'Pastelaria', 'Mooie eerste dag in de stad.', 'Eerste foto', 'Wat het kostte', 'Nawoord', 'Tot de volgende keer']) check(`reisverslag bevat "${s}"`, vtxt.includes(s));
 check('reisverslag bevat geen planningsonderdelen (voorbereiding, hotelbeoordeling, bronnen)', !/Hotelbeoordeling|Voorbereiding|Bronnen, peildata/.test(vtxt));
-check('omslagfoto en dagfoto staan erin', (await page.locator('#boekUit img').count()) === 2 && await page.evaluate(() => document.querySelector('#boekUit').classList.contains('verslag')));
+check('omslagfoto en dagfoto staan erin', (await page.locator('#boekUit img').count()) >= 2 && await page.evaluate(() => document.querySelector('#boekUit').classList.contains('verslag')));
 const dlV = page.waitForEvent('download'); await page.click('[data-a=boekHTML]'); const dv = readFileSync(await (await dlV).path(), 'utf8');
 check('verslag als één HTML-bestand: foto\u2019s ingebed, werkt zonder app', /REISVERSLAG/.test(dv) && /data:image\/jpeg;base64/.test(dv) && /class="boek verslag"/.test(dv) && !/<script/.test(dv));
 for (const [id, wel] of [['dag1', 'Zonsondergang'], ['voorwoord', 'Dit is het verhaal'], ['cijfers', 'De reis in cijfers']]) {
@@ -195,7 +236,7 @@ for (const [id, wel] of [['dag1', 'Zonsondergang'], ['voorwoord', 'Dit is het ve
 await page.selectOption('#f_boek_modus', 'gids');
 const [dl] = await Promise.all([page.waitForEvent('download'), page.evaluate(() => { location.hash = 'data'; }).then(() => page.reload()).then(() => page.click('[data-a=export][data-f="1"]'))]);
 const backup = JSON.parse(readFileSync(await dl.path(), 'utf8'));
-check('back-up bevat reis en foto', Object.keys(backup.reizen).length === 1 && Object.keys(backup.fotos).length === 1);
+check('back-up bevat reis en foto', Object.keys(backup.reizen).length === 1 && Object.keys(backup.fotos).length >= 1);
 
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
@@ -208,9 +249,9 @@ check('lege reis: geen bedragen verzonnen (geen € 0-posten behalve eigen invoe
 
 console.log('Nieuwe vluchtflow: zoekopdracht, gekozen vlucht, data, auto en nachten');
 await page.click('[data-t=vlucht]');
-for (const k of ['reis', 'verblijf', 'route']) { await page.click(`[data-t=${k}]`, { force: true }); }
+for (const k of ['auto', 'verblijf', 'route']) { await page.click(`[data-t=${k}]`, { force: true }); }
 check('latere stappen zijn vergrendeld zolang stap 1 niet is bevestigd', (await page.textContent('#tabs .act')).includes('1 Vlucht') && /Bevestig eerst stap 1/.test(await page.textContent('#melding')));
-check('vergrendelde tabbladen zijn zichtbaar gemarkeerd', (await page.locator('#tabs button.slot').count()) === 5);
+check('vergrendelde tabbladen zijn zichtbaar gemarkeerd (2 stappen en 5 onderdelen van de reisgids)', (await page.locator('#tabs button.slot').count()) === 7);
 for (const x of ['ams', 'DUS', 'FRA', 'BRU']) { await page.fill('#in_zoekVan', x); await page.click('[data-a=luchthavenToe][data-f=zoekVan]'); }
 for (const x of ['DEN', 'COS']) { await page.fill('#in_zoekNaar', x); await page.click('[data-a=luchthavenToe][data-f=zoekNaar]'); }
 await page.fill('#f_vlucht_maandVan', '2027-03'); await page.fill('#f_vlucht_maandTot', '2027-05');
@@ -237,8 +278,8 @@ check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00
 await bevestig('vlucht');
 check('bevestigen met ontbrekende gegevens vraagt eerst toestemming en noemt wat ontbreekt', /ontbreekt nog/.test(dialoogTekst) && /prijs/.test(dialoogTekst), dialoogTekst);
 check('na uw bevestiging opent stap 2 en is stap 1 gemarkeerd', (await page.textContent('#tabs .act')).includes('2 Auto') && (await page.textContent('#tabs')).includes('✔ 1 Vlucht'));
-await page.click('[data-t=reis]', { force: true });
-check('stap 3 blijft dicht tot stap 2 is bevestigd', /Bevestig eerst stap 2/.test(await page.textContent('#melding')) && (await page.textContent('#tabs .act')).includes('2 Auto'));
+await page.click('[data-t=verblijf]', { force: true });
+check('stap 3 (Hotels) blijft dicht tot stap 2 (Auto) is bevestigd', /Bevestig eerst stap 2/.test(await page.textContent('#melding')) && (await page.textContent('#tabs .act')).includes('2 Auto'));
 check('huurperiode wordt niet gevraagd: geen invulvelden voor datum en tijd zolang u niet afwijkt', await page.evaluate(() => !document.querySelector('#f_auto_ophaalDatum') && !document.querySelector('#f_auto_inleverTijd') && !!document.querySelector('#f_auto_afwijkend')));
 const tijden = await page.textContent('[data-calc=autoTijden]');
 check('huurperiode 530,5 uur = 23 dagen van 24 uur', /23 dag\(en\)/.test(tijden), tijden.slice(0, 300));
@@ -265,8 +306,10 @@ await page.click('[data-a=koersVlucht]'); await page.waitForTimeout(400);
 vl = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'vlucht'));
 check('600 USD p.p. met koers 1,1 voor 2 pers. = 1.090,91 EUR', vl.b !== null && Math.abs(vl.b - 600 / 1.1 * 2) < 0.01, JSON.stringify(vl));
 await page.click('[data-t=auto]');
-await bevestig('auto'); await bevestig('reis');
-check('stap 4 (Verblijf) opent pas na bevestiging van stap 2 en 3', (await page.textContent('#tabs .act')).includes('4 Verblijf'));
+await bevestig('auto');
+check('stap 3 (Hotels) opent pas na bevestiging van de auto, en de reisgids blijft nog dicht', (await page.textContent('#tabs .act')).includes('3 Hotels'));
+await page.click('[data-t=dag]', { force: true });
+check('de interactieve reisgids is nog dicht zolang de hotels niet zijn bevestigd', /Bevestig eerst stap 3 \(Hotels\)/.test(await page.textContent('#melding')) && (await page.textContent('#tabs .act')).includes('3 Hotels'));
 
 console.log('Stap 4: hotelcriteria, patroon 2/3/4 nachten, rondreisvoorstel, 3 hotels per verblijf');
 const crit = await page.evaluate(() => __rr.T().hotels.crit);
@@ -341,6 +384,8 @@ check('na bevestiging staat het adres op de pagina', /Adres:\s*123 Main Street/.
 check('na bevestiging staat tot wanneer gratis annuleren kan, met opdracht om opnieuw te zoeken', /Gratis annuleren:\s*tot en met/.test(ban) && /opnieuw/.test(ban), ban.slice(0, 400));
 await page.setInputFiles('input[type=file][data-ch=hotelFoto][data-i="0"][data-k="0"]', png); await page.waitForSelector('.banner img[data-foto]', { state: 'attached' }); await page.waitForTimeout(300);
 check('na bevestiging staat de foto van het hotel op de pagina', (await page.locator('.banner img[data-foto]').count()) === 1 && await page.evaluate(() => !!__rr.T().hotels.lijst[0].foto));
+await bevestig('verblijf');
+check('na bevestiging van de hotels opent de interactieve reisgids', (await page.locator('#tabs button.slot').count()) === 0 && /Alle drie de stappen/.test(await page.textContent('#melding')));
 await page.click('[data-t=dag]'); await page.waitForTimeout(300);
 const dagh = await page.textContent('#app');
 check('dagpagina toont hotel, adres en foto', /Hotel A/.test(dagh) && /123 Main Street/.test(dagh) && (await page.locator('img[data-foto]').count()) === 1);
@@ -447,7 +492,7 @@ await page.setInputFiles('input[type=file][data-ch=importeer]', fx); await page.
 const im = await page.evaluate(() => { const t = __rr.T(); return { n: t.naam, bev: Object.keys(t.bevestigd).length, van: t.vlucht.zoekVan, naar: t.vlucht.zoekNaar, d: [t.vlucht.exactVan, t.vlucht.exactTot, t.vlucht.dagenMin, t.vlucht.dagenMax], km: [t.gids.maxKm, t.gids.maxUren], uitz: t.hotels.crit.maxUitz, ints: t.gids.interesses.join(), noot: (t.importNotities || []).join(' ') }; });
 check('app leest de intake zelf in: zoekcriteria, hotelgrenzen en interesses, geen enkele stap bevestigd', im.n === 'Rondreis VS' && im.bev === 0 && im.van === 'FRA, DUS, AMS, BRU' && /DFW/.test(im.naar) && /DAL/.test(im.naar) && im.d.join() === '2027-03-01,2027-06-01,22,25' && im.km.join() === '400,6' && im.uitz === 150 && /stad/.test(im.ints) && /musea/.test(im.ints), JSON.stringify(im));
 check('afwijking van de intake wordt gemeld (35% prijsruimte)', /35%/.test(im.noot));
-check('na het inlezen staat u in stap 1 en zijn de andere stappen nog dicht', (await page.textContent('#tabs .act')).includes('1 Vlucht') && (await page.locator('#tabs button.slot').count()) === 5);
+check('na het inlezen staat u in stap 1 en zijn de andere stappen en de reisgids nog dicht', (await page.textContent('#tabs .act')).includes('1 Vlucht') && (await page.locator('#tabs button.slot').count()) === 7);
 check('zoekopdracht voor Get-Roam is meteen klaar', /DFW/.test(await page.textContent('[data-calc=roam]')) && /22/.test(await page.textContent('[data-calc=roam]')));
 const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=roam] [data-a=kopieOpen]')]);
 check('één klik kopieert de zoekopdracht en opent Get-Roam', pop.url().startsWith('https://get-roam.com/flexible-search') && /Gekopieerd/.test(await page.textContent('#melding')), pop.url()); await pop.close();

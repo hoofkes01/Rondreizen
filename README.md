@@ -15,3 +15,11 @@ browser; maak regelmatig een back-up (tab Gegevens). De app werkt zelfstandig: g
 ## Een oude intake.json gebruiken
 
 Start → "Back-up of intake inlezen" in de app. Er is geen tussenstap of script nodig.
+
+## Op de telefoon gebruiken (GitHub Pages)
+
+1. Zet de wijzigingen op de hoofdbranch (pull request samenvoegen).
+2. GitHub → de repo → **Settings** → **Pages** → bij *Source* kiezen voor **Deploy from a branch**, branch = de standaardbranch, map = **/ (root)**, **Save**.
+3. Na ongeveer een minuut staat de app op `https://<gebruikersnaam>.github.io/Rondreizen/reisgids.html`. Open die link op de telefoon en kies
+   **Toevoegen aan beginscherm**. Na het eerste bezoek werkt de app ook zonder bereik; camera en foto's werken alleen via deze https-link.
+4. Uw gegevens en foto's staan alleen op die telefoon (in de browser). Maak regelmatig een back-up (tab Gegevens).
