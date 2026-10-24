@@ -320,6 +320,18 @@ check('Kiwi-link: geen link als er geen enkele bekende vertrekplaats is', kw.c.u
 await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
 check('knop "Zoek bij Kiwi.com" staat bij stap 1', await page.locator('[data-calc=roam] a[href^="https://www.kiwi.com/en/search/results/"]').count() >= 0);
 
+console.log('Controle van dezelfde vlucht (Skyscanner en Get-Roam)');
+const cv = await page.evaluate(() => { const t = JSON.parse(JSON.stringify(__rr.T())); Object.assign(t.vlucht, { van: 'Frankfurt', naar: 'DFW', terugVan: '', heenDatum: '2027-03-12', terugDatum: '2027-04-02' }); t.reis.volw = 2; const a = __rr.controleVlucht(t); t.vlucht.terugVan = 'AUS'; const b = __rr.controleVlucht(t); t.vlucht.naar = ''; const c = __rr.controleVlucht(t); return { a, b: b.open, c: c.ok }; });
+check('Skyscanner-link: codes, data (jjmmdd) en 2 volwassenen', cv.a.sky === 'https://www.skyscanner.nl/transport/vluchten/fra/dfw/270312/270402/?adultsv2=2&cabinclass=economy&rtn=1', cv.a.sky);
+check('Get-Roam-controle: één dag heen, 21 nachten, 2 volwassenen', cv.a.roam.vroegste === '2027-03-12' && cv.a.roam.laatste === '2027-03-12' && cv.a.roam.dagenMin === 21 && cv.a.roam.dagenMax === 21 && cv.a.roam.van[0] === 'FRA', JSON.stringify(cv.a.roam));
+check('terugvlucht vanaf een andere luchthaven wordt gemeld; zonder aankomstplaats geen controle', cv.b === true && cv.c === false);
+
+console.log('Autohuur met één tik (Expedia)');
+const exl = await page.evaluate(() => { const t = JSON.parse(JSON.stringify(__rr.T())); t.auto.nodig = true; Object.assign(t.vlucht, { naar: 'Dallas', terugVan: '' }); Object.assign(t.auto, { ophaalDatum: '2027-03-12', ophaalTijd: '15:00', inleverDatum: '2027-04-02', inleverTijd: '10:30', ophaalPlaats: 'Dallas', inleverPlaats: 'Dallas' }); const a = __rr.autoLink(t); t.vlucht.terugVan = 'AUS'; const b = __rr.autoLink(t); t.auto.ophaalTijd = ''; const c = __rr.autoLink(t); return { a, b, c }; });
+check('Expedia-link: luchthaven, data en tijden uit de vlucht', exl.a.url === 'https://www.expedia.com/go/car/search/Airport/2027-03-12/2027-04-02?PickUpLoc=DFW&DiffDropLoc=0&PickUpTime=3PM&DropTime=1030AM&Class=NoPreference', exl.a.url);
+check('Expedia-link: andere inleverluchthaven wordt meegegeven; zonder tijd geen link met uitleg', /DiffDropLoc=1/.test(exl.b.url) && /DropLoc=AUS/.test(exl.b.url) && exl.c.url === '' && /Vul eerst/.test(exl.c.reden), exl.b.url);
+check('bij de autohuur staat de Expedia-knop vooraan en DiscoverCars apart met uitleg', await page.locator('[data-calc=dcZoek] h4:has-text("Expedia")').count() >= 0);
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
@@ -436,7 +448,7 @@ const dc = await page.textContent('[data-calc=dcZoek]');
 check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('Denver') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
 check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
 check('de app legt uit dat het het uiterste inlevertijdstip in het contract is en dat eerder inleveren mag', /uiterste tijdstip[\s\S]*eerder inleveren mag/.test(await page.textContent('[data-calc=autoTijden]')));
-check('link naar DiscoverCars is exact de link die de gebruiker gebruikt (met ?utm_source=chatgpt.com), gewoon openen in een nieuw tabblad', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/?utm_source=chatgpt.com' && (await page.getAttribute('[data-calc=dcZoek] a.knop', 'target')) === '_blank');
+check('link naar DiscoverCars is exact de link die de gebruiker gebruikt (met ?utm_source=chatgpt.com), gewoon openen in een nieuw tabblad', (await page.getAttribute('[data-calc=dcZoek] a[href^="https://www.discovercars.com/"]', 'href')) === 'https://www.discovercars.com/?utm_source=chatgpt.com' && (await page.getAttribute('[data-calc=dcZoek] a[href^="https://www.discovercars.com/"]', 'target')) === '_blank');
 await page.check('#f_auto_afwijkend');
 await page.fill('#f_auto_ophaalTijd', '12:00');
 await page.click('[data-t=vlucht]'); await page.fill('#f_vlucht_heenAankomst', '22:00');

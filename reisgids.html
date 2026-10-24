@@ -951,6 +951,10 @@ VIEWS.vlucht = () => {
       ${fld('vlucht.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld('vlucht.ref', 'Boekingsreferentie (optioneel)', 't', { h: 'Geen paspoort- of kaartnummers.' })}${fld('vlucht.link', 'Link naar de aanbieding/boeking', 'u')}
       ${fld('vlucht.notitie', 'Notities', 'a', { w: 1, rows: 2 })}
     </div><div class="box" data-calc="vluchtCheck"></div>`);
+  { const c = controleVlucht(t); h += sectie('Controleer dezelfde vlucht op een tweede plek', 'Kiwi.com is uw basis. Controleer de gekozen vlucht daarna met exact dezelfde data bij Skyscanner en Get-Roam. Vergelijk de totaalprijs <b>inclusief 2 koffers van 23 kg</b> en kijk of het dezelfde vluchten zijn.',
+    c.ok ? `<div class="rij"><a class="knop prim" target="_blank" rel="noopener" href="${esc(c.sky)}">Controleer op Skyscanner ↗</a><button data-a="roamKopieer" data-m="controle">Controleer op Get-Roam (heen ${esc(dFmt(t.vlucht.heenDatum))}, ${c.n} nachten) ↗</button></div>
+      <p class="noot">Skyscanner opent met ${esc(t.vlucht.van)} → ${esc(t.vlucht.naar)}, ${esc(dFmt(t.vlucht.heenDatum))} en ${esc(dFmt(t.vlucht.terugDatum))}, ${t.reis.volw || 2} volwassenen. Stel daar zelf de bagage in. Get-Roam heeft geen bagagefilter: tel de koffers er zelf bij op. Bij Get-Roam geldt weer de bladwijzer “Roam invullen” (uitleg bij de Get-Roam-knop hierboven).</p>${c.open ? '<div class="banner">U vliegt terug vanaf een andere luchthaven dan waar u aankomt: Skyscanner controleert hier alleen heen en terug op dezelfde luchthaven. Controleer de terugvlucht dan zelf.</div>' : ''}`
+      : '<p class="noot">Vul bij “Stap 2: uw gekozen vlucht” de vertrekluchthaven, de aankomstluchthaven (een plaats of code, bijv. Frankfurt en Dallas) en de heen- en terugdatum in, dan staan hier de controleknoppen.</p>'); }
   h += sectie('Dit zijn nu de data van uw rondreis', '', `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>`);
   h += sectie('Overige reisgegevens (optioneel)', 'Mag leeg blijven; de app gebruikt wat u invult voor kosten en reisboek.', `<div class="grid">
       ${fld('naam', 'Naam van de reis', 't')}${fld('reis.landen', 'Land(en) / regio’s', 't', { ph: 'bijv. Verenigde Staten' })}
@@ -1624,6 +1628,26 @@ function kiwiLink(t) {
   const pad = ['https://www.kiwi.com/en/search/results', uniek(van.map(c => KIWI[c])).join(','), uniek(naar.map(c => KIWI[c])).join(','), heen]; if (terug) pad.push(terug);
   return { url: pad.join('/') + `/?adults=${t.reis.volw || 2}${t.reis.kind ? '&children=' + t.reis.kind : ''}&sortBy=price`, mis, reden: '' };
 }
+/* Controle van dezelfde vlucht: exacte data op Skyscanner (link met codes en data, op 24-10-2026 op de echte site gecontroleerd) en op Get-Roam (periode = één dag). */
+/* Autohuur met één tik: Expedia heeft een gedocumenteerde zoeklink (luchthavencode, data, tijden); op 24-10-2026 op de echte site gecontroleerd (DFW, 12 maart 15:00 tot 2 april 10:00,
+   resultaten met prijzen). DiscoverCars werkt met interne locatie-id's en kan niet vooraf worden ingevuld. */
+function autoLink(t) {
+  const a = t.auto, v = t.vlucht; if (!a.nodig) return { url: '', reden: 'U huurt geen auto.' };
+  const cd = x => { const l = x && String(x).trim() ? lhZoek(x) : null; return l ? l.code : ''; };
+  const op = cd(v.naar) || cd(a.ophaalPlaats), af = cd(v.terugVan) || cd(a.inleverPlaats) || op;
+  const tijd = x => { const m = /^(\d{1,2}):(\d{2})$/.exec(x || ''); if (!m) return ''; let h = +m[1]; const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}${m[2] === '00' ? '' : m[2]}${ap}`; };
+  if (!op || !okD(a.ophaalDatum) || !okD(a.inleverDatum) || !tijd(a.ophaalTijd) || !tijd(a.inleverTijd)) return { url: '', reden: 'Vul eerst de vlucht in met aankomsttijd heen en vertrektijd terug; dan staan ophaal- en inlevertijd en de plaats hier.' };
+  const q = new URLSearchParams({ PickUpLoc: op, DiffDropLoc: af !== op ? '1' : '0', PickUpTime: tijd(a.ophaalTijd), DropTime: tijd(a.inleverTijd), Class: 'NoPreference' }); if (af !== op) q.set('DropLoc', af);
+  return { url: `https://www.expedia.com/go/car/search/Airport/${a.ophaalDatum}/${a.inleverDatum}?${q.toString()}`, reden: '' };
+}
+function controleVlucht(t) {
+  const v = t.vlucht, cd = x => { const l = x && String(x).trim() ? lhZoek(x) : null; return l ? l.code : ''; }, a = cd(v.van), b = cd(v.naar), terugVan = cd(v.terugVan);
+  const ok = /^[A-Z]{3}$/.test(a) && /^[A-Z]{3}$/.test(b) && okD(v.heenDatum) && okD(v.terugDatum);
+  const yy = d => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
+  const n = ok ? diffD(v.terugDatum, v.heenDatum) : null, open = !!terugVan && terugVan !== b;
+  return { ok, open, n, sky: ok ? `https://www.skyscanner.nl/transport/vluchten/${a.toLowerCase()}/${b.toLowerCase()}/${yy(v.heenDatum)}/${yy(v.terugDatum)}/?adultsv2=${t.reis.volw || 2}&cabinclass=economy&rtn=1` : '',
+    roam: ok ? { van: [a], naar: [b], vroegste: v.heenDatum, laatste: v.heenDatum, dagenMin: n, dagenMax: n, adults: t.reis.volw || 2, maxPrijs: null, maxStops: '', maxUren: null } : null };
+}
 function roamZoek(t) {
   const v = t.vlucht;
   const vroegste = okD(v.exactVan) ? v.exactVan : (/^\d{4}-\d{2}$/.test(v.maandVan || '') ? v.maandVan + '-01' : '');
@@ -1767,6 +1791,8 @@ const CALC = {
     const w = a.verzekeringKeuze === 'volledig' && a.volledigIncl !== 'ja' ? '<div class="banner">Vergelijk alleen aanbiedingen mét volledige verzekering, of tel die erbij op, en zet “Bevat de gekozen prijs de volledige verzekering?” op ja zodra dat klopt.</div>' : '';
     const ctl = [`Verzekering: ${a.verzekeringKeuze === 'volledig' ? 'volledige dekking inbegrepen? Hoogte van de borg en het maximum van de vergoeding' : 'hoogte van het eigen risico'}`, `Brandstofbeleid: ${br ? br[0] : 'controleren'}`, `Kilometers: ${kmTekst(a)}${a.kmType === 'beperkt' ? ' (let op de prijs per extra km)' : ''}`, `Kinderzitjes: ${a.zitjes === 'ja' ? `${a.zitjesAantal || '?'} zitje(s) inbegrepen of kosten? Past het zitje bij leeftijd en gewicht?` : a.zitjes === 'nee' ? 'niet nodig' : 'nog bepalen'}`, `Grensoverschrijding: ${a.grens === 'ja' ? `toegestaan naar ${a.grensLanden || '(landen invullen)'}? Toeslag? Geldt de verzekering daar?` : 'niet nodig'}`, `Versnelling: ${a.versnelling}`, a.tweede ? 'Tweede bestuurder: kosten en voorwaarden' : null, zelfde ? null : 'Eenrichtingstoeslag (andere inleverlocatie)', a.creditcard ? 'Borg: creditcard op naam van de hoofdbestuurder, voldoende limiet' : 'Borg: welke betaalkaart is nodig? Is er een creditcard op naam van de bestuurder?', 'Ophalen: in de terminal of met pendelbus? Openingstijden van de balie op uw ophaal- en inlevertijd', 'Leeftijdstoeslag en minimumleeftijd voor de bestuurder', 'Totaalprijs inclusief alle verplichte kosten en belastingen'].filter(Boolean);
     return `<h4 style="margin:0 0 6px">Ophalen en inleveren</h4>${tab('Veld op DiscoverCars', loc)}<h4 style="margin:12px 0 6px">Zoekprofiel (filters en eisen)</h4>${tab('Wat u zoekt (Engels, benaderend)', prof)}
+      ${(() => { const k = autoLink(t); return `<h4 style="margin:0 0 4px">Snelste weg: Expedia, al ingevuld</h4>${k.url ? `<div class="rij"><a class="knop prim" target="_blank" rel="noopener" href="${esc(k.url)}" style="font-size:1.1rem;padding:12px 22px">Zoek autohuur bij Expedia ↗ (alles al ingevuld)</a></div><p class="noot">Eén tik: Expedia opent met ophaalplaats, ophaal- en inleverdatum en -tijd uit uw vlucht. Stel daar nog zelf in: autoklasse, versnelling, kilometers en verzekering. Prijzen staan in dollars.</p>` : `<p class="noot">${esc(k.reden)}</p>`}`; })()}
+      <h4 style="margin:12px 0 4px">DiscoverCars (invullen met de kopieerlijst)</h4><p class="noot">DiscoverCars werkt met eigen locatie-nummers en laat zich niet vooraf invullen. Gebruik het om de prijs en de “Full Coverage” te vergelijken: kopieer de velden hieronder.</p>
       <div class="rij"><a class="knop prim" target="_blank" rel="noopener" href="https://www.discovercars.com/?utm_source=chatgpt.com" style="font-size:1.05rem;padding:10px 18px">Open DiscoverCars ↗</a>${matchMedia('(pointer:fine) and (min-width:900px)').matches ? '<button data-a="openNaast" data-u="https://www.discovercars.com/?utm_source=chatgpt.com" data-n="discovercars">Naast deze app openen ↗</button>' : ''}<button data-a="kopie" data-v="${esc(alles)}">Kopieer het hele zoekprofiel</button>${reis ? `<button data-a="kopie" data-v="${esc(reis)}">Kopieer reisschema (voor “Search by flight”)</button>` : ''}</div>
       <p class="noot"><b>Bij “Pick-up location”:</b> typ de plaatsnaam (zoals hierboven) en <b>kies daarna zelf de luchthaven in het lijstje</b> dat DiscoverCars toont. DiscoverCars accepteert alleen tekst die in hun eigen lijst voorkomt; een afwijkende schrijfwijze of alleen een code geeft daar “geen resultaten”. De knop “Open DiscoverCars” opent gewoon hun pagina, zonder iets te doen.</p>
       <p class="noot">Zoekgegevens kunnen niet automatisch worden doorgegeven (geen bekende link-opbouw). De Engelse benamen zijn benaderend: ik heb de resultatenpagina van DiscoverCars niet kunnen bekijken, dus filters kunnen anders heten. “Search by flight” op de homepage is niet door mij getest; controleer altijd het zoekformulier.</p>${verz}${w}
@@ -2004,8 +2030,10 @@ function roamVuller() {
   })();
 }
 const ROAM_BLADWIJZER = 'javascript:' + encodeURIComponent('(' + roamVuller.toString() + ')()');
-A.roamKopieer = () => {
-  const z = roamZoek(T()), veld = roamFormulier(z);
+A.roamKopieer = b => {
+  const ctl = b && b.dataset && b.dataset.m === 'controle', z = ctl ? controleVlucht(T()).roam : roamZoek(T());
+  if (ctl && !z) return melding('Vul eerst bij de gekozen vlucht de vertrek- en aankomstplaats en de heen- en terugdatum in.', true);
+  const veld = roamFormulier(z);
   if (!z.van.length || !z.naar.length || !z.vroegste || !z.laatste || z.dagenMin == null || z.dagenMax == null) return melding('Vul eerst vertrek- en aankomstluchthavens, de periode van de heenvlucht en het verblijf of de terugperiode in.', true);
   const tekst = 'ROAM:' + JSON.stringify(veld);
   /* alles binnen dezelfde tik (geen await ervoor): anders blokkeert de telefoon het nieuwe tabblad */
@@ -2299,10 +2327,10 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 s'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 u'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
-window.__rr = { fotoGet, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { fotoGet, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>
