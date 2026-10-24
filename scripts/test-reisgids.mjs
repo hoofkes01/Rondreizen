@@ -191,7 +191,8 @@ await page.click('[data-t=vlucht]');
 for (const k of ['reis', 'verblijf', 'route']) { await page.click(`[data-t=${k}]`, { force: true }); }
 check('latere stappen zijn vergrendeld zolang stap 1 niet is bevestigd', (await page.textContent('#tabs .act')).includes('1 Vlucht') && /Bevestig eerst stap 1/.test(await page.textContent('#melding')));
 check('vergrendelde tabbladen zijn zichtbaar gemarkeerd', (await page.locator('#tabs button.slot').count()) === 5);
-await page.fill('#f_vlucht_zoekVan', 'ams, DUS, FRA, BRU'); await page.fill('#f_vlucht_zoekNaar', 'DEN, COS');
+for (const x of ['ams', 'DUS', 'FRA', 'BRU']) { await page.fill('#in_zoekVan', x); await page.click('[data-a=luchthavenToe][data-f=zoekVan]'); }
+for (const x of ['DEN', 'COS']) { await page.fill('#in_zoekNaar', x); await page.click('[data-a=luchthavenToe][data-f=zoekNaar]'); }
 await page.fill('#f_vlucht_maandVan', '2027-03'); await page.fill('#f_vlucht_maandTot', '2027-05');
 await page.fill('#f_vlucht_dagenMin', '21'); await page.fill('#f_vlucht_dagenMax', '25');
 const roam = await page.textContent('[data-calc=roam]');
@@ -392,6 +393,25 @@ await page.click('[data-a=nieuw]');
 check('andere reis start met de basisdekking als standaard', await page.evaluate(() => __rr.T().auto.verzekeringKeuze === 'basis'));
 
 
+console.log('Meerdere vertrek- en aankomstluchthavens kiezen');
+await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+const lhVan = async x => { await page.fill('#in_zoekVan', x); await page.click('[data-a=luchthavenToe][data-f=zoekVan]'); await page.waitForTimeout(80); };
+await lhVan('Amsterdam'); await lhVan('  bru '); await lhVan('Frankfurt');
+let van = await page.evaluate(() => __rr.T().vlucht.zoekVan);
+check('luchthavens toevoegen op plaatsnaam en code, hoofdletters en zonder spaties', van === 'AMS, BRU, FRA', van);
+await lhVan('ams'); check('dubbele luchthaven wordt niet nog eens toegevoegd', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, BRU, FRA' && /staat er al bij/.test(await page.textContent('#melding')));
+await page.fill('#in_zoekVan', 'DUS'); await page.press('#in_zoekVan', 'Enter'); await page.waitForTimeout(100);
+check('Enter voegt de luchthaven toe', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, BRU, FRA, DUS');
+check('elke gekozen luchthaven staat als eigen blokje met naam en een verwijderknop', (await page.locator('[data-a=luchthavenWeg][data-f=zoekVan]').count()) === 4 && /Amsterdam/.test(await page.textContent('#app')));
+await page.click('[data-a=luchthavenWeg][data-f=zoekVan][data-c=BRU]');
+check('luchthaven verwijderen', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, FRA, DUS');
+await lhVan('ZZZ'); check('onbekende code: toegevoegd met waarschuwing om te controleren', (await page.evaluate(() => __rr.T().vlucht.zoekVan)).endsWith('ZZZ') && /staat niet in de eigen lijst/.test(await page.textContent('#melding')));
+await page.fill('#in_zoekNaar', 'Plaats Bestaat Niet'); await page.click('[data-a=luchthavenToe][data-f=zoekNaar]');
+check('onbekende plaats: melding, niets toegevoegd', /Geen luchthaven gevonden/.test(await page.textContent('#melding')));
+await page.click('[data-a=vasteVertrek]');
+check('vaste vertrekpunten worden toegevoegd zonder de rest te wissen', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, FRA, DUS, ZZZ, BRU');
+check('zoekopdracht voor Get-Roam toont alle vertrekluchthavens', /AMS, FRA, DUS, ZZZ, BRU/.test(await page.textContent('[data-calc=roam]')));
+
 console.log('Intake (uit het oude intakeformulier) omzetten en inlezen');
 const fx = join(mkdtempSync(join(tmpdir(), 'rr-intake-')), 'intake.json'), uitf = join(dirname(fx), 'uit.json');
 writeFileSync(fx, JSON.stringify({ reis: { naam: 'Rondreis VS', plaats: 'Dallas', periodeVan: '2027-03-01', periodeTot: '2027-06-01', duurMin: 22, duurMax: 25, personen: 2 }, vlucht: { straal1: 500, maxUren: 15, maxOverstappen: 1, maaltijden: true, openJaw: 'nee' }, reiskosten: { liters: 30, literprijs: 2.5, parkeren: 200 }, auto: { klasse: 'intermediate', km: true, brandstof: true, verzekering: true, automaat: true, afleveren: 'zelfde' }, hotels: { prijsDoel: 100, prijsRuimte: 35, minWaardering: 8, minGoogle: 4, ontbijt: true, badkamer: true, wifi: true, parkeerHotel: true, maxKmPerVerplaatsing: 400, maxRijuren: 6 }, overig: { interesses: 'Historie, musea, casino, strand, muziek, bar (50+)', rustdag: true } }));
@@ -409,8 +429,8 @@ const lu = await page.evaluate(() => { const r = window.__rr.luchthavensBijPlaat
 check('Dallas: voorkeur DFW en binnen 500 km o.a. DAL, AUS, HOU, IAH, SAT, OKC, TUL, SHV, LIT', lu.v === 'DFW' && ['DFW', 'DAL', 'AUS', 'HOU', 'IAH', 'SAT', 'OKC', 'TUL', 'SHV', 'LIT'].every(c => lu.codes.includes(c)), JSON.stringify(lu));
 check('luchthavens ver weg (Denver, New York) staan niet in de straal van Dallas', !lu.codes.includes('DEN') && !lu.codes.includes('JFK'));
 promptAntwoord = 'Straaltest'; await page.click('[data-a=nieuw]');
-await page.fill('#f_vlucht_zoekPlaats', 'Dallas'); await page.fill('#f_vlucht_straal', '500');
-check('knop vult aankomstluchthavens in', await (async () => { await page.click('[data-a=luchthavensVullen]'); await page.waitForTimeout(200); return (await page.evaluate(() => __rr.T().vlucht.zoekNaar)).startsWith('DFW, DAL'); })());
+await page.click('details.sub > summary:has-text("Luchthavens in de buurt")'); await page.fill('#f_vlucht_zoekPlaats', 'Dallas'); await page.fill('#f_vlucht_straal', '500');
+check('knop voegt de aankomstluchthavens binnen de straal toe', await (async () => { await page.click('[data-a=luchthavensVullen]'); await page.waitForTimeout(200); return (await page.evaluate(() => __rr.T().vlucht.zoekNaar)).startsWith('DFW, DAL'); })());
 check('overzicht toont namen en afstanden', /Dallas Love Field/.test(await page.textContent('[data-calc=luchthavensStraal]')));
 await page.click('[data-a=vasteVertrek]');
 check('vaste vertrekpunten FRA, DUS, AMS, BRU', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'FRA, DUS, AMS, BRU');

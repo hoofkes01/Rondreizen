@@ -388,6 +388,19 @@ const LUCHTHAVENS = [ /* [code, naam, land, breedtegraad, lengtegraad]; coördin
   ["LBB", "Lubbock", "Verenigde Staten", 33.66, -101.82],
   ["CRP", "Corpus Christi", "Verenigde Staten", 27.77, -97.5],
   ["BTR", "Baton Rouge", "Verenigde Staten", 30.53, -91.15],
+  ["AMS", "Amsterdam Schiphol", "Nederland", 52.31, 4.76],
+  ["EIN", "Eindhoven", "Nederland", 51.45, 5.37],
+  ["RTM", "Rotterdam Den Haag", "Nederland", 51.96, 4.44],
+  ["MST", "Maastricht Aken", "Nederland", 50.91, 5.77],
+  ["FRA", "Frankfurt", "Duitsland", 50.03, 8.57],
+  ["DUS", "Düsseldorf", "Duitsland", 51.29, 6.77],
+  ["CGN", "Keulen Bonn", "Duitsland", 50.87, 7.14],
+  ["NRN", "Weeze Niederrhein", "Duitsland", 51.6, 6.14],
+  ["BRU", "Brussel", "Belgie", 50.9, 4.48],
+  ["CRL", "Charleroi Brussel Zuid", "Belgie", 50.46, 4.45],
+  ["LGG", "Luik", "Belgie", 50.64, 5.44],
+  ["ANR", "Antwerpen", "Belgie", 51.19, 4.46],
+  ["LUX", "Luxemburg", "Luxemburg", 49.63, 6.2],
 ];
 const normT = x => (x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ');
 const luchthavenKm = (a, b) => { const r = Math.PI / 180, dl = (b[4] - a[4]) * r, p1 = a[3] * r, p2 = b[3] * r, x = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
@@ -837,23 +850,28 @@ VIEWS.reis = () => {
     </div>`);
 };
 
+function lhBlok(veld, titel, uitleg) {
+  const lijst = codes(T().vlucht[veld]);
+  return `<div class="item" style="margin:6px 0"><label>${esc(titel)}</label><div class="rij" style="margin:4px 0">${lijst.length ? lijst.map(c => { const l = LUCHTHAVENS.find(x => x[0] === c); return `<span class="b b-n" style="font-size:.9rem;padding:3px 10px">${esc(c)}${l ? ' ' + esc(l[1]) : ''} <button class="klein" style="border:0;padding:0 4px;background:none" data-a="luchthavenWeg" data-f="${veld}" data-c="${esc(c)}" aria-label="Verwijder ${esc(c)}">✕</button></span>`; }).join('') : '<span class="noot">Nog geen luchthavens gekozen.</span>'}</div>
+    <div class="rij" style="margin:0"><input type="text" id="in_${veld}" list="lhLijst" data-enter="${veld}" placeholder="code of plaats, bijv. AMS of Amsterdam" style="max-width:340px"><button data-a="luchthavenToe" data-f="${veld}">+ Toevoegen</button>${veld === 'zoekVan' ? '<button data-a="vasteVertrek">Voeg FRA, DUS, AMS en BRU toe</button>' : ''}</div><div class="hint">${esc(uitleg)}</div></div>`;
+}
 VIEWS.vlucht = () => {
   const t = T(), v = t.vlucht;
   let h = sectie('1 Vlucht: eerst de goedkoopste vlucht vinden', `Begin altijd hier. U geeft de zoekcriteria op, zoekt in <a target="_blank" rel="noopener" href="${ROAM}">Get-Roam</a> en vult hieronder de goedkoopste uitkomst in. De data van die vlucht worden de data van de rondreis; daarna volgen de autohuur en het aantal nachten.`,
     `<div class="grid">${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}</div>${v.nodig ? '' : '<p class="noot">Zonder vlucht vult u de reisdata in op tab 3.</p>'}`);
   if (!v.nodig) return h + kBox('Vlucht');
   h += sectie('Stap 1: zoekcriteria', 'Dezelfde velden als op de Get-Roam-pagina “flexible search”. De app kan ze niet automatisch in Get-Roam invullen (er is geen bekende link-opbouw); kopieer ze met de knoppen.',
-    `<div class="grid">
-      ${fld('vlucht.zoekPlaats', 'Bestemming: plaats of luchthaven', 't', { ph: 'bijv. Dallas', h: 'De app zoekt hiermee luchthavens in de buurt.' })}${fld('vlucht.straal', 'Straal rond die plaats (km)', 'n', { min: 0 })}
-      ${fld('vlucht.zoekVan', 'Vertrekluchthaven(s)', 'a', { rows: 2, ph: 'AMS, DUS, FRA, BRU', h: 'Meerdere mogelijk, gescheiden door komma’s (IATA-codes).' })}
-      ${fld('vlucht.zoekNaar', 'Aankomstluchthaven(s)', 'a', { rows: 2, ph: 'DEN, COS, SLC', h: 'Meerdere mogelijk. Ook ruim: Get-Roam kent ook continenten/landen.' })}
+    `<h3 style="margin-top:0">Van waar en naar waar?</h3><datalist id="lhLijst">${LUCHTHAVENS.map(l => `<option value="${l[0]} – ${esc(l[1])}">`).join('')}</datalist>
+    ${lhBlok('zoekVan', 'Vertrekluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u vandaan wilt vertrekken. Get-Roam zoekt ze allemaal tegelijk.')}${lhBlok('zoekNaar', 'Aankomstluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u wilt aankomen. Typ de code (bijv. DFW) of een plaats (bijv. Dallas).')}
+    <details class="sub" ${String(v.zoekPlaats || '').trim() ? 'open' : ''}><summary>Luchthavens in de buurt van een plaats toevoegen</summary><div class="grid" style="margin-top:8px">${fld('vlucht.zoekPlaats', 'Plaats of luchthaven', 't', { ph: 'bijv. Dallas' })}${fld('vlucht.straal', 'Binnen hoeveel km (hemelsbreed)', 'n', { min: 0 })}</div><div class="rij"><button data-a="luchthavensVullen">Voeg die luchthavens toe aan de aankomstluchthavens</button></div><div class="box" data-calc="luchthavensStraal"></div></details>
+    <h3>Wanneer en hoe lang?</h3><div class="grid">
       ${fld('vlucht.maandVan', 'Vroegste heenvlucht: vanaf maand', 'm')}${fld('vlucht.maandTot', 'Laatste heenvlucht: tot en met maand', 'm')}
       ${fld('vlucht.exactVan', 'of exacte vroegste heendatum (optioneel)', 'd')}${fld('vlucht.exactTot', 'of exacte laatste heendatum (optioneel)', 'd')}
       ${fld('vlucht.dagenMin', 'Verblijf: minimaal aantal dagen', 'n', { min: 1 })}${fld('vlucht.dagenMax', 'Verblijf: maximaal aantal dagen', 'n', { min: 1 })}
       ${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 1, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1, h: 'Get-Roam heeft alleen een veld voor volwassenen.' })}${fld('reis.kindLeeftijden', 'Leeftijden kinderen', 't')}
       ${fld('vlucht.maxStops', 'Maximaal aantal overstappen per richting', 's', { opts: [['', 'geen voorkeur'], ['0', 'alleen rechtstreeks'], ['1', 'max. 1'], ['2', 'max. 2']] })}${fld('vlucht.maxUren', 'Maximale vliegtijd (uren)', 'n', { min: 0 })}${fld('vlucht.maxPrijsUsd', 'Maximumprijs (in $, zoals Get-Roam vraagt)', 'n', { min: 0 })}
       ${fld('vlucht.bagage', 'Bagage-eis', 't', { h: 'Get-Roam kan hier niet op filteren: controleer dit bij de boeking.' })}
-    </div><div class="rij"><button data-a="luchthavensVullen">Vul aankomstluchthavens in binnen de straal</button><button data-a="vasteVertrek">Vul mijn vaste vertrekpunten in (FRA, DUS, AMS, BRU)</button></div><div class="box" data-calc="luchthavensStraal"></div><div class="box" data-calc="roam"></div>`);
+    </div><div class="box" data-calc="roam"></div>`);
   h += sectie('Stap 2: goedkoopste vlucht uit Get-Roam invullen', 'Vul de gekozen vlucht in. Tijden zijn de lokale tijd van de luchthaven. Alleen wat u hier invult wordt gebruikt; de app haalt geen vluchtprijzen op.',
     `<div class="grid">
       ${fld('vlucht.maatschappij', 'Maatschappij', 't')}${fld('vlucht.stops', 'Overstappen (heen / terug)', 't', { ph: 'bijv. 1 / 0' })}
@@ -1554,12 +1572,26 @@ A.bevestig = b => {
   if (i < STAPPEN.length - 1) { tab = STAPPEN[i + 1]; location.hash = tab; render(); scrollTo(0, 0); melding(`Stap ${i + 1} bevestigd.`); }
   else { tab = 'start'; location.hash = tab; render(); melding('Alle planningsstappen zijn bevestigd.'); }
 };
+const voegToe = (veld, nieuw) => { const v = T().vlucht, l = codes(v[veld]); let n = 0; nieuw.forEach(c => { if (!l.includes(c)) { l.push(c); n++; } }); v[veld] = l.join(', '); return n; };
+function lhZoek(tekst) {
+  const t = String(tekst || '').trim(); if (!t) return null;
+  const m = /^([A-Za-z]{3})(\s|–|-|$)/.exec(t);
+  if (m) { const c = m[1].toUpperCase(), l = LUCHTHAVENS.find(x => x[0] === c); if (l || t.length === 3) return { code: c, naam: l ? l[1] : '', bekend: !!l }; }
+  const r = luchthavensBijPlaats(t, 0, 1); return r.voorkeur ? { code: r.voorkeur[0], naam: r.voorkeur[1], bekend: true } : null;
+}
+A.luchthavenToe = b => {
+  const f = b.dataset.f, x = lhZoek($('#in_' + f).value);
+  if (!x) return melding('Geen luchthaven gevonden. Typ de drielettercode (bijv. AMS) of een plaats uit de lijst.', true);
+  if (!voegToe(f, [x.code])) return melding(`${x.code} staat er al bij.`);
+  opslaan(); rerender(); melding(x.bekend ? `${x.code} ${x.naam} toegevoegd.` : `${x.code} toegevoegd; deze code staat niet in de eigen lijst, controleer hem.`, !x.bekend);
+};
+A.luchthavenWeg = b => { const v = T().vlucht, f = b.dataset.f; v[f] = codes(v[f]).filter(c => c !== b.dataset.c).join(', '); opslaan(); rerender(); };
 A.luchthavensVullen = () => {
   const v = T().vlucht, r = luchthavensBijPlaats(v.zoekPlaats, num(v.straal) || 500, 15);
-  if (!r.voorkeur) return melding('Geen luchthaven gevonden voor deze plaats. Vul de aankomstluchthavens zelf in.', true);
-  v.zoekNaar = r.lijst.map(x => x.code).join(', '); opslaan(); rerender(); melding(`${r.lijst.length} luchthavens binnen ${num(v.straal) || 500} km van ${r.voorkeur[1]} ingevuld.`);
+  if (!r.voorkeur) return melding('Geen luchthaven gevonden voor deze plaats. Voeg de luchthavens zelf toe.', true);
+  const n = voegToe('zoekNaar', r.lijst.map(x => x.code)); opslaan(); rerender(); melding(`${n} luchthaven(s) toegevoegd binnen ${num(v.straal) || 500} km van ${r.voorkeur[1]}.`);
 };
-A.vasteVertrek = () => { T().vlucht.zoekVan = 'FRA, DUS, AMS, BRU'; opslaan(); rerender(); };
+A.vasteVertrek = () => { voegToe('zoekVan', ['FRA', 'DUS', 'AMS', 'BRU']); opslaan(); rerender(); };
 A.dagNav = b => { dagSel += +b.dataset.d; rerender(); scrollTo(0, 0); };
 A.vandaag = b => {
   const t = T(); if (!t.dagen.length) { tab = 'route'; return render(); }
@@ -1671,6 +1703,7 @@ function hooks(path) {
   if (/^reis\.(startplaats|eindplaats)$/.test(path)) { t.route.start = null; t.route.eind = null; }
   if ((m = /^dagen\.(\d+)\.(km|uren)$/.exec(path))) t.dagen[+m[1]].kmGeschat = false;
 }
+app.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset && e.target.dataset.enter) { e.preventDefault(); const k = $(`[data-a=luchthavenToe][data-f="${e.target.dataset.enter}"]`); if (k) k.click(); } });
 app.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b || b.dataset.ch) return; if (A[b.dataset.a]) { if (b.tagName === 'A') return; e.preventDefault(); A[b.dataset.a](b, e); } });
 app.addEventListener('input', e => {
   const el = e.target;
