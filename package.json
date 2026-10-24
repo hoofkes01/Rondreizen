@@ -3,10 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node scripts/test.mjs",
-    "zoek": "node scripts/zoek.mjs",
-    "plan": "node scripts/plan.mjs",
-    "test:gids": "node scripts/test-reisgids.mjs"
+    "test": "node scripts/test-reisgids.mjs",
+    "test:gids": "node scripts/test-reisgids.mjs",
+    "intake": "node scripts/intake-naar-reisgids.mjs"
   },
   "dependencies": {
     "playwright": "^1.48.0"

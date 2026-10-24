@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 import { pathToFileURL } from 'node:url';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 const pdfTekst = f => { try { return execFileSync('pdftotext', ['-layout', f, '-'], { encoding: 'utf8' }); } catch { return null; } };
@@ -392,7 +392,7 @@ await page.click('[data-a=nieuw]');
 check('andere reis start met de basisdekking als standaard', await page.evaluate(() => __rr.T().auto.verzekeringKeuze === 'basis'));
 
 
-console.log('Intake van intake.html omzetten en inlezen');
+console.log('Intake (uit het oude intakeformulier) omzetten en inlezen');
 const fx = join(mkdtempSync(join(tmpdir(), 'rr-intake-')), 'intake.json'), uitf = join(dirname(fx), 'uit.json');
 writeFileSync(fx, JSON.stringify({ reis: { naam: 'Rondreis VS', plaats: 'Dallas', periodeVan: '2027-03-01', periodeTot: '2027-06-01', duurMin: 22, duurMax: 25, personen: 2 }, vlucht: { straal1: 500, maxUren: 15, maxOverstappen: 1, maaltijden: true, openJaw: 'nee' }, reiskosten: { liters: 30, literprijs: 2.5, parkeren: 200 }, auto: { klasse: 'intermediate', km: true, brandstof: true, verzekering: true, automaat: true, afleveren: 'zelfde' }, hotels: { prijsDoel: 100, prijsRuimte: 35, minWaardering: 8, minGoogle: 4, ontbijt: true, badkamer: true, wifi: true, parkeerHotel: true, maxKmPerVerplaatsing: 400, maxRijuren: 6 }, overig: { interesses: 'Historie, musea, casino, strand, muziek, bar (50+)', rustdag: true } }));
 const uitTekst = execFileSync('node', [join(hier, 'intake-naar-reisgids.mjs'), fx, uitf], { encoding: 'utf8' });
@@ -402,6 +402,21 @@ await page.setInputFiles('input[type=file][data-ch=importeer]', uitf); await pag
 const im = await page.evaluate(() => { const t = __rr.T(); return { n: t.naam, bev: Object.keys(t.bevestigd).length, van: t.vlucht.zoekVan, naar: t.vlucht.zoekNaar, d: [t.vlucht.exactVan, t.vlucht.exactTot, t.vlucht.dagenMin, t.vlucht.dagenMax], km: [t.gids.maxKm, t.gids.maxUren], uitz: t.hotels.crit.maxUitz, ints: t.gids.interesses.join() }; });
 check('geïmporteerde reis: zoekcriteria, hotelgrenzen en interesses uit de intake, geen enkele stap bevestigd', im.n === 'Rondreis VS' && im.bev === 0 && im.van === 'FRA, DUS, AMS, BRU' && /DFW/.test(im.naar) && im.d.join() === '2027-03-01,2027-06-01,22,25' && im.km.join() === '400,6' && im.uitz === 150 && /stad/.test(im.ints) && /musea/.test(im.ints), JSON.stringify(im));
 check('na het inlezen is alleen stap 1 toegankelijk', (await page.locator('#tabs button.slot').count()) === 5);
+
+console.log('Luchthavens binnen een straal (eigen lijst in de app)');
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+const lu = await page.evaluate(() => { const r = window.__rr.luchthavensBijPlaats('Dallas', 500, 15); return { v: r.voorkeur && r.voorkeur[0], codes: r.lijst.map(x => x.code), n: window.__rr.aantalLuchthavens }; });
+check('Dallas: voorkeur DFW en binnen 500 km o.a. DAL, AUS, HOU, IAH, SAT, OKC, TUL, SHV, LIT', lu.v === 'DFW' && ['DFW', 'DAL', 'AUS', 'HOU', 'IAH', 'SAT', 'OKC', 'TUL', 'SHV', 'LIT'].every(c => lu.codes.includes(c)), JSON.stringify(lu));
+check('luchthavens ver weg (Denver, New York) staan niet in de straal van Dallas', !lu.codes.includes('DEN') && !lu.codes.includes('JFK'));
+promptAntwoord = 'Straaltest'; await page.click('[data-a=nieuw]');
+await page.fill('#f_vlucht_zoekPlaats', 'Dallas'); await page.fill('#f_vlucht_straal', '500');
+check('knop vult aankomstluchthavens in', await (async () => { await page.click('[data-a=luchthavensVullen]'); await page.waitForTimeout(200); return (await page.evaluate(() => __rr.T().vlucht.zoekNaar)).startsWith('DFW, DAL'); })());
+check('overzicht toont namen en afstanden', /Dallas Love Field/.test(await page.textContent('[data-calc=luchthavensStraal]')));
+await page.click('[data-a=vasteVertrek]');
+check('vaste vertrekpunten FRA, DUS, AMS, BRU', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'FRA, DUS, AMS, BRU');
+await page.fill('#f_vlucht_zoekPlaats', 'Plaats Bestaat Niet');
+check('onbekende plaats: duidelijke melding, geen gok', /Geen luchthaven gevonden/.test(await page.textContent('[data-calc=luchthavensStraal]')));
+check('oude Skyscanner-onderdelen zijn verdwenen en index.html verwijst door', !existsSync(join(hier, 'lib.mjs')) && !existsSync(join(hier, '..', 'intake.html')) && /reisgids\.html/.test(readFileSync(join(hier, '..', 'index.html'), 'utf8')));
 check('geen scriptfouten in de console', consoleFouten.length === 0, consoleFouten.join(' | '));
 await browser.close();
 console.log(`\n${ok} geslaagd, ${fouten} mislukt`);

@@ -152,6 +152,253 @@ const LANDPROFIELEN = [
 const landProfielen = txt => { const r = LANDPROFIELEN.filter(p => p.re.test(txt || '')); return r.length ? r : [{ id: 'overig', naam: 'Overig / onbekend', hints: ['Voor dit land heeft de app geen richtlijnen. Controleer rijrichting, rijbewijs/internationaal rijbewijs, beschikbaarheid van automaat en lokale regels bij een officiële bron (bijv. Nederland Wereldwijd).'] }]; };
 const klasseVoorstel = t => { const p = personen(t), k = num(t.auto.koffers) ?? p; if (p >= 5 || k >= 4) return 'minivan'; if (p >= 4 || k >= 3) return 'standard'; if (k <= 1) return 'compact'; return 'intermediate'; };
 function huurDagen(t) { const a = t.auto, pk = tMin(a.ophaalDatum, a.ophaalTijd), dr = tMin(a.inleverDatum, a.inleverTijd); if (pk != null && dr != null && dr > pk) return Math.ceil((dr - pk) / 60 / 24); if (okD(a.ophaalDatum) && okD(a.inleverDatum) && a.inleverDatum > a.ophaalDatum) return diffD(a.inleverDatum, a.ophaalDatum); return null; }
+const LUCHTHAVENS = [ /* [code, naam, land, breedtegraad, lengtegraad]; coördinaten bij benadering, genoeg voor zoeken binnen een straal */
+  ["LIS", "Lissabon Lisbon", "Portugal", 38.77, -9.13],
+  ["OPO", "Porto", "Portugal", 41.24, -8.68],
+  ["FAO", "Faro Algarve", "Portugal", 37.01, -7.97],
+  ["FNC", "Funchal Madeira", "Portugal", 32.69, -16.77],
+  ["MAD", "Madrid", "Spanje", 40.47, -3.56],
+  ["BCN", "Barcelona", "Spanje", 41.3, 2.08],
+  ["VLC", "Valencia", "Spanje", 39.49, -0.48],
+  ["AGP", "Malaga Costa del Sol", "Spanje", 36.67, -4.5],
+  ["SVQ", "Sevilla", "Spanje", 37.42, -5.9],
+  ["PMI", "Palma Mallorca", "Spanje", 39.55, 2.74],
+  ["IBZ", "Ibiza", "Spanje", 38.87, 1.37],
+  ["TFS", "Tenerife", "Spanje", 28.04, -16.57],
+  ["LPA", "Gran Canaria Las Palmas", "Spanje", 27.93, -15.39],
+  ["ACE", "Lanzarote", "Spanje", 28.95, -13.61],
+  ["FUE", "Fuerteventura", "Spanje", 28.45, -13.86],
+  ["BIO", "Bilbao", "Spanje", 43.3, -2.91],
+  ["SCQ", "Santiago de Compostela", "Spanje", 42.9, -8.42],
+  ["ALC", "Alicante", "Spanje", 38.28, -0.56],
+  ["CDG", "Parijs Paris", "Frankrijk", 49.01, 2.55],
+  ["NCE", "Nice Cote d Azur", "Frankrijk", 43.66, 7.21],
+  ["MRS", "Marseille", "Frankrijk", 43.44, 5.22],
+  ["LYS", "Lyon", "Frankrijk", 45.73, 5.09],
+  ["TLS", "Toulouse", "Frankrijk", 43.63, 1.37],
+  ["BOD", "Bordeaux", "Frankrijk", 44.83, -0.72],
+  ["FCO", "Rome Roma", "Italie", 41.8, 12.25],
+  ["MXP", "Milaan Milano Malpensa", "Italie", 45.63, 8.72],
+  ["VCE", "Venetie Venezia", "Italie", 45.51, 12.35],
+  ["NAP", "Napels Napoli", "Italie", 40.88, 14.29],
+  ["FLR", "Florence Firenze", "Italie", 43.81, 11.2],
+  ["PSA", "Pisa Toscane", "Italie", 43.68, 10.39],
+  ["BLQ", "Bologna", "Italie", 44.53, 11.29],
+  ["CTA", "Catania Sicilie", "Italie", 37.47, 15.07],
+  ["PMO", "Palermo Sicilie", "Italie", 38.18, 13.1],
+  ["CAG", "Cagliari Sardinie", "Italie", 39.25, 9.06],
+  ["BRI", "Bari", "Italie", 41.14, 16.76],
+  ["TRN", "Turijn Torino", "Italie", 45.2, 7.65],
+  ["ATH", "Athene Athens", "Griekenland", 37.94, 23.94],
+  ["HER", "Heraklion Kreta", "Griekenland", 35.34, 25.18],
+  ["JTR", "Santorini", "Griekenland", 36.4, 25.48],
+  ["RHO", "Rhodos", "Griekenland", 36.41, 28.09],
+  ["CFU", "Corfu", "Griekenland", 39.6, 19.91],
+  ["SKG", "Thessaloniki", "Griekenland", 40.52, 22.97],
+  ["IST", "Istanbul Istanboel", "Turkije", 41.26, 28.74],
+  ["SAW", "Istanbul Sabiha Gokcen", "Turkije", 40.9, 29.31],
+  ["AYT", "Antalya", "Turkije", 36.9, 30.8],
+  ["DLM", "Dalaman", "Turkije", 36.71, 28.79],
+  ["BJV", "Bodrum", "Turkije", 37.25, 27.67],
+  ["VIE", "Wenen Vienna", "Oostenrijk", 48.11, 16.57],
+  ["PRG", "Praag Prague", "Tsjechie", 50.1, 14.26],
+  ["BUD", "Boedapest Budapest", "Hongarije", 47.44, 19.26],
+  ["WAW", "Warschau Warsaw", "Polen", 52.17, 20.97],
+  ["KRK", "Krakau Krakow", "Polen", 50.08, 19.78],
+  ["ZRH", "Zurich", "Zwitserland", 47.46, 8.55],
+  ["GVA", "Geneve Geneva", "Zwitserland", 46.24, 6.11],
+  ["MUC", "Munchen Munich", "Duitsland", 48.35, 11.79],
+  ["BER", "Berlijn Berlin", "Duitsland", 52.36, 13.5],
+  ["HAM", "Hamburg", "Duitsland", 53.63, 9.99],
+  ["CPH", "Kopenhagen Copenhagen", "Denemarken", 55.62, 12.65],
+  ["ARN", "Stockholm", "Zweden", 59.65, 17.92],
+  ["OSL", "Oslo", "Noorwegen", 60.19, 11.1],
+  ["HEL", "Helsinki", "Finland", 60.32, 24.96],
+  ["KEF", "Reykjavik Keflavik IJsland", "IJsland", 63.98, -22.62],
+  ["DUB", "Dublin", "Ierland", 53.42, -6.27],
+  ["LHR", "Londen London Heathrow", "Verenigd Koninkrijk", 51.47, -0.45],
+  ["EDI", "Edinburgh", "Verenigd Koninkrijk", 55.95, -3.37],
+  ["ZAG", "Zagreb", "Kroatie", 45.74, 16.07],
+  ["SPU", "Split", "Kroatie", 43.54, 16.3],
+  ["DBV", "Dubrovnik", "Kroatie", 42.56, 18.27],
+  ["LJU", "Ljubljana", "Slovenie", 46.22, 14.46],
+  ["OTP", "Boekarest Bucharest", "Roemenie", 44.57, 26.08],
+  ["SOF", "Sofia", "Bulgarije", 42.7, 23.41],
+  ["TLL", "Tallinn", "Estland", 59.41, 24.83],
+  ["RIX", "Riga", "Letland", 56.92, 23.97],
+  ["VNO", "Vilnius", "Litouwen", 54.63, 25.29],
+  ["MLA", "Malta Valletta", "Malta", 35.86, 14.48],
+  ["LCA", "Larnaca Cyprus", "Cyprus", 34.88, 33.62],
+  ["TIA", "Tirana", "Albanie", 41.41, 19.72],
+  ["BEG", "Belgrado Belgrade", "Servie", 44.82, 20.29],
+  ["RAK", "Marrakech", "Marokko", 31.61, -8.04],
+  ["CMN", "Casablanca", "Marokko", 33.37, -7.59],
+  ["AGA", "Agadir", "Marokko", 30.33, -9.41],
+  ["TUN", "Tunis", "Tunesie", 36.85, 10.23],
+  ["CAI", "Caïro Cairo", "Egypte", 30.12, 31.41],
+  ["HRG", "Hurghada", "Egypte", 27.18, 33.8],
+  ["SSH", "Sharm el Sheikh", "Egypte", 27.98, 34.39],
+  ["DXB", "Dubai", "Verenigde Arabische Emiraten", 25.25, 55.37],
+  ["AUH", "Abu Dhabi", "Verenigde Arabische Emiraten", 24.43, 54.65],
+  ["DOH", "Doha", "Qatar", 25.27, 51.61],
+  ["TLV", "Tel Aviv", "Israel", 32.01, 34.89],
+  ["AMM", "Amman", "Jordanie", 31.72, 35.99],
+  ["CPT", "Kaapstad Cape Town", "Zuid-Afrika", -33.97, 18.6],
+  ["JNB", "Johannesburg", "Zuid-Afrika", -26.14, 28.25],
+  ["NBO", "Nairobi", "Kenia", -1.32, 36.93],
+  ["DAR", "Dar es Salaam", "Tanzania", -6.88, 39.2],
+  ["JRO", "Kilimanjaro Arusha", "Tanzania", -3.43, 37.07],
+  ["ZNZ", "Zanzibar", "Tanzania", -6.22, 39.22],
+  ["MRU", "Mauritius", "Mauritius", -20.43, 57.68],
+  ["WDH", "Windhoek", "Namibie", -22.48, 17.47],
+  ["VFA", "Victoria Falls", "Zimbabwe", -18.1, 25.84],
+  ["BKK", "Bangkok", "Thailand", 13.69, 100.75],
+  ["HKT", "Phuket", "Thailand", 8.11, 98.32],
+  ["CNX", "Chiang Mai", "Thailand", 18.77, 98.96],
+  ["USM", "Koh Samui", "Thailand", 9.55, 100.06],
+  ["SIN", "Singapore", "Singapore", 1.36, 103.99],
+  ["KUL", "Kuala Lumpur", "Maleisie", 2.75, 101.71],
+  ["DPS", "Bali Denpasar", "Indonesie", -8.75, 115.17],
+  ["CGK", "Jakarta", "Indonesie", -6.13, 106.66],
+  ["SGN", "Ho Chi Minh Saigon", "Vietnam", 10.82, 106.66],
+  ["HAN", "Hanoi", "Vietnam", 21.22, 105.81],
+  ["DAD", "Da Nang", "Vietnam", 16.04, 108.2],
+  ["MNL", "Manilla Manila", "Filipijnen", 14.51, 121.02],
+  ["CEB", "Cebu", "Filipijnen", 10.31, 123.98],
+  ["HKG", "Hongkong Hong Kong", "Hongkong", 22.31, 113.91],
+  ["NRT", "Tokio Tokyo Narita", "Japan", 35.77, 140.39],
+  ["HND", "Tokio Tokyo Haneda", "Japan", 35.55, 139.78],
+  ["KIX", "Osaka Kyoto", "Japan", 34.43, 135.24],
+  ["ICN", "Seoul", "Zuid-Korea", 37.46, 126.44],
+  ["PEK", "Peking Beijing", "China", 40.08, 116.58],
+  ["PVG", "Shanghai", "China", 31.14, 121.81],
+  ["DEL", "Delhi", "India", 28.56, 77.1],
+  ["BOM", "Mumbai Bombay", "India", 19.09, 72.87],
+  ["GOI", "Goa", "India", 15.38, 73.83],
+  ["CMB", "Colombo", "Sri Lanka", 7.18, 79.88],
+  ["MLE", "Male Malediven Maldives", "Malediven", 4.19, 73.53],
+  ["KTM", "Kathmandu", "Nepal", 27.7, 85.36],
+  ["TPE", "Taipei", "Taiwan", 25.08, 121.23],
+  ["REP", "Siem Reap Angkor", "Cambodja", 13.41, 103.81],
+  ["PNH", "Phnom Penh", "Cambodja", 11.55, 104.84],
+  ["VTE", "Vientiane", "Laos", 17.99, 102.57],
+  ["LPQ", "Luang Prabang", "Laos", 19.9, 102.16],
+  ["RGN", "Yangon Rangoon", "Myanmar", 16.91, 96.13],
+  ["JFK", "New York JFK", "Verenigde Staten", 40.64, -73.78],
+  ["EWR", "New York Newark", "Verenigde Staten", 40.69, -74.17],
+  ["BOS", "Boston", "Verenigde Staten", 42.36, -71.01],
+  ["IAD", "Washington", "Verenigde Staten", 38.95, -77.46],
+  ["MIA", "Miami", "Verenigde Staten", 25.79, -80.29],
+  ["MCO", "Orlando", "Verenigde Staten", 28.43, -81.31],
+  ["ATL", "Atlanta", "Verenigde Staten", 33.64, -84.43],
+  ["ORD", "Chicago", "Verenigde Staten", 41.98, -87.9],
+  ["DFW", "Dallas", "Verenigde Staten", 32.9, -97.04],
+  ["IAH", "Houston", "Verenigde Staten", 29.98, -95.34],
+  ["DEN", "Denver", "Verenigde Staten", 39.86, -104.67],
+  ["LAX", "Los Angeles", "Verenigde Staten", 33.94, -118.41],
+  ["SFO", "San Francisco", "Verenigde Staten", 37.62, -122.38],
+  ["LAS", "Las Vegas", "Verenigde Staten", 36.08, -115.15],
+  ["SEA", "Seattle", "Verenigde Staten", 47.45, -122.31],
+  ["HNL", "Honolulu Hawaii", "Verenigde Staten", 21.32, -157.92],
+  ["PHX", "Phoenix", "Verenigde Staten", 33.43, -112.01],
+  ["SAN", "San Diego", "Verenigde Staten", 32.73, -117.19],
+  ["SLC", "Salt Lake City", "Verenigde Staten", 40.79, -111.98],
+  ["PDX", "Portland", "Verenigde Staten", 45.59, -122.6],
+  ["SMF", "Sacramento", "Verenigde Staten", 38.7, -121.59],
+  ["ABQ", "Albuquerque", "Verenigde Staten", 35.04, -106.61],
+  ["AUS", "Austin", "Verenigde Staten", 30.19, -97.67],
+  ["MSY", "New Orleans", "Verenigde Staten", 29.99, -90.26],
+  ["BNA", "Nashville", "Verenigde Staten", 36.12, -86.68],
+  ["CLT", "Charlotte", "Verenigde Staten", 35.21, -80.94],
+  ["DTW", "Detroit", "Verenigde Staten", 42.21, -83.35],
+  ["MSP", "Minneapolis", "Verenigde Staten", 44.88, -93.22],
+  ["PHL", "Philadelphia", "Verenigde Staten", 39.87, -75.24],
+  ["BWI", "Baltimore", "Verenigde Staten", 39.18, -76.67],
+  ["TPA", "Tampa", "Verenigde Staten", 27.98, -82.53],
+  ["FLL", "Fort Lauderdale", "Verenigde Staten", 26.07, -80.15],
+  ["RDU", "Raleigh Durham", "Verenigde Staten", 35.88, -78.79],
+  ["STL", "St. Louis", "Verenigde Staten", 38.75, -90.37],
+  ["MCI", "Kansas City", "Verenigde Staten", 39.3, -94.71],
+  ["CLE", "Cleveland", "Verenigde Staten", 41.41, -81.85],
+  ["PIT", "Pittsburgh", "Verenigde Staten", 40.49, -80.23],
+  ["CVG", "Cincinnati", "Verenigde Staten", 39.05, -84.66],
+  ["ANC", "Anchorage Alaska", "Verenigde Staten", 61.17, -149.99],
+  ["SAT", "San Antonio", "Verenigde Staten", 29.53, -98.47],
+  ["OAK", "Oakland", "Verenigde Staten", 37.72, -122.22],
+  ["SJC", "San Jose", "Verenigde Staten", 37.36, -121.93],
+  ["BOI", "Boise", "Verenigde Staten", 43.56, -116.22],
+  ["RNO", "Reno", "Verenigde Staten", 39.5, -119.77],
+  ["YYZ", "Toronto", "Canada", 43.68, -79.63],
+  ["YVR", "Vancouver", "Canada", 49.19, -123.18],
+  ["YUL", "Montreal", "Canada", 45.47, -73.74],
+  ["MEX", "Mexico-Stad Mexico City", "Mexico", 19.44, -99.07],
+  ["CUN", "Cancun", "Mexico", 21.04, -86.87],
+  ["PUJ", "Punta Cana", "Dominicaanse Republiek", 18.57, -68.36],
+  ["HAV", "Havana", "Cuba", 22.99, -82.41],
+  ["GRU", "Sao Paulo", "Brazilie", -23.43, -46.47],
+  ["GIG", "Rio de Janeiro", "Brazilie", -22.81, -43.25],
+  ["EZE", "Buenos Aires", "Argentinie", -34.82, -58.54],
+  ["SCL", "Santiago", "Chili", -33.39, -70.79],
+  ["LIM", "Lima", "Peru", -12.02, -77.11],
+  ["CUZ", "Cusco Machu Picchu", "Peru", -13.54, -71.94],
+  ["BOG", "Bogota", "Colombia", 4.7, -74.15],
+  ["PTY", "Panama-Stad", "Panama", 9.07, -79.38],
+  ["SJO", "San Jose Costa Rica", "Costa Rica", 9.99, -84.21],
+  ["AUA", "Aruba", "Aruba", 12.5, -70.02],
+  ["CUR", "Curacao", "Curacao", 12.19, -68.96],
+  ["SXM", "Sint Maarten", "Sint Maarten", 18.04, -63.11],
+  ["PBM", "Paramaribo", "Suriname", 5.45, -55.19],
+  ["SYD", "Sydney", "Australie", -33.95, 151.18],
+  ["MEL", "Melbourne", "Australie", -37.67, 144.84],
+  ["BNE", "Brisbane", "Australie", -27.38, 153.12],
+  ["PER", "Perth", "Australie", -31.94, 115.97],
+  ["CNS", "Cairns", "Australie", -16.89, 145.76],
+  ["AKL", "Auckland", "Nieuw-Zeeland", -37.01, 174.79],
+  ["CHC", "Christchurch", "Nieuw-Zeeland", -43.49, 172.53],
+  ["ZQN", "Queenstown", "Nieuw-Zeeland", -45.02, 168.74],
+  ["NAN", "Fiji Nadi", "Fiji", -17.76, 177.44],
+  ["PPT", "Tahiti Papeete", "Frans-Polynesie", -17.56, -149.61],
+  ["DAL", "Dallas Love Field", "Verenigde Staten", 32.85, -96.85],
+  ["HOU", "Houston Hobby", "Verenigde Staten", 29.65, -95.28],
+  ["OKC", "Oklahoma City", "Verenigde Staten", 35.39, -97.6],
+  ["TUL", "Tulsa", "Verenigde Staten", 36.2, -95.89],
+  ["SHV", "Shreveport", "Verenigde Staten", 32.45, -93.83],
+  ["LIT", "Little Rock", "Verenigde Staten", 34.73, -92.22],
+  ["ELP", "El Paso", "Verenigde Staten", 31.81, -106.38],
+  ["MEM", "Memphis", "Verenigde Staten", 35.04, -89.98],
+  ["BHM", "Birmingham Alabama", "Verenigde Staten", 33.56, -86.75],
+  ["JAX", "Jacksonville", "Verenigde Staten", 30.49, -81.69],
+  ["CHS", "Charleston", "Verenigde Staten", 32.9, -80.04],
+  ["RSW", "Fort Myers", "Verenigde Staten", 26.54, -81.76],
+  ["SDF", "Louisville", "Verenigde Staten", 38.17, -85.74],
+  ["IND", "Indianapolis", "Verenigde Staten", 39.72, -86.29],
+  ["CMH", "Columbus Ohio", "Verenigde Staten", 40.0, -82.89],
+  ["MKE", "Milwaukee", "Verenigde Staten", 42.95, -87.9],
+  ["OMA", "Omaha", "Verenigde Staten", 41.3, -95.89],
+  ["DSM", "Des Moines", "Verenigde Staten", 41.53, -93.66],
+  ["ICT", "Wichita", "Verenigde Staten", 37.65, -97.43],
+  ["COS", "Colorado Springs", "Verenigde Staten", 38.81, -104.7],
+  ["SNA", "Orange County Santa Ana", "Verenigde Staten", 33.68, -117.87],
+  ["BUR", "Burbank", "Verenigde Staten", 34.2, -118.36],
+  ["ONT", "Ontario Californie", "Verenigde Staten", 34.06, -117.6],
+  ["TUS", "Tucson", "Verenigde Staten", 32.12, -110.94],
+  ["FLG", "Flagstaff", "Verenigde Staten", 35.14, -111.67],
+  ["BZN", "Bozeman", "Verenigde Staten", 45.78, -111.15],
+  ["AMA", "Amarillo", "Verenigde Staten", 35.22, -101.71],
+  ["LBB", "Lubbock", "Verenigde Staten", 33.66, -101.82],
+  ["CRP", "Corpus Christi", "Verenigde Staten", 27.77, -97.5],
+  ["BTR", "Baton Rouge", "Verenigde Staten", 30.53, -91.15],
+];
+const normT = x => (x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ');
+const luchthavenKm = (a, b) => { const r = Math.PI / 180, dl = (b[4] - a[4]) * r, p1 = a[3] * r, p2 = b[3] * r, x = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+/* zoekt de plaats of luchthaven en geeft alle luchthavens binnen de straal (dichtstbij eerst) */
+function luchthavensBijPlaats(plaats, straal = 500, max = 15) {
+  const n = normT(plaats).trim(); if (!n) return { voorkeur: null, lijst: [] };
+  const tr = LUCHTHAVENS.filter(l => normT(`${l[1]} ${l[2]} ${l[0]}`).includes(n)).sort((a, b) => (normT(a[1]).startsWith(n) ? 0 : 1) - (normT(b[1]).startsWith(n) ? 0 : 1));
+  if (!tr.length) return { voorkeur: null, lijst: [] };
+  const v = tr[0];
+  return { voorkeur: v, lijst: LUCHTHAVENS.map(l => ({ code: l[0], naam: l[1], land: l[2], km: Math.round(luchthavenKm(v, l)) })).filter(x => x.km <= straal).sort((a, b) => a.km - b.km).slice(0, max) };
+}
 const voorkeurVerz = () => lees('rr_auto_verz') === 'basis' ? 'basis' : 'volledig';
 const ROAM = 'https://get-roam.com/flexible-search';
 const SYM = { EUR: '€', USD: 'US$', GBP: '£' };
@@ -248,7 +495,7 @@ function nieuweReis(naam) {
   return {
     id: uid(), naam: naam || 'Nieuwe reis', gemaakt: new Date().toISOString(), demo: false,
     reis: { landen: '', startplaats: '', eindplaats: '', vertrek: '', terug: '', flexibel: false, volw: 2, kind: 0, kindLeeftijden: '', reisvorm: 'rondreis', tempo: 'normaal', valuta: 'EUR', budget: null, taal: 'nl', detail: 'normaal', toegang: '', wensen: '', toonMijl: false },
-    vlucht: { nodig: true, personen: null, zoekVan: '', zoekNaar: '', maandVan: '', maandTot: '', exactVan: '', exactTot: '', dagenMin: null, dagenMax: null, maxStops: '', maxUren: null, maxPrijsUsd: null, bagage: '1 koffer van 23 kg per persoon',
+    vlucht: { nodig: true, personen: null, zoekVan: '', zoekNaar: '', zoekPlaats: '', straal: 500, maandVan: '', maandTot: '', exactVan: '', exactTot: '', dagenMin: null, dagenMax: null, maxStops: '', maxUren: null, maxPrijsUsd: null, bagage: '1 koffer van 23 kg per persoon',
       van: '', naar: '', terugVan: '', maatschappij: '', stops: '', heenDatum: '', heenVertrek: '', heenAankomstDatum: '', heenAankomst: '', heenNr: '', terugDatum: '', terugVertrek: '', terugAankomstDatum: '', terugAankomst: '', terugNr: '',
       prijs: null, prijsValuta: 'EUR', prijsPer: '', koers: null, koersDatum: '', prijsType: 'schatting', bron: 'Get-Roam', prijsDatum: '', status: 'idee', ref: '', link: '', liters: 30, literprijs: 2.45, literprijsDatum: '', parkeren: 200, extra: null, notitie: '' },
     auto: { nodig: true, vervoer: '', personen: null, land: '', verhuurder: '', klasse: 'intermediate', versnelling: 'automaat', koffers: 2, ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '',
@@ -597,6 +844,7 @@ VIEWS.vlucht = () => {
   if (!v.nodig) return h + kBox('Vlucht');
   h += sectie('Stap 1: zoekcriteria', 'Dezelfde velden als op de Get-Roam-pagina “flexible search”. De app kan ze niet automatisch in Get-Roam invullen (er is geen bekende link-opbouw); kopieer ze met de knoppen.',
     `<div class="grid">
+      ${fld('vlucht.zoekPlaats', 'Bestemming: plaats of luchthaven', 't', { ph: 'bijv. Dallas', h: 'De app zoekt hiermee luchthavens in de buurt.' })}${fld('vlucht.straal', 'Straal rond die plaats (km)', 'n', { min: 0 })}
       ${fld('vlucht.zoekVan', 'Vertrekluchthaven(s)', 'a', { rows: 2, ph: 'AMS, DUS, FRA, BRU', h: 'Meerdere mogelijk, gescheiden door komma’s (IATA-codes).' })}
       ${fld('vlucht.zoekNaar', 'Aankomstluchthaven(s)', 'a', { rows: 2, ph: 'DEN, COS, SLC', h: 'Meerdere mogelijk. Ook ruim: Get-Roam kent ook continenten/landen.' })}
       ${fld('vlucht.maandVan', 'Vroegste heenvlucht: vanaf maand', 'm')}${fld('vlucht.maandTot', 'Laatste heenvlucht: tot en met maand', 'm')}
@@ -605,7 +853,7 @@ VIEWS.vlucht = () => {
       ${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 1, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1, h: 'Get-Roam heeft alleen een veld voor volwassenen.' })}${fld('reis.kindLeeftijden', 'Leeftijden kinderen', 't')}
       ${fld('vlucht.maxStops', 'Maximaal aantal overstappen per richting', 's', { opts: [['', 'geen voorkeur'], ['0', 'alleen rechtstreeks'], ['1', 'max. 1'], ['2', 'max. 2']] })}${fld('vlucht.maxUren', 'Maximale vliegtijd (uren)', 'n', { min: 0 })}${fld('vlucht.maxPrijsUsd', 'Maximumprijs (in $, zoals Get-Roam vraagt)', 'n', { min: 0 })}
       ${fld('vlucht.bagage', 'Bagage-eis', 't', { h: 'Get-Roam kan hier niet op filteren: controleer dit bij de boeking.' })}
-    </div><div class="box" data-calc="roam"></div>`);
+    </div><div class="rij"><button data-a="luchthavensVullen">Vul aankomstluchthavens in binnen de straal</button><button data-a="vasteVertrek">Vul mijn vaste vertrekpunten in (FRA, DUS, AMS, BRU)</button></div><div class="box" data-calc="luchthavensStraal"></div><div class="box" data-calc="roam"></div>`);
   h += sectie('Stap 2: goedkoopste vlucht uit Get-Roam invullen', 'Vul de gekozen vlucht in. Tijden zijn de lokale tijd van de luchthaven. Alleen wat u hier invult wordt gebruikt; de app haalt geen vluchtprijzen op.',
     `<div class="grid">
       ${fld('vlucht.maatschappij', 'Maatschappij', 't')}${fld('vlucht.stops', 'Overstappen (heen / terug)', 't', { ph: 'bijv. 1 / 0' })}
@@ -989,6 +1237,7 @@ const BRONNEN = [
   { naam: 'Frankfurter (ECB-referentiekoersen)', gegeven: 'Wisselkoersen', dekking: 'ECB-valuta’s', url: 'https://frankfurter.dev', api: 'ja, geen sleutel', licentie: 'ECB-koersen; voorwaarden nog te controleren', quota: 'redelijk gebruik', kosten: 'gratis', fallback: 'Koers en datum handmatig invullen', gebruik: 'koers lokale valuta' },
   { naam: 'Google Maps (alleen externe links)', gegeven: 'Route, zoeken, navigatie', dekking: 'wereldwijd', url: 'https://www.google.com/maps', api: 'nee – alleen links die in een nieuw tabblad openen', licentie: 'gewoon gebruik van Google Maps', quota: 'n.v.t.', kosten: 'geen: er worden geen betaalde Maps-API’s aangeroepen', fallback: 'Adres kopiëren', gebruik: 'route per dag, restaurants, supermarkt, café' },
   { naam: 'Officiële overheids- en weerdiensten (handmatige links)', gegeven: 'Reisadvies, inreis, gezondheid, waarschuwingen', dekking: 'zie link', url: 'nederlandwereldwijd.nl · lcr.nl · severe.worldweather.wmo.int · meteoalarm.org · weather.gov', api: 'nee – u bezoekt de bron zelf', licentie: 'n.v.t. (alleen verwijzing)', quota: 'n.v.t.', kosten: 'gratis', fallback: 'Altijd zelf controleren', gebruik: 'visum, advies, inentingen, waarschuwingen' },
+  { naam: 'Eigen luchthavenlijst (in de app)', gegeven: 'Luchthavens binnen een straal', dekking: 'populaire bestemmingen, aanvulbaar', url: '—', api: 'nee', licentie: 'eigen lijst; coördinaten bij benadering', quota: 'n.v.t.', kosten: 'gratis', fallback: 'Luchthavens zelf invullen', gebruik: 'luchthavens zoeken rond een bestemming' },
   { naam: 'Browseropslag (localStorage en IndexedDB)', gegeven: 'Uw reisgegevens en foto’s', dekking: 'dit apparaat', url: '—', api: 'nee', licentie: 'n.v.t.', quota: 'beperkt door browser; blijft weg bij wissen van sitegegevens', kosten: 'gratis', fallback: 'Back-up als JSON (tab Gegevens)', gebruik: 'opslag; geen cloud, geen synchronisatie tussen apparaten' }
 ];
 
@@ -1039,6 +1288,12 @@ const metBalk = k => { const f = VIEWS[k]; VIEWS[k] = () => f() + `<section clas
 /* ====================== Berekende blokken (live bijgewerkt) ====================== */
 const engDatum = d => okD(d) ? dt(d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '';
 const CALC = {
+  luchthavensStraal: () => {
+    const t = T(), v = t.vlucht; if (!String(v.zoekPlaats || '').trim()) return '<span class="noot">Vul een bestemming in om luchthavens in de buurt te zien (bijv. Dallas).</span>';
+    const r = luchthavensBijPlaats(v.zoekPlaats, num(v.straal) || 500, 15);
+    if (!r.voorkeur) return `<span class="let">Geen luchthaven gevonden voor “${esc(v.zoekPlaats)}” in de eigen lijst (${LUCHTHAVENS.length} luchthavens, vooral populaire bestemmingen). Vul de luchthavens zelf in.</span>`;
+    return `<b>Luchthavens binnen ${num(v.straal) || 500} km van ${esc(r.voorkeur[1])} (${esc(r.voorkeur[0])}):</b> ${r.lijst.map(x => `${esc(x.code)} ${esc(x.naam)} (${x.km} km)`).join(' · ')}<div class="noot">Eigen lijst, afstanden hemelsbreed. Staat een luchthaven die u wilt niet in de lijst, vul die dan zelf in bij “Aankomstluchthaven(s)”.</div>`;
+  },
   laagste: e => { const t = T(), st = t.hotels.lijst[+e.i]; if (!st) return ''; const o = st.opties[+e.k]; return num(o.prijs) == null ? '<span class="noot">nog geen prijs</span>' : `<b>${mny(num(o.prijs))}</b> bij ${esc(o.bron)}`; },
   vervoerAdvies: () => {
     const t = T(), a = t.auto, land = a.land || t.reis.landen, pr = VERVOER.find(v => v.re.test(land || '')), w = [];
@@ -1299,6 +1554,12 @@ A.bevestig = b => {
   if (i < STAPPEN.length - 1) { tab = STAPPEN[i + 1]; location.hash = tab; render(); scrollTo(0, 0); melding(`Stap ${i + 1} bevestigd.`); }
   else { tab = 'start'; location.hash = tab; render(); melding('Alle planningsstappen zijn bevestigd.'); }
 };
+A.luchthavensVullen = () => {
+  const v = T().vlucht, r = luchthavensBijPlaats(v.zoekPlaats, num(v.straal) || 500, 15);
+  if (!r.voorkeur) return melding('Geen luchthaven gevonden voor deze plaats. Vul de aankomstluchthavens zelf in.', true);
+  v.zoekNaar = r.lijst.map(x => x.code).join(', '); opslaan(); rerender(); melding(`${r.lijst.length} luchthavens binnen ${num(v.straal) || 500} km van ${r.voorkeur[1]} ingevuld.`);
+};
+A.vasteVertrek = () => { T().vlucht.zoekVan = 'FRA, DUS, AMS, BRU'; opslaan(); rerender(); };
 A.dagNav = b => { dagSel += +b.dataset.d; rerender(); scrollTo(0, 0); };
 A.vandaag = b => {
   const t = T(); if (!t.dagen.length) { tab = 'route'; return render(); }
@@ -1470,7 +1731,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
-window.__rr = { bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>

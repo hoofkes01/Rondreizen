@@ -1,10 +1,24 @@
-// Zet een intake.json (van intake.html) om naar een back-upbestand voor reisgids.html.
+// Zet een intake.json (uit het oude intakeformulier) om naar een back-upbestand voor reisgids.html.
 // Gebruik: node scripts/intake-naar-reisgids.mjs intake.json [uitvoer.json]
 // Inlezen in de app: tab Start of Gegevens, "Back-up inlezen". Alle stappen staan daarna nog open (niets is bevestigd).
 // De uitvoer komt standaard in reizen/ (staat in .gitignore: persoonlijke reisgegevens horen niet in de openbare repo).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { bestemmingenVoorPlaats, VERTREK } from './lib.mjs';
+import { fileURLToPath } from 'node:url';
+
+const VERTREK = ['FRA', 'DUS', 'AMS', 'BRU'];
+const hier = path.dirname(fileURLToPath(import.meta.url));
+/* luchthavenlijst uit reisgids.html: [code, naam, land, breedtegraad, lengtegraad] */
+const lijstTekst = readFileSync(path.join(hier, '..', 'reisgids.html'), 'utf8').match(/const LUCHTHAVENS = (\[[\s\S]*?\n\]);/);
+if (!lijstTekst) throw new Error('LUCHTHAVENS niet gevonden in reisgids.html');
+const LUCHTHAVENS = new Function(`return ${lijstTekst[1]}`)();
+const norm = x => (x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ');
+const km = (a, b) => { const r = Math.PI / 180, dl = (b[4] - a[4]) * r, p1 = a[3] * r, p2 = b[3] * r, x = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
+function bestemmingenVoorPlaats(plaats, straal = 500, max = 15) {
+  const n = norm(plaats).trim(), tr = LUCHTHAVENS.filter(l => norm(`${l[1]} ${l[2]} ${l[0]}`).includes(n)).sort((a, b) => (norm(a[1]).startsWith(n) ? 0 : 1) - (norm(b[1]).startsWith(n) ? 0 : 1));
+  if (!n || !tr.length) throw new Error(`Geen luchthaven gevonden voor "${plaats}"`);
+  return { voorkeur: tr[0][0], bestemmingen: LUCHTHAVENS.map(l => ({ code: l[0], naam: l[1], km: Math.round(km(tr[0], l)) })).filter(x => x.km <= straal).sort((a, b) => a.km - b.km).slice(0, max) };
+}
 
 const [invoer, uitvoer] = process.argv.slice(2);
 if (!invoer) { console.error('Gebruik: node scripts/intake-naar-reisgids.mjs intake.json [uitvoer.json]'); process.exit(1); }
@@ -41,7 +55,7 @@ const trip = {
   id, naam: r.naam || 'Reis uit intake', gemaakt: new Date().toISOString(), demo: false, bevestigd: {},
   reis: { landen: /\bvs\b|usa|verenigde|amerika/i.test(`${r.naam} ${r.plaats}`) ? 'Verenigde Staten' : '', startplaats: r.plaats || '', volw: num(r.personen) || 2, kind: 0, tempo: o.tempo || 'normaal', valuta: 'EUR', budget: num(o.totaalBudget),
     wensen: [o.interesses ? `Interesses: ${o.interesses}.` : '', num(o.wandelen) != null ? `Wandelen: ${o.wandelen}.` : '', o.notities || ''].filter(Boolean).join(' ') },
-  vlucht: { nodig: true, zoekVan: VERTREK.join(', '), zoekNaar: naar, maandVan: (r.periodeVan || '').slice(0, 7), maandTot: (r.periodeTot || '').slice(0, 7), exactVan: r.periodeVan || '', exactTot: r.periodeTot || '',
+  vlucht: { nodig: true, zoekVan: VERTREK.join(', '), zoekNaar: naar, zoekPlaats: r.plaats || '', straal: num(v.straal1) || 500, maandVan: (r.periodeVan || '').slice(0, 7), maandTot: (r.periodeTot || '').slice(0, 7), exactVan: r.periodeVan || '', exactTot: r.periodeTot || '',
     dagenMin: num(r.duurMin), dagenMax: num(r.duurMax), maxStops: v.maxOverstappen === 0 ? '0' : v.maxOverstappen === 1 ? '1' : v.maxOverstappen === 2 ? '2' : '', maxUren: num(v.maxUren), maxPrijsUsd: null,
     bagage: '1 koffer van 23 kg per persoon', liters: num(k.liters) ?? 30, literprijs: num(k.literprijs) ?? 2.45, parkeren: num(k.parkeren) ?? 200, notitie: vluchtNotitie },
   auto: { land: /\bvs\b|usa|verenigde|amerika/i.test(`${r.naam} ${r.plaats}`) ? 'Verenigde Staten' : '', klasse: a.klasse || 'intermediate', versnelling: a.automaat === false ? 'maakt niet uit' : 'automaat', kmType: a.km === false ? 'beperkt' : 'onbeperkt',

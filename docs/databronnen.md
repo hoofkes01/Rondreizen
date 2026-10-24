@@ -11,6 +11,7 @@ bevestigen vóór commercieel of grootschalig gebruik. Dezelfde tabel staat in d
 | Frankfurter (ECB-koersen) | wisselkoers | API, op knopdruk | ECB-koersen; voorwaarden nog te controleren | gratis | koers handmatig |
 | Google Maps | route, zoeken | alleen externe links | gewoon gebruik | geen (geen API-aanroepen) | adres kopiëren |
 | Overheids- en weerdiensten | reisadvies, inreis, gezondheid, waarschuwingen | alleen links | n.v.t. | gratis | zelf controleren |
+| Eigen luchthavenlijst (in de app) | luchthavens binnen een straal | in reisgids.html | eigen lijst; coördinaten bij benadering | gratis | luchthavens zelf invullen |
 | Browseropslag | uw gegevens en foto's | localStorage / IndexedDB | n.v.t. | gratis | JSON-back-up |
 
 Regels in de app: geen gegevens zonder bron of label; voorspelling, historische analyse en eigen beschrijving blijven altijd als zodanig gelabeld;
