@@ -271,6 +271,40 @@ check('eigen minimum en maximum voor het verblijf gaan voor de afgeleide waarden
 const pt = await page.evaluate(() => __rr.leesVlucht('12 Mar 2027 ... 02 Apr 2027 ... 20 Apr 2027', '2027-03-01', { min: 1, max: 60, van: '2027-03-01', tot: '2027-03-31', tVan: '2027-04-10', tTot: '2027-04-30' }).velden);
 check('plakken: terugvlucht moet in de terugperiode vallen (02 apr valt erbuiten, 20 apr niet)', pt.heenDatum === '2027-03-12' && pt.terugDatum === '2027-04-20', JSON.stringify(pt));
 
+console.log('Overstaptijd controleren');
+const oe = await page.evaluate(() => ({ eu: __rr.overstapEis('Frankfurt', false), us: __rr.overstapEis('Atlanta', false), los: __rr.overstapEis('Atlanta', true), leeg: __rr.overstapEis('', false) }));
+check('overstapregels: Europa 105/120, VS 150/180, losse tickets 240/300 minuten', oe.eu.min === 105 && oe.eu.adv === 120 && oe.us.min === 150 && oe.us.adv === 180 && oe.us.land === 'Verenigde Staten' && oe.los.min === 240 && oe.los.adv === 300 && oe.leeg.min === 105, JSON.stringify(oe));
+await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+await page.fill('#f_vlucht_heenOverstapVia', 'Atlanta'); await page.fill('#f_vlucht_heenOverstapMin', '105');
+check('overstap van 1 uur 45 in de VS wordt als te kort gemeld', /Overstap heen in Atlanta: 1 uur 45 is te kort[\s\S]*2 uur 30/.test(await page.textContent('[data-calc=vluchtCheck]')), (await page.textContent('[data-calc=vluchtCheck]')).slice(0, 200));
+await page.fill('#f_vlucht_heenOverstapMin', '160');
+check('160 minuten in de VS: net genoeg, advies 3 uur', /net genoeg[\s\S]*3 uur/.test(await page.textContent('[data-calc=vluchtCheck]')));
+await page.fill('#f_vlucht_heenOverstapMin', '200');
+check('200 minuten in de VS: geen melding over de overstap', !/Overstap heen/.test(await page.textContent('[data-calc=vluchtCheck]')));
+await page.fill('#f_vlucht_heenOverstapVia', 'Frankfurt'); await page.fill('#f_vlucht_heenOverstapMin', '105');
+check('105 minuten in Frankfurt (één ticket): geen te-korte-melding, wel advies 2 uur', /net genoeg[\s\S]*2 uur/.test(await page.textContent('[data-calc=vluchtCheck]')) && !/te kort/.test(await page.textContent('[data-calc=vluchtCheck]')));
+await page.fill('#f_vlucht_heenOverstapVia', ''); await page.fill('#f_vlucht_heenOverstapMin', '');
+
+console.log('Rondreis: niet dezelfde weg heen en terug; per se zien');
+const hr = await page.evaluate(() => {
+  const g = (plaats, lat, lon) => ({ plaats, geo: { lat, lon, plaats } });
+  const dal = { plaats: 'Dallas', lat: 32.78, lon: -96.8 };
+  const t = { route: { start: dal, eind: null, wegfactor: 1.3 } };
+  const aus = g('Austin', 30.27, -97.74), sa = g('San Antonio', 29.42, -98.49), hou = g('Houston', 29.76, -95.37), waco = g('Waco', 31.55, -97.15);
+  return { lus: __rr.routeHerhaling(t, [aus, sa, hou]).length, heenTerug: __rr.routeHerhaling(t, [aus, waco]).length, uitEnTerug: __rr.routeHerhaling(t, [waco, aus, waco]).length };
+});
+check('een lus Dallas → Austin → San Antonio → Houston → Dallas is een rondreis (geen herhaling)', hr.lus === 0, JSON.stringify(hr));
+check('Dallas → Austin → Waco (Waco ligt langs de weg naar Austin) wordt als dezelfde weg gemeld', hr.heenTerug >= 1, JSON.stringify(hr));
+check('heen en terug langs dezelfde plaats wordt gemeld', hr.uitEnTerug >= 1, JSON.stringify(hr));
+await page.evaluate(() => { location.hash = 'verblijf'; }); await page.reload();
+await page.click('[data-a=add][data-p="gids.perse"]');
+await page.fill('[data-b="gids.perse.0.naam"]', 'Alamo'); await page.fill('[data-b="gids.perse.0.plaats"]', 'San Antonio');
+await page.waitForTimeout(300);
+check('per se zien: bezienswaardigheid in een plaats buiten de route wordt gemeld met knop om de plaats toe te voegen', /San Antonio, dat niet in uw route staat/.test(await page.textContent('[data-calc=perseCheck]')) && await page.locator('[data-calc=perseCheck] [data-a=perseStop]').count() === 1);
+await page.click('[data-calc=perseCheck] [data-a=perseStop]'); await page.waitForTimeout(300);
+check('plaats wordt aan de route toegevoegd en de melding verdwijnt', await page.evaluate(() => __rr.T().stops.some(x => x.plaats === 'San Antonio')) && !/niet in uw route staat/.test(await page.textContent('[data-calc=perseCheck]')));
+await page.evaluate(() => { const t = __rr.T(); t.gids.perse = []; t.stops = t.stops.filter(x => x.plaats !== 'San Antonio'); __rr.opslaan(); });
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
@@ -364,7 +398,7 @@ check('zonder gekozen vlucht: geen reisdata', (await page.textContent('[data-cal
 await page.fill('#f_vlucht_van', 'AMS'); await page.fill('#f_vlucht_naar', 'DEN');
 await page.fill('#f_vlucht_heenDatum', '2027-04-02'); await page.fill('#f_vlucht_heenAankomstDatum', '2027-04-03'); await page.fill('#f_vlucht_terugDatum', '2027-04-26');
 const rd = await page.evaluate(() => { const t = __rr.T(); return [t.reis.vertrek, t.reis.terug, t.auto.ophaalDatum, t.auto.inleverDatum, t.auto.ophaalPlaats]; });
-check('reisdata = aankomstdatum heen t/m terugvlucht; auto neemt data en plaats over', rd.join('|') === '2027-04-03|2027-04-26|2027-04-03|2027-04-26|DEN', rd.join('|'));
+check('reisdata = aankomstdatum heen t/m terugvlucht; auto neemt data en plaats over (plaatsnaam, geen code)', rd.join('|') === '2027-04-03|2027-04-26|2027-04-03|2027-04-26|Denver', rd.join('|'));
 check('aantal nachten (23) staat bij de vlucht', (await page.textContent('[data-calc=reisdatums]')).includes('23 nachten'));
 const chk = await page.textContent('[data-calc=vluchtCheck]');
 check('verblijf van 24 dagen valt binnen 21-25: geen melding over duur', !/korter dan|langer dan/.test(chk), chk);
@@ -373,7 +407,7 @@ check('te lang verblijf wordt gemeld', /langer dan uw maximum/.test(await page.t
 await page.fill('#f_vlucht_terugDatum', '2027-04-26');
 await page.fill('#f_vlucht_heenAankomst', '23:30'); await page.fill('#f_vlucht_terugVertrek', '06:00');
 const at = await page.evaluate(() => { const a = __rr.T().auto; return [a.ophaalDatum, a.ophaalTijd, a.inleverDatum, a.inleverTijd]; });
-check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00 - 180 min = 03:00', at.join() === '2027-04-04,00:30,2027-04-26,03:00', at.join());
+check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00 - 60 min = 05:00', at.join() === '2027-04-04,00:30,2027-04-26,05:00', at.join());
 await bevestig('vlucht');
 check('bevestigen met ontbrekende gegevens vraagt eerst toestemming en noemt wat ontbreekt', /ontbreekt nog/.test(dialoogTekst) && /prijs/.test(dialoogTekst), dialoogTekst);
 check('na uw bevestiging opent stap 2 en is stap 1 gemarkeerd', (await page.textContent('#tabs .act')).includes('2 Auto') && (await page.textContent('#tabs')).includes('✔ 1 Vlucht'));
@@ -384,8 +418,9 @@ const tijden = await page.textContent('[data-calc=autoTijden]');
 check('huurperiode 530,5 uur = 23 dagen van 24 uur', /23 dag\(en\)/.test(tijden), tijden.slice(0, 300));
 check('voorlopig-melding zolang de vlucht niet als geboekt staat', /nog niet als geboekt/.test(tijden));
 const dc = await page.textContent('[data-calc=dcZoek]');
-check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('DEN') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
+check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('Denver') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
 check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
+check('de app legt uit dat het het uiterste inlevertijdstip in het contract is en dat eerder inleveren mag', /uiterste tijdstip[\s\S]*eerder inleveren mag/.test(await page.textContent('[data-calc=autoTijden]')));
 check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
 await page.check('#f_auto_afwijkend');
 await page.fill('#f_auto_ophaalTijd', '12:00');
