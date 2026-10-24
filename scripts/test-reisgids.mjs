@@ -194,7 +194,7 @@ console.log('  (pdf: ' + pdf + ')');
 check('in printweergave verdwijnt de menubalk', printKop === 'none', printKop);
 console.log('Afdrukken per blad en per onderdeel van het reisboek');
 const dir = mkdtempSync(join(tmpdir(), 'rr-blad-'));
-const koppen = { start: 'Welkom', vlucht: '1 Vlucht', auto: '2 Autohuur', verblijf: '3 Hotels', gids: 'Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
+const koppen = { start: 'Reizen', vlucht: '1 Vlucht', auto: '2 Autohuur', verblijf: '3 Hotels', gids: 'Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
 for (const [k, kop] of Object.entries(koppen)) {
   await page.evaluate(x => { location.hash = x; }, k); await page.reload(); await page.waitForTimeout(250);
   await page.evaluate(() => { window.__stop = __rr.bereidPrint(); });
@@ -275,6 +275,23 @@ await page.evaluate(() => { __rr.T().boek.modus = 'gids'; __rr.T().boek.refs = t
 check('screenshot staat in het reisboek bij "boekingsnummers opnemen"', await page.locator('#boekUit [data-sec=bewijzen] img').count() === 1, await page.evaluate(() => JSON.stringify([__rr.T().boek, __rr.T().bewijs, document.querySelectorAll('#boekUit [data-sec]').length])));
 await page.evaluate(() => { __rr.T().boek.refs = false; __rr.opslaan(); }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
 check('zonder die keuze blijft het screenshot uit het reisboek', await page.locator('#boekUit [data-sec=bewijzen]').count() === 0);
+
+console.log('Stapknoppen en openen op de juiste reisdag');
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('bevestigde stappen krijgen een groene knop met vinkje, vergrendelde niet', await page.evaluate(() => { const t = __rr.T(); const k = [...document.querySelectorAll('nav.tabs button.klaar')].length; return k === ['vlucht', 'auto', 'verblijf'].filter(x => t.bevestigd[x] && t.bevestigd[x].ok).length; }));
+const dagenInfo = await page.evaluate(() => { const t = __rr.T(); return { n: t.dagen.length, i: __rr.dagVandaag(t) }; });
+const vandaag = await page.evaluate(() => { const t = __rr.T(); const d = new Intl.DateTimeFormat('sv-SE').format(new Date()); return d; });
+await page.evaluate(() => { const t = __rr.T(); const vandaag = new Intl.DateTimeFormat('sv-SE').format(new Date()); t.dagen.forEach((d, i) => { d.tz = ''; d.datum = new Date(Date.parse(vandaag) + (i - 2) * 864e5).toISOString().slice(0, 10); }); t.bevestigd = { vlucht: { ok: true }, auto: { ok: true }, verblijf: { ok: true } }; __rr.opslaan(); location.hash = ''; });
+await page.goto(url); await page.waitForSelector('nav.tabs');
+check('reis bezig: de app opent op de dagpagina van vandaag', await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t === 'dag' && [...document.querySelectorAll('h2')].some(h => h.textContent.includes('Dag 3'))), await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t + ' ' + [...document.querySelectorAll('h2')].map(x => x.textContent).join('|').slice(0, 120)));
+
+console.log('Te regelen voor de reis');
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('startpagina toont "Te regelen voor de reis" met visum, stekkers en valuta', await page.locator('h2:has-text("Te regelen voor de reis")').count() >= 1 && /verloopstekkers|valuta/i.test(await page.locator('section:has(h2:has-text("Te regelen voor de reis"))').first().innerText()));
+await page.click('[data-a=tab][data-t=regelen]');
+check('knop opent het tabblad Te regelen, met visum, stekkertype en valuta', await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t === 'regelen' && /Visum/.test(app.innerHTML) && /Stekkertype/.test(app.innerHTML) && /Lokale valuta/.test(app.innerText)));
+check('Te regelen staat altijd open, ook zonder bevestigde stappen', await page.evaluate(() => { const t = __rr.T(); return !document.querySelector('nav.tabs button[data-t=regelen]').classList.contains('slot'); }));
+check('oudere reizen krijgen de taken voor verloopstekkers en valuta erbij', await page.evaluate(() => { const t = __rr.T(); return t.voorbereiding.some(x => /tekker/i.test(x.tekst)) && t.voorbereiding.some(x => /pinpas/i.test(x.tekst)); }));
 
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();

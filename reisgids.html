@@ -25,6 +25,8 @@
   nav.tabs { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
   nav.tabs button { padding:5px 10px; font-size:.88rem; }
   nav.tabs button.slot { opacity:.55; }
+  nav.tabs button.klaar { background:color-mix(in srgb, var(--goed) 16%, var(--card)); border-color:var(--goed); color:var(--goed); font-weight:600; }
+  nav.tabs button.klaar.act { background:var(--goed); color:#fff; }
   nav.tabs button.act { background:var(--accent); border-color:var(--accent); color:#fff; }
   h2 { font-size:1.15rem; margin:0 0 6px; }
   h3 { font-size:1rem; margin:14px 0 6px; }
@@ -492,10 +494,10 @@ const GIDSTABS = ['gids', 'route', 'dag', 'dagboek', 'boek']; /* openen pas na b
 const vergrendeld = k => STAPPEN.includes(k) || GIDSTABS.includes(k);
 const STAPNAAM = { vlucht: 'Vlucht', auto: 'Auto', verblijf: 'Hotels' };
 const STAPCHK = { vlucht: 'Vlucht', auto: 'Auto', verblijf: 'Verblijf' };
-const CHKTAB = { Vlucht: 'vlucht', Reis: 'vlucht', Auto: 'auto', Verblijf: 'verblijf', Reisgids: 'gids', Route: 'route' };
+const CHKTAB = { Vlucht: 'vlucht', Reis: 'vlucht', Auto: 'auto', Verblijf: 'verblijf', Reisgids: 'gids', Voorbereiding: 'regelen', Route: 'route' };
 const alleBevestigd = () => Object.fromEntries(STAPPEN.map(k => [k, { ok: true, op: new Date().toISOString(), gewijzigd: false }]));
 /* reizen van vóór de stappen-flow blijven volledig toegankelijk */
-function migreer(t) { if (!('bevestigd' in t)) t.bevestigd = alleBevestigd(); vul(t); (t.hotels.lijst || []).forEach(h => { if (!h.opties) h.opties = [nieuwHotel(), nieuwHotel(), nieuwHotel()]; for (const k of ['wifi', 'badkamer', 'wijk']) if (!h[k]) h[k] = 'onbekend'; if (h.gekozen === undefined) h.gekozen = null; }); return t; }
+function migreer(t) { if (!('bevestigd' in t)) t.bevestigd = alleBevestigd(); vul(t); { const nieuweTaken = standaardVoorbereiding().filter(x => /tekker|valuta/i.test(x.tekst)); nieuweTaken.forEach(n => { const sleutel = /tekker/i.test(n.tekst) ? /tekker|adapter/i : /valuta|pinpas/i; if (!t.voorbereiding.some(x => sleutel.test(x.tekst))) t.voorbereiding.push(n); }); } (t.hotels.lijst || []).forEach(h => { if (!h.opties) h.opties = [nieuwHotel(), nieuwHotel(), nieuwHotel()]; for (const k of ['wifi', 'badkamer', 'wijk']) if (!h[k]) h[k] = 'onbekend'; if (h.gekozen === undefined) h.gekozen = null; }); return t; }
 const stapOk = (t, k) => !!(t.bevestigd[k] && t.bevestigd[k].ok);
 const toegang = (t, k) => { const i = STAPPEN.indexOf(k); if (i >= 0) return i === 0 || STAPPEN.slice(0, i).every(x => stapOk(t, x)); return !GIDSTABS.includes(k) || STAPPEN.every(x => stapOk(t, x)); };
 const huidigeStap = t => STAPPEN.find(k => !stapOk(t, k)) || STAPPEN[STAPPEN.length - 1];
@@ -569,7 +571,7 @@ function nieuweReis(naam) {
 const standaardExtra = () => ['Reisverzekering', 'Visum / inreisautorisatie (ESTA e.d.)', 'Mobiele data / eSIM', 'Lokale transfers en overige kosten'].map(p => ({ id: uid(), post: p, bedrag: null, type: 'schatting', bron: '', datum: '' }));
 const OFF = { reisadvies: 'https://www.nederlandwereldwijd.nl/reisadvies', lcr: 'https://lcr.nl', plug: 'https://www.worldstandards.eu/electricity/plugs-and-sockets/', wmo: 'https://severe.worldweather.wmo.int/', meteoalarm: 'https://meteoalarm.org', nws: 'https://www.weather.gov' };
 function standaardVoorbereiding() {
-  const t = [['Paspoort/reisdocument: geldigheid en vrije pagina’s controleren', 180, OFF.reisadvies], ['Visum, ESTA of andere inreisautorisatie via de officiële overheidssite controleren en aanvragen', 90, OFF.reisadvies], ['Vlucht zoeken en boeken (Get-Roam)', 150, 'https://get-roam.com/flexible-search'], ['Reisverzekering regelen', 90, ''], ['Inentingen en gezondheidsadvies controleren', 60, OFF.lcr], ['Hotels boeken met gratis annuleren (populaire data en feestdagen eerst)', 120, ''], ['Hotelprijzen opnieuw vergelijken (Booking.com, Agoda.com, hotelwebsite) vóór de annuleerdatum en zo nodig goedkoper of beter boeken', 60, ''], ['Huurauto zoeken en boeken (DiscoverCars): verzekering, tweede bestuurder, ophaal-/inlevertijden controleren', 90, 'https://www.discovercars.com/'], ['Attracties en tijdsloten reserveren', 45, ''], ['Restaurants en feestdagdiners reserveren indien relevant', 30, ''], ['Rijbewijs, internationaal rijbewijs en creditcardlimieten/buitenlandgebruik controleren', 30, ''], ['Mobiele data/eSIM regelen', 14, ''], ['Vervoer van/naar de luchthaven regelen', 14, ''], ['Offline kaarten en belangrijke documenten opslaan; reisboek printen of exporteren', 3, ''], ['Laatste controle van vluchten, weer, wegen en openingstijden', 1, '']];
+  const t = [['Paspoort/reisdocument: geldigheid en vrije pagina’s controleren', 180, OFF.reisadvies], ['Visum, ESTA of andere inreisautorisatie via de officiële overheidssite controleren en aanvragen', 90, OFF.reisadvies], ['Vlucht zoeken en boeken (Get-Roam)', 150, 'https://get-roam.com/flexible-search'], ['Reisverzekering regelen', 90, ''], ['Inentingen en gezondheidsadvies controleren', 60, OFF.lcr], ['Hotels boeken met gratis annuleren (populaire data en feestdagen eerst)', 120, ''], ['Hotelprijzen opnieuw vergelijken (Booking.com, Agoda.com, hotelwebsite) vóór de annuleerdatum en zo nodig goedkoper of beter boeken', 60, ''], ['Huurauto zoeken en boeken (DiscoverCars): verzekering, tweede bestuurder, ophaal-/inlevertijden controleren', 90, 'https://www.discovercars.com/'], ['Attracties en tijdsloten reserveren', 45, ''], ['Restaurants en feestdagdiners reserveren indien relevant', 30, ''], ['Rijbewijs, internationaal rijbewijs en creditcardlimieten/buitenlandgebruik controleren', 30, ''], ['Verloopstekkers/reisadapter kopen (stekkertype en voltage van het land controleren)', 30, ''], ['Lokale valuta, pinpas en creditcard regelen (opnamekosten, limieten, melding buitenland)', 30, ''], ['Mobiele data/eSIM regelen', 14, ''], ['Vervoer van/naar de luchthaven regelen', 14, ''], ['Offline kaarten en belangrijke documenten opslaan; reisboek printen of exporteren', 3, ''], ['Laatste controle van vluchten, weer, wegen en openingstijden', 1, '']];
   return t.map(([tekst, dagen, link]) => ({ id: uid(), tekst, dagenVoor: dagen, link, klaar: false, kosten: null, notitie: '' }));
 }
 function standaardInfo() {
@@ -813,7 +815,8 @@ function voortgang(t) {
   { const it = [['vervoerskeuze (huurauto, trein/bus of combinatie)', !!a.vervoer]]; if (a.nodig) it.push(['ophaalplaats', !!a.ophaalPlaats], ['ophaal- en inleverdatum', okD(a.ophaalDatum) && okD(a.inleverDatum)], ['soort auto', !!a.klasse], ['kilometers', !!a.kmType && (a.kmType === 'onbeperkt' || num(a.kmLimiet) != null)], ['kinderzitjes (bij kinderen)', !(r.kind > 0) || !!a.zitjes], ['grensoverschrijding bepaald', !!a.grens], ['huurprijs', num(a.prijs) != null]); else it.push(['kosten trein en bus', num(a.ovKosten) != null]); chk('Auto', it); }
   reisChk();
   chk('Verblijf', [['plaatsen met nachten (klopt met het aantal nachten)', t.stops.length > 0 && okD(r.vertrek) && okD(r.terug) && sum(t.stops.map(x => num(x.nachten) || 0)) === diffD(r.terug, r.vertrek)], ['locaties van de plaatsen opgezocht', t.stops.length > 0 && t.stops.every(x => x.geo)], ['drie hotelopties per verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => h.opties.filter(o => o.naam).length >= 3)], ['hotel bevestigd bij elk verblijf', t.hotels.lijst.length > 0 && t.hotels.lijst.every(h => h.bevestigd)]]);
-  chk('Reisgids', [['interesses', g.interesses.length > 0], ['limiet km per dag', num(g.maxKm) != null], ['limiet rijtijd per dag', num(g.maxUren) != null], ['nationaliteit (voor inreisregels)', !!p.nationaliteit]]);
+  chk('Reisgids', [['interesses', g.interesses.length > 0], ['limiet km per dag', num(g.maxKm) != null], ['limiet rijtijd per dag', num(g.maxUren) != null]]);
+  chk('Voorbereiding', [['nationaliteit (voor inreisregels)', !!p.nationaliteit]]);
   chk('Route', [['dagen aangemaakt', t.dagen.length > 0], ['plaats bij elke dag', t.dagen.length > 0 && t.dagen.every(d => d.plaats)], ['km en rijtijd bij elke rijdag', t.dagen.length > 0 && t.dagen.filter(d => d.type === 'rijdag').every(d => num(d.km) != null && num(d.uren) != null)], ['tijdzone bij elke dag', t.dagen.length > 0 && t.dagen.every(d => geldigeTz(d.tz))]]);
   return S;
 }
@@ -849,15 +852,20 @@ const sectie = (titel, uitleg, inhoud) => `<section class="card"><h2>${titel}</h
 const badge = (k, tekst) => `<span class="b b-${{ g: 'goed', l: 'let', f: 'fout', n: 'n' }[k] || 'n'}">${esc(tekst)}</span>`;
 
 /* ====================== Tabbladen ====================== */
-const TABS = [['start', 'Start'], ['vlucht', '1 Vlucht'], ['auto', '2 Auto'], ['verblijf', '3 Hotels'], ['gids', 'Reisgids'], ['route', 'Route'], ['dag', 'Onderweg'], ['dagboek', 'Dagboek'], ['kosten', 'Kosten'], ['boek', 'Reisboek en verslag (PDF)'], ['data', 'Gegevens']];
+const TABS = [['start', 'Start'], ['regelen', 'Te regelen'], ['vlucht', '1 Vlucht'], ['auto', '2 Auto'], ['verblijf', '3 Hotels'], ['gids', 'Reisgids'], ['route', 'Route'], ['dag', 'Onderweg'], ['dagboek', 'Dagboek'], ['kosten', 'Kosten'], ['boek', 'Reisboek en verslag (PDF)'], ['data', 'Gegevens']];
 let tab = 'start', dagSel = 0;
 const VIEWS = {};
 
 VIEWS.start = () => {
   const t = T();
-  let h = `<section class="card"><h2>Welkom</h2><p class="noot">Plan een rondreis, gebruik de gids onderweg, houd een dagboek met foto’s bij en bewaar alles als printbaar reisboek. Alle gegevens staan alleen in deze browser (niet in de openbare repo). Maak regelmatig een back-up op het tabblad Gegevens.</p>
-    <div class="rij"><button class="prim" data-a="nieuw">+ Nieuwe reis</button><button data-a="demo">Demo-reis laden (verzonnen gegevens)</button><label class="knop" style="margin:0">Back-up of intake inlezen<input type="file" accept="application/json,.json" data-ch="importeer" hidden></label></div></section>`;
-  if (!t) return h + `<p class="noot">Er is nog geen reis. Maak een nieuwe reis aan om te beginnen.</p>`;
+  const heeft = Object.keys(DB.reizen).length > 0;
+  let h = heeft ? `<section class="card"><h2>Reizen</h2><p class="noot">Alle gegevens staan alleen in deze browser. Maak regelmatig een back-up op het tabblad Gegevens.</p>
+    <div class="rij"><button data-a="nieuw">+ Nog een reis</button><button data-a="demo">Demo-reis laden (verzonnen gegevens)</button><label class="knop" style="margin:0">Back-up of intake inlezen<input type="file" accept="application/json,.json" data-ch="importeer" hidden></label></div></section>`
+    : `<section class="card"><h2>Welkom: zo begint u</h2><p class="noot">U hoeft niets te kiezen in de knoppen bovenin. Begin met de grote knop hieronder; de app leidt u daarna stap voor stap.</p>
+    <ol><li><b>Maak een reis aan</b> (knop hieronder, alleen een naam).</li><li><b>Stap 1 Vlucht:</b> zoekgegevens klaarzetten voor Get-Roam, uw gekozen vlucht invullen en bevestigen.</li><li><b>Stap 2 Auto</b> en <b>stap 3 Hotels:</b> idem. Pas na uw bevestiging van elke stap gaat de volgende open.</li><li>Daarna de <b>reisgids</b> voor onderweg met dagboek, foto’s en het reisverslag.</li></ol>
+    <div class="rij"><button class="prim" data-a="nieuw" style="font-size:1.05rem;padding:10px 18px">Begin hier: nieuwe reis</button></div>
+    <h3>Heeft u al iets?</h3><div class="rij" style="margin-top:0"><label class="knop" style="margin:0">Back-up of oude intake (.json) inlezen<input type="file" accept="application/json,.json" data-ch="importeer" hidden></label><button data-a="demo">Eerst de demo bekijken (verzonnen gegevens)</button></div></section>`;
+  if (!t) return h;
   const S = voortgang(t), W = waarschuwingen(t), d = duurDagen(t);
   const R = kostenRegels(t), ks = kostenSom(R);
   h += `<section class="card"><h2>${esc(t.naam)} ${t.demo ? badge('l', 'DEMO – verzonnen gegevens') : ''}</h2>
@@ -869,6 +877,7 @@ VIEWS.start = () => {
       <div class="kpi"><b>${num(t.reis.budget) != null ? mny(t.reis.budget) : '—'}</b><span>budget</span></div>
     </div></section>`;
   if (t.importNotities && t.importNotities.length) h += `<section class="card"><h2>Opmerkingen bij het inlezen van uw intake</h2><ul>${t.importNotities.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="rij"><button class="klein" data-a="notitiesWeg">Gelezen, verberg</button></div></section>`;
+  if (!okD(t.reis.terug) || vandaagIn() <= t.reis.terug) { const vd = vandaagIn(), open = t.voorbereiding.filter(x => !x.klaar).map(x => [x, okD(t.reis.vertrek) ? addD(t.reis.vertrek, -x.dagenVoor) : '']).sort((a, b) => (a[1] || '9').localeCompare(b[1] || '9')); h += `<section class="card"><h2>Te regelen voor de reis</h2>${open.length ? `<p class="noot">${open.length} van ${t.voorbereiding.length} taken staan nog open, o.a. visum of inreisautorisatie, verloopstekkers en valuta. Eerstvolgende:</p><ul>${open.slice(0, 4).map(([x, d]) => `<li>${esc(x.tekst)}${d ? ` <span class="${d < vd ? 'let' : 'noot'}">(uiterlijk ${dFmt(d)}${d < vd ? ', over de richttermijn' : ''})</span>` : ''}</li>`).join('')}</ul>` : '<p class="noot">Alle taken zijn afgevinkt.</p>'}<div class="rij"><button class="prim" data-a="tab" data-t="regelen">Open “Te regelen voor de reis”</button></div></section>`; }
   { const hs = huidigeStap(t), ia = STAPPEN.indexOf(hs), alles = STAPPEN.every(x => stapOk(t, x)); h += `<section class="card"><h2>Volgende stap</h2><p>${alles ? 'Alle planningsstappen zijn door u bevestigd. U kunt nu onderweg de dagpagina’s en het dagboek gebruiken.' : `Stap ${ia + 1} van ${STAPPEN.length}: <b>${esc(STAPNAAM[hs])}</b>. De app vraagt alleen wat nog ontbreekt.`}</p><div class="rij"><button class="prim" data-a="tab" data-t="${alles ? 'dag' : hs}">${alles ? 'Naar onderweg' : 'Ga verder met stap ' + (ia + 1)} →</button></div></section>`; }
   if (t.dagen.length && STAPPEN.every(x => stapOk(t, x))) { const laatste = t.dagen[t.dagen.length - 1].datum; h += verslagKnop(t, okD(laatste) && vandaagIn() > laatste); }
   h += `<section class="card"><h2>Voortgang intake</h2><table class="rtab"><thead><tr><th>Onderdeel</th><th>Ingevuld</th><th>Nog te doen</th><th></th></tr></thead><tbody>` +
@@ -1055,6 +1064,18 @@ VIEWS.gids = () => {
      <h3>Wensen per thema</h3><div class="grid">
       ${fld('gids.eten', 'Eten en drinken', 'a', { rows: 2 })}${fld('gids.uitgaan', 'Cafés, bars, avondleven', 'a', { rows: 2 })}${fld('gids.muziek', 'Muziek', 'a', { rows: 2 })}${fld('gids.cultuur', 'Cultuur en geschiedenis', 'a', { rows: 2 })}${fld('gids.sport', 'Sport en natuur', 'a', { rows: 2 })}${fld('gids.winkelen', 'Winkelen en outlets', 'a', { rows: 2 })}
      </div>`);
+  h += sectie('Contacten en noodgegevens', 'Zet hier contactpersonen, luchthavenvervoer en lokale noodnummers. Bewaar geen gevoelige nummers die u niet in een export of print wilt hebben.',
+    `<table class="rtab"><thead><tr><th>Rol</th><th>Naam</th><th>Telefoon</th><th>Notitie</th><th></th></tr></thead><tbody>` +
+    t.contacten.map((x, i) => `<tr>${['rol', 'naam', 'tel', 'notitie'].map(k => `<td data-l="${k}"><input type="text" data-b="contacten.${i}.${k}" value="${esc(x[k])}"></td>`).join('')}<td><button class="klein gevaar" data-a="del" data-p="contacten" data-i="${i}">✕</button></td></tr>`).join('') +
+    `</tbody></table><div class="rij"><button data-a="add" data-p="contacten" data-n="contact">+ Contact</button></div>`);
+  return h;
+};
+
+VIEWS.regelen = () => {
+  const t = T(), vd = vandaagIn(), open = t.voorbereiding.filter(x => !x.klaar), laat = okD(t.reis.vertrek) ? open.filter(x => addD(t.reis.vertrek, -x.dagenVoor) < vd) : [];
+  let h = sectie('Te regelen voor de reis', 'Alles wat u vóór vertrek moet uitzoeken of kopen: visum of inreisautorisatie, paspoort, verzekering, verloopstekkers, geld en pinpas, eSIM. Dit tabblad staat altijd open, ook vóór u de stappen bevestigt. De app zoekt de regels niet zelf op: u controleert ze bij de officiële bron en vinkt dan af.',
+    `<div class="kpis"><div class="kpi"><b>${t.voorbereiding.length - open.length}/${t.voorbereiding.length}</b><span>taken klaar</span></div><div class="kpi"><b>${laat.length}</b><span>over de richttermijn</span></div></div>
+     <div class="rij"><a class="knop" target="_blank" rel="noopener" href="${OFF.reisadvies}">Visum en inreisregels (Nederland Wereldwijd)</a><a class="knop" target="_blank" rel="noopener" href="${OFF.lcr}">Inentingen (LCR)</a></div>`);
   h += sectie('Praktische landenintake', 'Wordt uitsluitend gebruikt om inreisregels en praktische zaken te laten controleren. Vul geen paspoort- of kaartnummers in.',
     `<div class="grid">
       ${fld('prakt.nationaliteit', 'Nationaliteit(en)', 't')}${fld('prakt.document', 'Type reisdocument', 's', { opts: [['paspoort', 'paspoort'], ['id', 'identiteitskaart'], ['anders', 'anders']] })}${fld('prakt.doel', 'Reisdoel', 's', { opts: [['vakantie', 'vakantie'], ['zakelijk', 'zakelijk'], ['anders', 'anders']] })}
@@ -1077,10 +1098,6 @@ VIEWS.gids = () => {
     `<table class="rtab"><thead><tr><th></th><th>Taak</th><th>Dagen vóór vertrek</th><th>Uiterlijk</th><th>Kosten</th><th>Notitie</th><th></th></tr></thead><tbody>` +
     t.voorbereiding.map((x, i) => { const dd = okD(t.reis.vertrek) ? addD(t.reis.vertrek, -x.dagenVoor) : null; const laat = dd && !x.klaar && dd < vandaagIn(); return `<tr><td data-l="Klaar"><input type="checkbox" data-b="voorbereiding.${i}.klaar" ${x.klaar ? 'checked' : ''}></td><td data-l="Taak"><input type="text" data-b="voorbereiding.${i}.tekst" value="${esc(x.tekst)}">${x.link ? `<a target="_blank" rel="noopener" href="${esc(x.link)}">officiële bron / link</a>` : ''}</td><td data-l="Dagen" ><input type="number" data-b="voorbereiding.${i}.dagenVoor" data-r value="${esc(x.dagenVoor)}" style="width:80px"></td><td data-l="Uiterlijk" class="${laat ? 'fout' : ''}">${dd ? dFmt(dd) + (laat ? ' (over tijd)' : '') : '—'}</td><td data-l="Kosten"><input type="number" data-b="voorbereiding.${i}.kosten" value="${esc(x.kosten)}" style="width:90px"></td><td data-l="Notitie"><input type="text" data-b="voorbereiding.${i}.notitie" value="${esc(x.notitie)}"></td><td><button class="klein gevaar" data-a="del" data-p="voorbereiding" data-i="${i}">✕</button></td></tr>`; }).join('') +
     `</tbody></table><div class="rij"><button data-a="add" data-p="voorbereiding" data-n="taak">+ Taak</button></div>`);
-  h += sectie('Contacten en noodgegevens', 'Zet hier contactpersonen, luchthavenvervoer en lokale noodnummers. Bewaar geen gevoelige nummers die u niet in een export of print wilt hebben.',
-    `<table class="rtab"><thead><tr><th>Rol</th><th>Naam</th><th>Telefoon</th><th>Notitie</th><th></th></tr></thead><tbody>` +
-    t.contacten.map((x, i) => `<tr>${['rol', 'naam', 'tel', 'notitie'].map(k => `<td data-l="${k}"><input type="text" data-b="contacten.${i}.${k}" value="${esc(x[k])}"></td>`).join('')}<td><button class="klein gevaar" data-a="del" data-p="contacten" data-i="${i}">✕</button></td></tr>`).join('') +
-    `</tbody></table><div class="rij"><button data-a="add" data-p="contacten" data-n="contact">+ Contact</button></div>`);
   return h;
 };
 
@@ -1726,7 +1743,7 @@ const A = {};
 const app = $('#app');
 function melding(t, fout) { const m = $('#melding'); m.textContent = t; m.style.display = 'block'; m.style.borderColor = fout ? 'var(--fout)' : 'var(--lijn)'; clearTimeout(melding.t); melding.t = setTimeout(() => m.style.display = 'none', fout ? 8000 : 3000); }
 function rerender() { const y = scrollY; render(); scrollTo(0, y); }
-A.tab = b => { tab = b.dataset.t; render(); scrollTo(0, 0); };
+A.tab = b => { tab = b.dataset.t; location.hash = tab; render(); scrollTo(0, 0); };
 A.nieuw = () => { const n = prompt('Naam van de reis:', 'Mijn rondreis'); if (!n) return; const t = nieuweReis(n); DB.reizen[t.id] = t; DB.actief = t.id; opslaan(); tab = 'vlucht'; render(); };
 A.demo = () => { const t = demoReis(); DB.reizen[t.id] = t; DB.actief = t.id; opslaan(); tab = 'start'; render(); melding('Demo-reis geladen. Alle gegevens zijn verzonnen.'); };
 A.add = b => { const arr = getP(T(), b.dataset.p); const n = b.dataset.n === 'dag' ? nieuweDag(arr.length ? addD(arr[arr.length - 1].datum || iso(new Date()), 1) : T().reis.vertrek || iso(new Date())) : NIEUW[b.dataset.n](); arr.push(n); opslaan(); rerender(); };
@@ -2064,9 +2081,10 @@ $('#tabs').addEventListener('click', e => { const b = e.target.closest('button')
 async function laadFotos() { for (const im of $$('img[data-foto]')) { try { im.src = await fotoUrl(im.dataset.foto); } catch { } } }
 function render() {
   const t = T(); if (t) syncDatums(t);
-  $('#reisKeuze').innerHTML = Object.values(DB.reizen).map(x => `<option value="${x.id}" ${x.id === DB.actief ? 'selected' : ''}>${esc(x.naam)}</option>`).join('') || '<option>(geen reis)</option>';
+  $('#reisKeuze').innerHTML = Object.values(DB.reizen).map(x => `<option value="${x.id}" ${x.id === DB.actief ? 'selected' : ''}>${esc(x.naam)}</option>`).join('');
+  $('#reisKeuze').hidden = !Object.keys(DB.reizen).length;
   if (t && vergrendeld(tab) && !toegang(t, tab)) { const h = huidigeStap(t); melding(`Bevestig eerst stap ${STAPPEN.indexOf(h) + 1} (${STAPNAAM[h]}) voordat u verder gaat.`, true); tab = h; }
-  $('#tabs').innerHTML = TABS.map(([k, n]) => { const stap = vergrendeld(k) && t, slot = stap && !toegang(t, k), ok = STAPPEN.includes(k) && t && stapOk(t, k); return `<button data-t="${k}" class="${k === tab ? 'act' : ''}${slot ? ' slot' : ''}" ${k === tab ? 'aria-current="page"' : ''} ${slot ? 'aria-disabled="true" title="Eerst de vorige stap bevestigen"' : ''}>${slot ? '🔒 ' : ok ? '✔ ' : ''}${n}</button>`; }).join('');
+  $('#tabs').innerHTML = TABS.map(([k, n]) => { const stap = vergrendeld(k) && t, slot = stap && !toegang(t, k), ok = STAPPEN.includes(k) && t && stapOk(t, k); return `<button data-t="${k}" class="${k === tab ? 'act' : ''}${slot ? ' slot' : ''}${ok ? ' klaar' : ''}" ${k === tab ? 'aria-current="page"' : ''} ${slot ? 'aria-disabled="true" title="Eerst de vorige stap bevestigen"' : ''}>${slot ? '🔒 ' : ok ? '✔ ' : ''}${n}</button>`; }).join('');
   if (!t && tab !== 'start') tab = 'start';
   let pre = '';
   if (t && toegang(t, 'dag') && tab !== 'boek') pre += herinneringBanner(t);
@@ -2102,6 +2120,7 @@ function demoReis() {
 /* ====================== Start ====================== */
 laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
+{ const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
 window.__rr = { fotoGet, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
