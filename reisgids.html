@@ -1724,7 +1724,7 @@ const CALC = {
     return `<b>Zoekopdracht voor Get-Roam</b>${ontbr.length ? `<div class="banner">Nog in te vullen: ${ontbr.join(', ')}.</div>` : ''}${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}
       ${uitleg}<div class="rij"><button class="prim" data-a="roamKopieer" style="font-size:1.1rem;padding:12px 22px" ${klaar ? '' : 'aria-disabled="true"'}>Open Get-Roam met mijn zoekopdracht ↗</button></div>
       <p class="noot">Get-Roam laat niet toe dat een andere site zijn formulier verstuurt (beveiliging). Daarom werkt dit in twee korte stappen: <b>1.</b> deze knop kopieert uw zoekopdracht en opent Get-Roam; <b>2.</b> u klikt daar op de bladwijzer “Roam invullen”, die alles invult. Daarna klikt u zelf op Search. Get-Roam toont prijzen in dollars en heeft geen bagagefilter.</p>
-      <details class="sub" ${localStorage.getItem('rr_roam_bw') ? '' : 'open'}><summary>Eenmalig instellen: de bladwijzer “Roam invullen” (alleen computer, 1 minuut)</summary>
+      <details class="sub" ${localStorage.getItem('rr_roam_bw') ? '' : 'open'}><summary>Eenmalig instellen: de bladwijzer “Roam invullen” (computer 1 minuut, telefoon 3 minuten)</summary>
       <ol class="stappen">
         <li><b>Maak de bladwijzerbalk zichtbaar.</b> Druk in Chrome, Edge of Firefox op <b>Ctrl + Shift + B</b> (Mac: <b>Cmd + Shift + B</b>). Onder de adresbalk verschijnt een smalle rij voor bladwijzers.</li>
         <li><b>Sleep de knop hieronder naar die rij.</b> Zet de muisaanwijzer op de knop “⭐ Roam invullen”, houd de linkermuisknop ingedrukt, beweeg naar de bladwijzerbalk en laat los. Klikken op de knop doet hier niets.</li>
@@ -1735,6 +1735,17 @@ const CALC = {
       <details class="sub"><summary>Lukt slepen niet? Zo maakt u de bladwijzer met de hand</summary>
         <ol class="stappen"><li>Klik op de knop “Kopieer de code”.</li><li>Klik met de rechtermuisknop op de bladwijzerbalk en kies “Pagina toevoegen” (Chrome) of “Bladwijzer toevoegen”.</li><li>Typ bij Naam: <b>Roam invullen</b>.</li><li>Plak bij URL (adres) de gekopieerde code (Ctrl + V) en kies Opslaan.</li></ol>
         <div class="rij"><button data-a="kopie" data-v="${esc(decodeURIComponent(ROAM_BLADWIJZER))}">Kopieer de code</button></div></details>
+      <details class="sub"><summary>Op uw telefoon (Chrome op Android)</summary>
+        <p class="noot">Op een telefoon is er geen bladwijzerbalk en kunt u niet slepen. Het kan wel met een gewone bladwijzer. Eenmalig, ongeveer 3 minuten:</p>
+        <ol class="stappen"><li>Tik hier op <button class="klein" data-a="kopie" data-v="${esc(decodeURIComponent(ROAM_BLADWIJZER))}">Kopieer de code</button>.</li>
+          <li>Tik rechtsboven in Chrome op de <b>drie puntjes</b> en dan op het <b>sterretje</b> (bladwijzer toevoegen). Deze pagina staat nu in uw bladwijzers.</li>
+          <li>Tik opnieuw op de <b>drie puntjes</b> → <b>Bladwijzers</b> → <b>Mobiele bladwijzers</b>. Tik achter de zojuist toegevoegde bladwijzer op de <b>drie puntjes</b> → <b>Bewerken</b>.</li>
+          <li>Typ bij <b>Naam</b>: <b>Roam invullen</b>. Wis bij <b>URL</b> alles en <b>plak</b> de gekopieerde code (tik lang in het veld en kies Plakken). Tik op het vinkje om op te slaan.</li></ol>
+        <p><b>Gebruiken, bij elke zoekopdracht:</b></p>
+        <ol class="stappen"><li>Tik hierboven op “Open Get-Roam met mijn zoekopdracht”. Get-Roam opent.</li>
+          <li>Tik bovenin op de <b>adresbalk</b> en typ <b>Roam invullen</b>. Tik <b>niet</b> op Enter, maar op de bladwijzer in de lijst eronder (met het sterretje).</li>
+          <li>Tik eventueel op Toestaan voor het klembord, controleer de velden en tik zelf op Search.</li></ol>
+        <p class="noot">Dit is niet door mij op een echte telefoon getest. Gebruik de adresbalk en tik op de suggestie: de code in de adresbalk plakken en op Enter drukken werkt niet, Chrome verwijdert dan het begin ervan. Lukt het niet, gebruik dan de kopieerlijst hieronder.</p></details>
       <h4 style="margin:12px 0 4px">Daarna, bij elke zoekopdracht</h4>
       <ol class="stappen"><li>Klik hierboven op <b>“Open Get-Roam met mijn zoekopdracht”</b>. Get-Roam opent in een nieuw tabblad.</li><li>Klik in dat tabblad op de bladwijzer <b>“Roam invullen”</b>. Chrome vraagt eventueel toestemming om het klembord te lezen: kies Toestaan.</li><li>Er verschijnt een melding met wat is ingevuld. Klik OK, controleer de velden en klik zelf op <b>Search</b>.</li></ol></details>
       <details class="sub"><summary>Telefoon of lukt het niet? Zo vult u het zelf in</summary>
@@ -2205,7 +2216,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 h'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 i'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
