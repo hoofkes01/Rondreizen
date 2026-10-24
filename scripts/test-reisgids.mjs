@@ -384,7 +384,7 @@ const tijden = await page.textContent('[data-calc=autoTijden]');
 check('huurperiode 530,5 uur = 23 dagen van 24 uur', /23 dag\(en\)/.test(tijden), tijden.slice(0, 300));
 check('voorlopig-melding zolang de vlucht niet als geboekt staat', /nog niet als geboekt/.test(tijden));
 const dc = await page.textContent('[data-calc=dcZoek]');
-check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('DEN') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
+check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('Denver') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
 check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
 check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
 await page.check('#f_auto_afwijkend');
