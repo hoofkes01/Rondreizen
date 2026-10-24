@@ -17,6 +17,7 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--tekst); font:16px/1.5 system-ui,sans-serif; }
   main { max-width:1040px; margin:0 auto; padding:12px 16px 60px; }
+  ol.stappen { padding-left:1.3em; } ol.stappen li { margin:6px 0; }
   header.top { background:var(--card); border-bottom:1px solid var(--lijn); position:sticky; top:0; z-index:5; }
   header.top .in { max-width:1040px; margin:0 auto; padding:8px 16px; }
   header.top .kop { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; }
@@ -881,6 +882,7 @@ VIEWS.start = () => {
       <div class="kpi"><b>${num(t.reis.budget) != null ? mny(t.reis.budget) : '—'}</b><span>budget</span></div>
     </div></section>`;
   if (t.importNotities && t.importNotities.length) h += `<section class="card"><h2>Opmerkingen bij het inlezen van uw intake</h2><ul>${t.importNotities.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="rij"><button class="klein" data-a="notitiesWeg">Gelezen, verberg</button></div></section>`;
+  { let bw = false; try { bw = !!localStorage.getItem('rr_roam_bw'); } catch { } if (!bw && !stapOk(t, 'vlucht')) h += `<section class="card"><h2>Eenmalig: bladwijzer voor Get-Roam</h2><p class="noot">Met één bladwijzer vult u het zoekformulier van Get-Roam in een paar klikken in. Dit duurt een minuut en hoeft maar één keer. De uitleg staat stap voor stap bij stap 1 Vlucht.</p><div class="rij"><button class="prim" data-a="tab" data-t="vlucht">Naar de uitleg</button><button class="klein" data-a="roamBwKlaar">Niet nodig / al gedaan</button></div></section>`; }
   if (!okD(t.reis.terug) || vandaagIn() <= t.reis.terug) { const vd = vandaagIn(), open = t.voorbereiding.filter(x => !x.klaar).map(x => [x, okD(t.reis.vertrek) ? addD(t.reis.vertrek, -x.dagenVoor) : '']).sort((a, b) => (a[1] || '9').localeCompare(b[1] || '9')); h += `<section class="card"><h2>Te regelen voor de reis</h2>${open.length ? `<p class="noot">${open.length} van ${t.voorbereiding.length} taken staan nog open, o.a. visum of inreisautorisatie, verloopstekkers en valuta. Eerstvolgende:</p><ul>${open.slice(0, 4).map(([x, d]) => `<li>${esc(x.tekst)}${d ? ` <span class="${d < vd ? 'let' : 'noot'}">(uiterlijk ${dFmt(d)}${d < vd ? ', over de richttermijn' : ''})</span>` : ''}</li>`).join('')}</ul>` : '<p class="noot">Alle taken zijn afgevinkt.</p>'}<div class="rij"><button class="prim" data-a="tab" data-t="regelen">Open “Te regelen voor de reis”</button></div></section>`; }
   { const hs = huidigeStap(t), ia = STAPPEN.indexOf(hs), alles = STAPPEN.every(x => stapOk(t, x)); h += `<section class="card"><h2>Volgende stap</h2><p>${alles ? 'Alle planningsstappen zijn door u bevestigd. U kunt nu onderweg de dagpagina’s en het dagboek gebruiken.' : `Stap ${ia + 1} van ${STAPPEN.length}: <b>${esc(STAPNAAM[hs])}</b>. De app vraagt alleen wat nog ontbreekt.`}</p><div class="rij"><button class="prim" data-a="tab" data-t="${alles ? 'dag' : hs}">${alles ? 'Naar onderweg' : 'Ga verder met stap ' + (ia + 1)} →</button></div></section>`; }
   if (t.dagen.length && STAPPEN.every(x => stapOk(t, x))) { const laatste = t.dagen[t.dagen.length - 1].datum; h += verslagKnop(t, okD(laatste) && vandaagIn() > laatste); }
@@ -1722,9 +1724,19 @@ const CALC = {
     return `<b>Zoekopdracht voor Get-Roam</b>${ontbr.length ? `<div class="banner">Nog in te vullen: ${ontbr.join(', ')}.</div>` : ''}${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}
       ${uitleg}<div class="rij"><button class="prim" data-a="roamKopieer" style="font-size:1.1rem;padding:12px 22px" ${klaar ? '' : 'aria-disabled="true"'}>Open Get-Roam met mijn zoekopdracht ↗</button></div>
       <p class="noot">Get-Roam laat niet toe dat een andere site zijn formulier verstuurt (beveiliging). Daarom werkt dit in twee korte stappen: <b>1.</b> deze knop kopieert uw zoekopdracht en opent Get-Roam; <b>2.</b> u klikt daar op de bladwijzer “Roam invullen”, die alles invult. Daarna klikt u zelf op Search. Get-Roam toont prijzen in dollars en heeft geen bagagefilter.</p>
-      <details class="sub" ${localStorage.getItem('rr_roam_bw') ? '' : 'open'}><summary>Eenmalig instellen: de bladwijzer “Roam invullen” (computer)</summary>
-      <p class="noot">Doe dit één keer. Maak de bladwijzerbalk zichtbaar (Chrome: Ctrl+Shift+B) en <b>sleep onderstaande knop</b> erheen. Daarna hoeft u niets meer te doen: de bladwijzer leest elke keer de nieuwste zoekopdracht. Een klik op de knop hier doet niets. Op een telefoon werkt dit niet goed: gebruik daar de kopieerlijst hieronder.</p>
-      <div class="rij"><a class="knop" href="${ROAM_BLADWIJZER}" draggable="true" onclick="alert('Sleep deze knop naar uw bladwijzerbalk. Klik er niet hier op.');return false">⭐ Roam invullen</a><button class="klein" data-a="roamBwKlaar">Ik heb de bladwijzer gemaakt</button></div></details>
+      <details class="sub" ${localStorage.getItem('rr_roam_bw') ? '' : 'open'}><summary>Eenmalig instellen: de bladwijzer “Roam invullen” (alleen computer, 1 minuut)</summary>
+      <ol class="stappen">
+        <li><b>Maak de bladwijzerbalk zichtbaar.</b> Druk in Chrome, Edge of Firefox op <b>Ctrl + Shift + B</b> (Mac: <b>Cmd + Shift + B</b>). Onder de adresbalk verschijnt een smalle rij voor bladwijzers.</li>
+        <li><b>Sleep de knop hieronder naar die rij.</b> Zet de muisaanwijzer op de knop “⭐ Roam invullen”, houd de linkermuisknop ingedrukt, beweeg naar de bladwijzerbalk en laat los. Klikken op de knop doet hier niets.</li>
+        <li><b>Controleer:</b> in de bladwijzerbalk staat nu “Roam invullen”. Staat hij er niet, gebruik dan de uitweg hieronder.</li>
+        <li><b>Klik hieronder op “Ik heb de bladwijzer gemaakt”.</b> Dan klapt deze uitleg dicht.</li>
+      </ol>
+      <div class="rij"><a class="knop" href="${ROAM_BLADWIJZER}" draggable="true" style="font-size:1.05rem;padding:10px 18px" onclick="alert('Sleep deze knop naar uw bladwijzerbalk. Klik er niet hier op.');return false">⭐ Roam invullen</a><button class="prim" data-a="roamBwKlaar">Ik heb de bladwijzer gemaakt</button></div>
+      <details class="sub"><summary>Lukt slepen niet? Zo maakt u de bladwijzer met de hand</summary>
+        <ol class="stappen"><li>Klik op de knop “Kopieer de code”.</li><li>Klik met de rechtermuisknop op de bladwijzerbalk en kies “Pagina toevoegen” (Chrome) of “Bladwijzer toevoegen”.</li><li>Typ bij Naam: <b>Roam invullen</b>.</li><li>Plak bij URL (adres) de gekopieerde code (Ctrl + V) en kies Opslaan.</li></ol>
+        <div class="rij"><button data-a="kopie" data-v="${esc(decodeURIComponent(ROAM_BLADWIJZER))}">Kopieer de code</button></div></details>
+      <h4 style="margin:12px 0 4px">Daarna, bij elke zoekopdracht</h4>
+      <ol class="stappen"><li>Klik hierboven op <b>“Open Get-Roam met mijn zoekopdracht”</b>. Get-Roam opent in een nieuw tabblad.</li><li>Klik in dat tabblad op de bladwijzer <b>“Roam invullen”</b>. Chrome vraagt eventueel toestemming om het klembord te lezen: kies Toestaan.</li><li>Er verschijnt een melding met wat is ingevuld. Klik OK, controleer de velden en klik zelf op <b>Search</b>.</li></ol></details>
       <details class="sub"><summary>Telefoon of lukt het niet? Zo vult u het zelf in</summary>
       <table class="rtab"><thead><tr><th>Veld in Get-Roam</th><th>Waarde</th><th></th></tr></thead><tbody>${rij.map(r => `<tr><td data-l="Veld">${esc(r[0])}</td><td data-l="Waarde">${r[1] === '' ? '<span class="noot">—</span>' : '<b>' + esc(r[1]) + '</b>'}</td><td>${r[1] === '' ? '' : `<button class="klein" data-a="kopie" data-v="${esc(r[1])}">Kopieer</button>`}</td></tr>`).join('')}</tbody></table>
       <div class="rij"><button data-a="openNaast" data-u="${ROAM}" data-n="roam">Get-Roam naast deze app openen ↗</button><a class="knop" target="roam" rel="noopener" href="${ROAM}">Open Get-Roam flexible search ↗</a><button data-a="kopieOpen" data-v="${esc(alles)}" data-u="${ROAM}" data-n="roam">Kopieer alles en open Get-Roam</button><button data-a="kopie" data-v="${esc(alles)}">Kopieer alle velden</button></div></details>`;
@@ -2193,7 +2205,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 g'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 h'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
