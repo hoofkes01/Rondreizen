@@ -10,7 +10,7 @@
 
 ## Reiskosten naar de vertrekluchthaven (vanaf Best, met de auto)
 - Besluit gebruiker: voor alle vertrekpunten hetzelfde, dus geen invloed op de vlucht-vergelijking: 30 liter benzine heen en terug
-  plus 200 euro parkeren. Standaard ingevuld in intake.html (reiskosten.liters, literprijs, parkeren).
+  plus 200 euro parkeren. Standaard ingevuld bij stap 1 Vlucht (liters, prijs per liter, parkeren) in reisgids.html.
 - Literprijs is een voorstel (Euro95, week 21 september 2026, 2,45 euro volgens zoekresultaat, niet zelf geverifieerd): controleren.
 - Deze kosten komen alleen in de kostenraming in de reisgids, niet in de ranglijst van vluchten.
 - Kanttekening: Frankfurt ligt veel verder dan Amsterdam; het verschil in werkelijke rijkosten wordt bewust genegeerd.

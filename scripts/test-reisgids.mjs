@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 import { pathToFileURL } from 'node:url';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 const pdfTekst = f => { try { return execFileSync('pdftotext', ['-layout', f, '-'], { encoding: 'utf8' }); } catch { return null; } };
@@ -28,9 +28,11 @@ let fouten = 0, ok = 0;
 const check = (naam, waar, extra = '') => { if (waar) { ok++; console.log('  ok   ' + naam); } else { fouten++; console.log('  FOUT ' + naam + (extra ? ' – ' + extra : '')); } };
 const bijna = (a, b) => Math.abs(a - b) < 0.01;
 
-const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
-const ctx = await browser.newContext({ viewport: { width: 1100, height: 900 }, acceptDownloads: true });
+const browser = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+const ctx = await browser.newContext({ viewport: { width: 1100, height: 900 }, acceptDownloads: true, permissions: ['camera'] });
 const page = await ctx.newPage();
+const hosts = new Set(); page.on('request', r => { try { hosts.add(new URL(r.url()).host); } catch { } });
+await ctx.route('https://get-roam.com/**', r => r.fulfill({ body: '<p>Get-Roam</p>', contentType: 'text/html' })); await ctx.route('https://www.discovercars.com/**', r => r.fulfill({ body: '<p>DiscoverCars</p>', contentType: 'text/html' }));
 let dialoogTekst = '', promptAntwoord = 'Test';
 page.on('dialog', d => { dialoogTekst = d.message(); d.type() === 'prompt' ? d.accept(promptAntwoord) : d.accept(); });
 const bevestig = async k => { dialoogTekst = ''; await page.click(`[data-a=bevestig][data-s=${k}]`); await page.waitForTimeout(150); };
@@ -79,7 +81,7 @@ await page.evaluate(() => { __rr.T().dagen[3].tz = 'Europe/Lisbon'; });
 
 console.log('Alle tabbladen, mobiel zonder horizontaal scrollen');
 await page.setViewportSize({ width: 375, height: 800 });
-for (const t of ['start', 'reis', 'vlucht', 'auto', 'verblijf', 'gids', 'route', 'dag', 'dagboek', 'kosten', 'boek', 'data']) {
+for (const t of ['start', 'vlucht', 'auto', 'verblijf', 'gids', 'route', 'dag', 'dagboek', 'kosten', 'boek', 'data']) {
   await page.evaluate(x => { location.hash = x; }, t);
   await page.reload();
   await page.waitForTimeout(150);
@@ -132,6 +134,47 @@ const geladen = await page.evaluate(async () => { const im = document.querySelec
 check('foto staat na verversen nog in IndexedDB en wordt getoond', geladen > 0, String(geladen));
 check('onderschrift bewaard', (await page.inputValue('input[data-b$=".fotos.0.cap"]')) === 'Eerste foto');
 
+console.log('Dagboek ter plaatse: verwijderen en herstellen, verdelen over dagen, camera, actieve herinnering');
+await page.click('[data-a=fotoDel]'); await page.waitForTimeout(150);
+let ft = await page.evaluate(() => { const b = __rr.T().dagen[0].dagboek; return [b.fotos.length, b.prullenbak.length]; });
+check('foto verwijderen zet hem in de prullenbak, zonder bevestigingsvraag', ft.join() === '0,1', ft.join());
+check('verwijderde foto’s staan apart met herstel- en wisknop', /Verwijderde foto’s \(1\)/.test(await page.textContent('#app')));
+await page.click('summary:has-text("Verwijderde foto")'); await page.click('[data-a=fotoHerstel]'); await page.waitForTimeout(150);
+ft = await page.evaluate(() => { const b = __rr.T().dagen[0].dagboek; return [b.fotos.length, b.prullenbak.length, b.fotos[0].cap]; });
+check('herstellen brengt de foto terug met zijn onderschrift', ft.join() === '1,0,Eerste foto', ft.join());
+await page.setInputFiles('input[type=file][data-ch=fotoToevoegen]', png); await page.waitForFunction(() => __rr.T().dagen[0].dagboek.fotos.length === 2);
+const tweede = await page.evaluate(() => __rr.T().dagen[0].dagboek.fotos[1].id);
+await page.click('[data-a=fotoDel][data-i="1"]'); await page.waitForTimeout(150); await page.click('summary:has-text("Verwijderde foto")'); await page.click('[data-a=fotoWis]'); await page.waitForTimeout(250);
+check('definitief wissen haalt de foto ook uit de opslag van de browser', await page.evaluate(async id => { const b = __rr.T().dagen[0].dagboek; return b.prullenbak.length === 0 && !(await __rr.fotoGet(id)); }, tweede));
+const gal = await page.evaluate(async () => {
+  const c = document.createElement('canvas'); c.width = c.height = 24; c.getContext('2d').fillRect(0, 0, 24, 24);
+  const png = await new Promise(r => c.toBlob(r, 'image/png')), jpg = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', .8))).arrayBuffer());
+  const s = new TextEncoder().encode('2027:05:12 10:00:00\0');
+  const tiff = [0x49, 0x49, 0x2A, 0, 8, 0, 0, 0, 1, 0, 0x69, 0x87, 4, 0, 1, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0x03, 0x90, 2, 0, 20, 0, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0, ...s];
+  const app1 = new Uint8Array([0xFF, 0xE1, 0, 2 + 6 + tiff.length, 0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff]);
+  const metExif = new File([new Uint8Array([0xFF, 0xD8, ...app1, ...jpg.slice(2)])], 'exif.jpg', { type: 'image/jpeg', lastModified: Date.UTC(2020, 0, 1, 12) });
+  const f = (naam, jaar, mnd, dag) => new File([png], naam, { type: 'image/png', lastModified: Date.UTC(jaar, mnd, dag, 12) });
+  const r = await __rr.verdeelFotos([f('a.png', 2027, 4, 11), f('b.png', 2027, 4, 11), f('c.png', 2027, 4, 13), f('oud.png', 2020, 0, 1), metExif], 4);
+  return { r, n: __rr.T().dagen.map(d => d.dagboek.fotos.length) };
+});
+check('galerij: foto’s worden over de dagen verdeeld op opnamedatum (11 mei x2, 13 mei x1), EXIF-datum gaat voor (12 mei), zonder datum naar de gekozen dag', gal.n.join() === '1,2,1,1,1' && gal.r.n === 5 && gal.r.zonder === 1, JSON.stringify(gal));
+await page.reload(); await page.waitForSelector('[data-a=cameraOpen]');
+await page.click('[data-a=cameraOpen]');
+await page.waitForFunction(() => { const v = document.querySelector('#camV'); return v && v.videoWidth > 0; }, null, { timeout: 15000 });
+await page.click('#camKnop'); await page.waitForTimeout(400); await page.click('#camKnop'); await page.waitForFunction(() => document.querySelector('#camN').textContent === '2');
+await page.click('#camSluit'); await page.waitForTimeout(300);
+check('camera: elke foto wordt direct bewaard (2 foto’s extra bij dag 1), scherm sluit netjes', await page.evaluate(() => __rr.T().dagen[0].dagboek.fotos.length === 3 && !document.querySelector('#cam')));
+await page.evaluate(() => { localStorage.setItem('rr_herinnering_uur', '0'); const d = __rr.T().dagen[2]; window.__oud = d.datum; d.datum = new Intl.DateTimeFormat('sv-SE').format(new Date()); d.tz = ''; d.dagboek.fotos = []; __rr.opslaan(); });
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('actief vragen: banner als het dagboek van vandaag nog leeg is', /Het dagboek van vandaag \(dag 3/.test(await page.textContent('#app')) && /nog leeg/.test(await page.textContent('#app')));
+await page.click('[data-a=dagboekVandaag]');
+const kaart = await page.textContent('#app');
+check('de dagpagina stelt de dagboekvragen (hoogtepunt, wat deden jullie, eten en drinken, weer, onthouden)', (await page.textContent('#tabs .act')).includes('Onderweg') && /Dagboek van vandaag/.test(kaart) && /hoogtepunt van deze dag/.test(kaart) && /gegeten of gedronken/.test(kaart) && /Hoe was het weer/.test(kaart));
+await page.fill('#f_dagen_2_dagboek_hoogtepunt', 'Zwemmen in zee'); await page.waitForTimeout(100);
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('na een invulling verdwijnt de herinnering', !/dagboek van vandaag \(dag 3/.test(await page.textContent('#app')));
+await page.evaluate(() => { __rr.T().dagen[2].datum = window.__oud; __rr.T().dagen[2].dagboek.hoogtepunt = ''; localStorage.removeItem('rr_herinnering_uur'); __rr.opslaan(); });
+
 console.log('Reisboek, PDF en back-up');
 await page.evaluate(() => { location.hash = 'boek'; }); await page.reload();
 await page.waitForSelector('#boekUit .voorblad');
@@ -151,14 +194,14 @@ console.log('  (pdf: ' + pdf + ')');
 check('in printweergave verdwijnt de menubalk', printKop === 'none', printKop);
 console.log('Afdrukken per blad en per onderdeel van het reisboek');
 const dir = mkdtempSync(join(tmpdir(), 'rr-blad-'));
-const koppen = { start: 'Welkom', vlucht: '1 Vlucht', auto: '2 Autohuur', reis: '3 Reisgegevens', verblijf: '4 Hotels', gids: '5 Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
+const koppen = { start: 'Welkom', vlucht: '1 Vlucht', auto: '2 Autohuur', verblijf: '3 Hotels', gids: 'Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
 for (const [k, kop] of Object.entries(koppen)) {
   await page.evaluate(x => { location.hash = x; }, k); await page.reload(); await page.waitForTimeout(250);
   await page.evaluate(() => { window.__stop = __rr.bereidPrint(); });
   await page.emulateMedia({ media: 'print' }); const f = join(dir, k + '.pdf'); await page.pdf({ path: f, format: 'A4', printBackground: true }); await page.emulateMedia({ media: 'screen' });
   await page.evaluate(() => window.__stop());
   const tx = pdfTekst(f);
-  check(`blad "${k}" apart als PDF (${pdfPaginas(f)} p.)${tx ? '' : ' [geen pdftotext: tekst niet gecontroleerd]'}`, pdfPaginas(f) >= 1 && (!tx || (tx.includes(kop) && !tx.includes('Vluchtplanner') && !/Ik bevestig stap/.test(tx))), tx ? tx.slice(0, 120) : '');
+  check(`blad "${k}" apart als PDF (${pdfPaginas(f)} p.)${tx ? '' : ' [geen pdftotext: tekst niet gecontroleerd]'}`, pdfPaginas(f) >= 1 && (!tx || (tx.includes(kop) && !tx.includes('Rondreis reisgids') && !/Ik bevestig stap/.test(tx))), tx ? tx.slice(0, 120) : '');
 }
 const vt = pdfTekst(join(dir, 'vlucht.pdf'));
 if (vt) check('ingevulde velden staan als tekst in de PDF van een blad (luchthaven AMS, Lissabon)', /AMS/.test(vt) && /LIS/.test(vt) && !/<input/.test(vt));
@@ -173,9 +216,27 @@ for (const [id, wel, niet] of [['route', 'Route in één oogopslag', 'Kostenover
   check(`reisboek-onderdeel "${id}" apart als PDF`, pdfPaginas(f) >= 1 && pdfPaginas(f) <= 2 && (!tx || (tx.includes(wel) && !tx.includes(niet))), (tx || '').slice(0, 100));
 }
 check('na het afdrukken is het volledige reisboek weer zichtbaar', await page.evaluate(() => !document.querySelector('#boekUit').classList.contains('deelprint') && !document.querySelector('#printBlad')));
+console.log('Reisverslag (na afloop): dagboek en foto\u2019s tot een compleet verhaal');
+await page.evaluate(() => { __rr.T().dagen[0].dagboek.hoogtepunt = 'Zonsondergang aan de rivier'; __rr.T().dagen[0].dagboek.favorieten = 'Pastelaria in de oude stad'; __rr.opslaan(); });
+await page.evaluate(() => { location.hash = 'boek'; }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
+await page.selectOption('#f_boek_modus', 'verslag');
+await page.fill('#f_verslag_titel', 'Onze reis door Portugal'); await page.fill('#f_verslag_voorwoord', 'Dit is het verhaal van onze reis.\n\nWat een avontuur.'); await page.fill('#f_verslag_nawoord', 'Tot de volgende keer.');
+await page.selectOption('#f_verslag_omslag', { index: 1 }); await page.waitForTimeout(500);
+const vtxt = await page.textContent('#boekUit');
+for (const s of ['REISVERSLAG', 'Onze reis door Portugal', 'Voorwoord', 'Dit is het verhaal', 'De reis in cijfers', 'De route', 'Hoogtepunten en favorieten', 'Zonsondergang aan de rivier', 'Pastelaria', 'Mooie eerste dag in de stad.', 'Eerste foto', 'Wat het kostte', 'Nawoord', 'Tot de volgende keer']) check(`reisverslag bevat "${s}"`, vtxt.includes(s));
+check('reisverslag bevat geen planningsonderdelen (voorbereiding, hotelbeoordeling, bronnen)', !/Hotelbeoordeling|Voorbereiding|Bronnen, peildata/.test(vtxt));
+check('omslagfoto en dagfoto staan erin', (await page.locator('#boekUit img').count()) >= 2 && await page.evaluate(() => document.querySelector('#boekUit').classList.contains('verslag')));
+const dlV = page.waitForEvent('download'); await page.click('[data-a=boekHTML]'); const dv = readFileSync(await (await dlV).path(), 'utf8');
+check('verslag als één HTML-bestand: foto\u2019s ingebed, werkt zonder app', /REISVERSLAG/.test(dv) && /data:image\/jpeg;base64/.test(dv) && /class="boek verslag"/.test(dv) && !/<script/.test(dv));
+for (const [id, wel] of [['dag1', 'Zonsondergang'], ['voorwoord', 'Dit is het verhaal'], ['cijfers', 'De reis in cijfers']]) {
+  await page.evaluate(x => { window.__stop = __rr.kiesBoekDeel(x); }, id); await page.emulateMedia({ media: 'print' });
+  const f = join(dir, 'verslag-' + id + '.pdf'); await page.pdf({ path: f, format: 'A4', printBackground: true }); await page.emulateMedia({ media: 'screen' }); await page.evaluate(() => window.__stop());
+  const tx = pdfTekst(f); check(`verslag-onderdeel "${id}" apart als PDF`, pdfPaginas(f) >= 1 && pdfPaginas(f) <= 2 && (!tx || (tx.includes(wel) && !tx.includes('Nawoord'))), (tx || '').slice(0, 80));
+}
+await page.selectOption('#f_boek_modus', 'gids');
 const [dl] = await Promise.all([page.waitForEvent('download'), page.evaluate(() => { location.hash = 'data'; }).then(() => page.reload()).then(() => page.click('[data-a=export][data-f="1"]'))]);
 const backup = JSON.parse(readFileSync(await dl.path(), 'utf8'));
-check('back-up bevat reis en foto', Object.keys(backup.reizen).length === 1 && Object.keys(backup.fotos).length === 1);
+check('back-up bevat reis en foto', Object.keys(backup.reizen).length === 1 && Object.keys(backup.fotos).length >= 1);
 
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
@@ -188,10 +249,11 @@ check('lege reis: geen bedragen verzonnen (geen € 0-posten behalve eigen invoe
 
 console.log('Nieuwe vluchtflow: zoekopdracht, gekozen vlucht, data, auto en nachten');
 await page.click('[data-t=vlucht]');
-for (const k of ['reis', 'verblijf', 'route']) { await page.click(`[data-t=${k}]`, { force: true }); }
+for (const k of ['auto', 'verblijf', 'route']) { await page.click(`[data-t=${k}]`, { force: true }); }
 check('latere stappen zijn vergrendeld zolang stap 1 niet is bevestigd', (await page.textContent('#tabs .act')).includes('1 Vlucht') && /Bevestig eerst stap 1/.test(await page.textContent('#melding')));
-check('vergrendelde tabbladen zijn zichtbaar gemarkeerd', (await page.locator('#tabs button.slot').count()) === 5);
-await page.fill('#f_vlucht_zoekVan', 'ams, DUS, FRA, BRU'); await page.fill('#f_vlucht_zoekNaar', 'DEN, COS');
+check('vergrendelde tabbladen zijn zichtbaar gemarkeerd (2 stappen en 5 onderdelen van de reisgids)', (await page.locator('#tabs button.slot').count()) === 7);
+for (const x of ['ams', 'DUS', 'FRA', 'BRU']) { await page.fill('#in_zoekVan', x); await page.click('[data-a=luchthavenToe][data-f=zoekVan]'); }
+for (const x of ['DEN', 'COS']) { await page.fill('#in_zoekNaar', x); await page.click('[data-a=luchthavenToe][data-f=zoekNaar]'); }
 await page.fill('#f_vlucht_maandVan', '2027-03'); await page.fill('#f_vlucht_maandTot', '2027-05');
 await page.fill('#f_vlucht_dagenMin', '21'); await page.fill('#f_vlucht_dagenMax', '25');
 const roam = await page.textContent('[data-calc=roam]');
@@ -216,8 +278,9 @@ check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00
 await bevestig('vlucht');
 check('bevestigen met ontbrekende gegevens vraagt eerst toestemming en noemt wat ontbreekt', /ontbreekt nog/.test(dialoogTekst) && /prijs/.test(dialoogTekst), dialoogTekst);
 check('na uw bevestiging opent stap 2 en is stap 1 gemarkeerd', (await page.textContent('#tabs .act')).includes('2 Auto') && (await page.textContent('#tabs')).includes('✔ 1 Vlucht'));
-await page.click('[data-t=reis]', { force: true });
-check('stap 3 blijft dicht tot stap 2 is bevestigd', /Bevestig eerst stap 2/.test(await page.textContent('#melding')) && (await page.textContent('#tabs .act')).includes('2 Auto'));
+await page.click('[data-t=verblijf]', { force: true });
+check('stap 3 (Hotels) blijft dicht tot stap 2 (Auto) is bevestigd', /Bevestig eerst stap 2/.test(await page.textContent('#melding')) && (await page.textContent('#tabs .act')).includes('2 Auto'));
+check('huurperiode wordt niet gevraagd: geen invulvelden voor datum en tijd zolang u niet afwijkt', await page.evaluate(() => !document.querySelector('#f_auto_ophaalDatum') && !document.querySelector('#f_auto_inleverTijd') && !!document.querySelector('#f_auto_afwijkend')));
 const tijden = await page.textContent('[data-calc=autoTijden]');
 check('huurperiode 530,5 uur = 23 dagen van 24 uur', /23 dag\(en\)/.test(tijden), tijden.slice(0, 300));
 check('voorlopig-melding zolang de vlucht niet als geboekt staat', /nog niet als geboekt/.test(tijden));
@@ -225,6 +288,7 @@ const dc = await page.textContent('[data-calc=dcZoek]');
 check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('DEN') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
 check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
 check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
+await page.check('#f_auto_afwijkend');
 await page.fill('#f_auto_ophaalTijd', '12:00');
 await page.click('[data-t=vlucht]'); await page.fill('#f_vlucht_heenAankomst', '22:00');
 check('wijziging na bevestiging vraagt om opnieuw bevestigen', /Bevestig stap 1 opnieuw/.test(await page.textContent('[data-calc=stapbalk]')));
@@ -242,8 +306,10 @@ await page.click('[data-a=koersVlucht]'); await page.waitForTimeout(400);
 vl = await page.evaluate(() => __rr.kostenRegels(__rr.T()).find(x => x.key === 'vlucht'));
 check('600 USD p.p. met koers 1,1 voor 2 pers. = 1.090,91 EUR', vl.b !== null && Math.abs(vl.b - 600 / 1.1 * 2) < 0.01, JSON.stringify(vl));
 await page.click('[data-t=auto]');
-await bevestig('auto'); await bevestig('reis');
-check('stap 4 (Verblijf) opent pas na bevestiging van stap 2 en 3', (await page.textContent('#tabs .act')).includes('4 Verblijf'));
+await bevestig('auto');
+check('stap 3 (Hotels) opent pas na bevestiging van de auto, en de reisgids blijft nog dicht', (await page.textContent('#tabs .act')).includes('3 Hotels'));
+await page.click('[data-t=dag]', { force: true });
+check('de interactieve reisgids is nog dicht zolang de hotels niet zijn bevestigd', /Bevestig eerst stap 3 \(Hotels\)/.test(await page.textContent('#melding')) && (await page.textContent('#tabs .act')).includes('3 Hotels'));
 
 console.log('Stap 4: hotelcriteria, patroon 2/3/4 nachten, rondreisvoorstel, 3 hotels per verblijf');
 const crit = await page.evaluate(() => __rr.T().hotels.crit);
@@ -302,17 +368,24 @@ await page.check('#f_hotels_lijst_0_uitzondering');
 await page.fill(H + 'prijsA', '125'); await page.fill(H + 'prijsH', '130');
 const low = await page.evaluate(() => { const o = __rr.T().hotels.lijst[0].opties[0]; return [o.prijs, o.bron]; });
 check('laagste prijs van Booking.com (120), Agoda.com (125) en hotelwebsite (130) = 120 bij Booking.com', low.join() === '120,Booking.com', low.join());
+await page.selectOption(H + 'annulerenGratis', 'nee');
+ht = await page.evaluate(() => { const t = __rr.T(), st = t.hotels.lijst[0], x = __rr.hotelToets(t, st.opties[0], st); return x.C.find(c => c.label === 'Gratis annuleren'); });
+check('hotel dat niet gratis annuleerbaar is voldoet niet', ht.s === 'f' && /annuleerbaar/.test(ht.tekst), JSON.stringify(ht));
+await page.selectOption(H + 'annulerenGratis', 'ja'); await page.fill(H + 'annuleerTot', '2027-03-20');
 for (const [id, v] of [['bScore', '8.5'], ['gScore', '4.3'], ['bN', '100'], ['bNeg', '5'], ['gN', '100'], ['gNeg', '5'], ['afstandCentrum', '1']]) await page.fill(H + id, v);
 await page.selectOption(H + 'ontbijt', 'ja'); await page.selectOption(H + 'parkeren', 'gratis'); await page.selectOption(H + 'wifi', 'ja'); await page.selectOption(H + 'badkamer', 'eigen'); await page.selectOption(H + 'wijk', 'goed'); await page.selectOption(H + 'veilig', 'geen');
 ht = await page.evaluate(() => { const t = __rr.T(), st = t.hotels.lijst[0], x = __rr.hotelToets(t, st.opties[0], st); return { k: x.k, f: x.f, l: x.l, labels: x.C.map(c => c.label) }; });
-check('alle criteria ok (prijs, waardering, reviews, ontbijt, parkeren, wifi, badkamer, veiligheid, wijk)', ht.k === 'g' && ['Prijs', 'Laagste prijs', 'Waardering', 'Slechte reviews', 'Ontbijt', 'Parkeren', 'Wifi', 'Eigen badkamer', 'Veiligheid', 'Wijk'].every(l => ht.labels.includes(l)), JSON.stringify(ht));
+check('alle criteria ok (prijs, waardering, reviews, ontbijt, parkeren, wifi, badkamer, veiligheid, wijk)', ht.k === 'g' && ['Prijs', 'Gratis annuleren', 'Laagste prijs', 'Waardering', 'Slechte reviews', 'Ontbijt', 'Parkeren', 'Wifi', 'Eigen badkamer', 'Veiligheid', 'Wijk'].every(l => ht.labels.includes(l)), JSON.stringify(ht));
 await page.click('[data-a=bevestigHotel][data-i="0"][data-k="0"]'); await page.waitForTimeout(200);
 const bv = await page.evaluate(() => { const st = __rr.T().hotels.lijst[0]; return [st.bevestigd, st.naam, st.gekozen, st.prijs]; });
 check('hotel bevestigd: naam en prijs staan bij het verblijf', bv.join() === 'true,Hotel A,0,120', bv.join());
 const ban = await page.textContent('section.card:has(h2:has-text("Verblijf 1")) .banner');
 check('na bevestiging staat het adres op de pagina', /Adres:\s*123 Main Street/.test(ban), ban.slice(0, 200));
+check('na bevestiging staat tot wanneer gratis annuleren kan, met opdracht om opnieuw te zoeken', /Gratis annuleren:\s*tot en met/.test(ban) && /opnieuw/.test(ban), ban.slice(0, 400));
 await page.setInputFiles('input[type=file][data-ch=hotelFoto][data-i="0"][data-k="0"]', png); await page.waitForSelector('.banner img[data-foto]', { state: 'attached' }); await page.waitForTimeout(300);
 check('na bevestiging staat de foto van het hotel op de pagina', (await page.locator('.banner img[data-foto]').count()) === 1 && await page.evaluate(() => !!__rr.T().hotels.lijst[0].foto));
+await bevestig('verblijf');
+check('na bevestiging van de hotels opent de interactieve reisgids', (await page.locator('#tabs button.slot').count()) === 0 && /Alle drie de stappen/.test(await page.textContent('#melding')));
 await page.click('[data-t=dag]'); await page.waitForTimeout(300);
 const dagh = await page.textContent('#app');
 check('dagpagina toont hotel, adres en foto', /Hotel A/.test(dagh) && /123 Main Street/.test(dagh) && (await page.locator('img[data-foto]').count()) === 1);
@@ -391,6 +464,57 @@ promptAntwoord = 'Reis voor andere reiziger';
 await page.click('[data-a=nieuw]');
 check('andere reis start met de basisdekking als standaard', await page.evaluate(() => __rr.T().auto.verzekeringKeuze === 'basis'));
 
+
+console.log('Meerdere vertrek- en aankomstluchthavens kiezen');
+await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+const lhVan = async x => { await page.fill('#in_zoekVan', x); await page.click('[data-a=luchthavenToe][data-f=zoekVan]'); await page.waitForTimeout(80); };
+await lhVan('Amsterdam'); await lhVan('  bru '); await lhVan('Frankfurt');
+let van = await page.evaluate(() => __rr.T().vlucht.zoekVan);
+check('luchthavens toevoegen op plaatsnaam en code, hoofdletters en zonder spaties', van === 'AMS, BRU, FRA', van);
+await lhVan('ams'); check('dubbele luchthaven wordt niet nog eens toegevoegd', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, BRU, FRA' && /staat er al bij/.test(await page.textContent('#melding')));
+await page.fill('#in_zoekVan', 'DUS'); await page.press('#in_zoekVan', 'Enter'); await page.waitForTimeout(100);
+check('Enter voegt de luchthaven toe', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, BRU, FRA, DUS');
+check('elke gekozen luchthaven staat als eigen blokje met naam en een verwijderknop', (await page.locator('[data-a=luchthavenWeg][data-f=zoekVan]').count()) === 4 && /Amsterdam/.test(await page.textContent('#app')));
+await page.click('[data-a=luchthavenWeg][data-f=zoekVan][data-c=BRU]');
+check('luchthaven verwijderen', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, FRA, DUS');
+await lhVan('ZZZ'); check('onbekende code: toegevoegd met waarschuwing om te controleren', (await page.evaluate(() => __rr.T().vlucht.zoekVan)).endsWith('ZZZ') && /staat niet in de eigen lijst/.test(await page.textContent('#melding')));
+await page.fill('#in_zoekNaar', 'Plaats Bestaat Niet'); await page.click('[data-a=luchthavenToe][data-f=zoekNaar]');
+check('onbekende plaats: melding, niets toegevoegd', /Geen luchthaven gevonden/.test(await page.textContent('#melding')));
+await page.click('[data-a=vasteVertrek]');
+check('vaste vertrekpunten worden toegevoegd zonder de rest te wissen', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, FRA, DUS, ZZZ, BRU');
+check('zoekopdracht voor Get-Roam toont alle vertrekluchthavens', /AMS, FRA, DUS, ZZZ, BRU/.test(await page.textContent('[data-calc=roam]')));
+
+console.log('Oude intake.json direct in de app inlezen (zonder Claude)');
+const fx = join(mkdtempSync(join(tmpdir(), 'rr-intake-')), 'intake.json');
+writeFileSync(fx, JSON.stringify({ reis: { naam: 'Rondreis VS', plaats: 'Dallas', periodeVan: '2027-03-01', periodeTot: '2027-06-01', duurMin: 22, duurMax: 25, personen: 2 }, vlucht: { straal1: 500, maxUren: 15, maxOverstappen: 1, maaltijden: true, openJaw: 'nee' }, reiskosten: { liters: 30, literprijs: 2.5, parkeren: 200 }, auto: { klasse: 'intermediate', km: true, brandstof: true, verzekering: true, automaat: true, afleveren: 'zelfde' }, hotels: { prijsDoel: 100, prijsRuimte: 35, minWaardering: 8, minGoogle: 4, ontbijt: true, badkamer: true, wifi: true, parkeerHotel: true, maxKmPerVerplaatsing: 400, maxRijuren: 6 }, overig: { interesses: 'Historie, musea, casino, strand, muziek, bar (50+)', rustdag: true } }));
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+await page.setInputFiles('input[type=file][data-ch=importeer]', fx); await page.waitForTimeout(500);
+const im = await page.evaluate(() => { const t = __rr.T(); return { n: t.naam, bev: Object.keys(t.bevestigd).length, van: t.vlucht.zoekVan, naar: t.vlucht.zoekNaar, d: [t.vlucht.exactVan, t.vlucht.exactTot, t.vlucht.dagenMin, t.vlucht.dagenMax], km: [t.gids.maxKm, t.gids.maxUren], uitz: t.hotels.crit.maxUitz, ints: t.gids.interesses.join(), noot: (t.importNotities || []).join(' ') }; });
+check('app leest de intake zelf in: zoekcriteria, hotelgrenzen en interesses, geen enkele stap bevestigd', im.n === 'Rondreis VS' && im.bev === 0 && im.van === 'FRA, DUS, AMS, BRU' && /DFW/.test(im.naar) && /DAL/.test(im.naar) && im.d.join() === '2027-03-01,2027-06-01,22,25' && im.km.join() === '400,6' && im.uitz === 150 && /stad/.test(im.ints) && /musea/.test(im.ints), JSON.stringify(im));
+check('afwijking van de intake wordt gemeld (35% prijsruimte)', /35%/.test(im.noot));
+check('na het inlezen staat u in stap 1 en zijn de andere stappen en de reisgids nog dicht', (await page.textContent('#tabs .act')).includes('1 Vlucht') && (await page.locator('#tabs button.slot').count()) === 7);
+check('zoekopdracht voor Get-Roam is meteen klaar', /DFW/.test(await page.textContent('[data-calc=roam]')) && /22/.test(await page.textContent('[data-calc=roam]')));
+const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=roam] [data-a=kopieOpen]')]);
+check('één klik kopieert de zoekopdracht en opent Get-Roam', pop.url().startsWith('https://get-roam.com/flexible-search') && /Gekopieerd/.test(await page.textContent('#melding')), pop.url()); await pop.close();
+await page.click('[data-t=start]');
+check('startpagina toont de volgende stap en leidt er direct naartoe', /Volgende stap/.test(await page.textContent('#app')) && await (async () => { await page.click('.card:has(h2:has-text("Volgende stap")) [data-a=tab]'); return (await page.textContent('#tabs .act')).includes('1 Vlucht'); })());
+
+console.log('Luchthavens binnen een straal (eigen lijst in de app)');
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+const lu = await page.evaluate(() => { const r = window.__rr.luchthavensBijPlaats('Dallas', 500, 15); return { v: r.voorkeur && r.voorkeur[0], codes: r.lijst.map(x => x.code), n: window.__rr.aantalLuchthavens }; });
+check('Dallas: voorkeur DFW en binnen 500 km o.a. DAL, AUS, HOU, IAH, SAT, OKC, TUL, SHV, LIT', lu.v === 'DFW' && ['DFW', 'DAL', 'AUS', 'HOU', 'IAH', 'SAT', 'OKC', 'TUL', 'SHV', 'LIT'].every(c => lu.codes.includes(c)), JSON.stringify(lu));
+check('luchthavens ver weg (Denver, New York) staan niet in de straal van Dallas', !lu.codes.includes('DEN') && !lu.codes.includes('JFK'));
+promptAntwoord = 'Straaltest'; await page.click('[data-a=nieuw]');
+await page.click('details.sub > summary:has-text("Luchthavens in de buurt")'); await page.fill('#f_vlucht_zoekPlaats', 'Dallas'); await page.fill('#f_vlucht_straal', '500');
+check('knop voegt de aankomstluchthavens binnen de straal toe', await (async () => { await page.click('[data-a=luchthavensVullen]'); await page.waitForTimeout(200); return (await page.evaluate(() => __rr.T().vlucht.zoekNaar)).startsWith('DFW, DAL'); })());
+check('overzicht toont namen en afstanden', /Dallas Love Field/.test(await page.textContent('[data-calc=luchthavensStraal]')));
+await page.click('[data-a=vasteVertrek]');
+check('vaste vertrekpunten FRA, DUS, AMS, BRU', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'FRA, DUS, AMS, BRU');
+await page.fill('#f_vlucht_zoekPlaats', 'Plaats Bestaat Niet');
+check('onbekende plaats: duidelijke melding, geen gok', /Geen luchthaven gevonden/.test(await page.textContent('[data-calc=luchthavensStraal]')));
+check('oude Skyscanner-onderdelen zijn verdwenen en index.html verwijst door', !existsSync(join(hier, 'lib.mjs')) && !existsSync(join(hier, '..', 'intake.html')) && /reisgids\.html/.test(readFileSync(join(hier, '..', 'index.html'), 'utf8')));
+const vreemd = [...hosts].filter(h => h && !/(^|\.)open-meteo\.com$|^api\.frankfurter\.dev$/.test(h));
+check('de app maakt alleen verzoeken aan Open-Meteo en Frankfurter (op verzoek); nooit aan Claude of een server van ons', vreemd.length === 0, vreemd.join(','));
 check('geen scriptfouten in de console', consoleFouten.length === 0, consoleFouten.join(' | '));
 await browser.close();
 console.log(`\n${ok} geslaagd, ${fouten} mislukt`);
