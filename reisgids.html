@@ -121,6 +121,10 @@
   }
   td, th, .noot, .box, p, li, label, summary, .kpi { overflow-wrap:anywhere; }
   @media (max-width:640px) {
+    header.top { position:static; }
+    header.top .in { padding:6px 12px; }
+    nav.tabs { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; scrollbar-width:thin; }
+    nav.tabs button { flex:0 0 auto; white-space:nowrap; }
     .boek table { display:block; overflow-x:auto; }
     table.rtab thead { display:none; }
     table.rtab tr { display:block; border:1px solid var(--lijn); border-radius:8px; margin-bottom:8px; padding:6px; }
@@ -897,7 +901,7 @@ VIEWS.vlucht = () => {
   let h = sectie('1 Vlucht: eerst de goedkoopste vlucht vinden', `Begin altijd hier. U geeft de zoekcriteria op, zoekt in <a target="_blank" rel="noopener" href="${ROAM}">Get-Roam</a> en vult hieronder de goedkoopste uitkomst in. De data van die vlucht worden de data van de rondreis; daarna volgen de autohuur en het aantal nachten.`,
     `<div class="grid">${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}</div>${v.nodig ? '' : '<p class="noot">Zonder vlucht vult u hieronder de reisdata in.</p>'}`);
   if (!v.nodig) return h + sectie('Reisdata zonder vlucht', '', `<div class="grid">${fld('reis.vertrek', 'Eerste reisdag', 'd', { r: 1 })}${fld('reis.terug', 'Laatste reisdag', 'd', { r: 1 })}${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 0, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1 })}</div>`) + kBox('Vlucht');
-  h += sectie('Stap 1: zoekcriteria', 'Dezelfde velden als op de Get-Roam-pagina “flexible search”. De app kan ze niet automatisch in Get-Roam invullen (er is geen bekende link-opbouw); kopieer ze met de knoppen.',
+  h += sectie('Stap 1: zoekcriteria', 'Vul hieronder alles in. Onderaan opent één knop Get-Roam met uw zoekopdracht al ingevuld en gestart.',
     `<h3 style="margin-top:0">Van waar en naar waar?</h3><datalist id="lhLijst">${LUCHTHAVENS.map(l => `<option value="${l[0]} – ${esc(l[1])}">`).join('')}</datalist>
     ${lhBlok('zoekVan', 'Vertrekluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u vandaan wilt vertrekken. Get-Roam zoekt ze allemaal tegelijk.')}${lhBlok('zoekNaar', 'Aankomstluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u wilt aankomen. Typ de code (bijv. DFW) of een plaats (bijv. Dallas).')}
     <details class="sub" ${String(v.zoekPlaats || '').trim() ? 'open' : ''}><summary>Luchthavens in de buurt van een plaats toevoegen</summary><div class="grid" style="margin-top:8px">${fld('vlucht.zoekPlaats', 'Plaats of luchthaven', 't', { ph: 'bijv. Dallas' })}${fld('vlucht.straal', 'Binnen hoeveel km (hemelsbreed)', 'n', { min: 0 })}</div><div class="rij"><button data-a="luchthavensVullen">Voeg die luchthavens toe aan de aankomstluchthavens</button></div><div class="box" data-calc="luchthavensStraal"></div></details>
@@ -2126,6 +2130,7 @@ function render() {
   $('#reisKeuze').hidden = !Object.keys(DB.reizen).length;
   if (t && vergrendeld(tab) && !toegang(t, tab)) { const h = huidigeStap(t); melding(`Bevestig eerst stap ${STAPPEN.indexOf(h) + 1} (${STAPNAAM[h]}) voordat u verder gaat.`, true); tab = h; }
   $('#tabs').innerHTML = TABS.map(([k, n]) => { const stap = vergrendeld(k) && t, slot = stap && !toegang(t, k), ok = STAPPEN.includes(k) && t && stapOk(t, k); return `<button data-t="${k}" class="${k === tab ? 'act' : ''}${slot ? ' slot' : ''}${ok ? ' klaar' : ''}" ${k === tab ? 'aria-current="page"' : ''} ${slot ? 'aria-disabled="true" title="Eerst de vorige stap bevestigen"' : ''}>${slot ? '🔒 ' : ok ? '✔ ' : ''}${n}</button>`; }).join('');
+  { const act = $('#tabs button.act'); if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'center' }); }
   if (!t && tab !== 'start') tab = 'start';
   let pre = '';
   if (t && toegang(t, 'dag') && tab !== 'boek') pre += herinneringBanner(t);
@@ -2163,7 +2168,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 e'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 f'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
