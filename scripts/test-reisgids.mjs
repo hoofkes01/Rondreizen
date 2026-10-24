@@ -276,6 +276,15 @@ check('screenshot staat in het reisboek bij "boekingsnummers opnemen"', await pa
 await page.evaluate(() => { __rr.T().boek.refs = false; __rr.opslaan(); }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
 check('zonder die keuze blijft het screenshot uit het reisboek', await page.locator('#boekUit [data-sec=bewijzen]').count() === 0);
 
+console.log('Stapknoppen en openen op de juiste reisdag');
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('bevestigde stappen krijgen een groene knop met vinkje, vergrendelde niet', await page.evaluate(() => { const t = __rr.T(); const k = [...document.querySelectorAll('nav.tabs button.klaar')].length; return k === ['vlucht', 'auto', 'verblijf'].filter(x => t.bevestigd[x] && t.bevestigd[x].ok).length; }));
+const dagenInfo = await page.evaluate(() => { const t = __rr.T(); return { n: t.dagen.length, i: __rr.dagVandaag(t) }; });
+const vandaag = await page.evaluate(() => { const t = __rr.T(); const d = new Intl.DateTimeFormat('sv-SE').format(new Date()); return d; });
+await page.evaluate(() => { const t = __rr.T(); const vandaag = new Intl.DateTimeFormat('sv-SE').format(new Date()); t.dagen.forEach((d, i) => { d.tz = ''; d.datum = new Date(Date.parse(vandaag) + (i - 2) * 864e5).toISOString().slice(0, 10); }); t.bevestigd = { vlucht: { ok: true }, auto: { ok: true }, verblijf: { ok: true } }; __rr.opslaan(); location.hash = ''; });
+await page.goto(url); await page.waitForSelector('nav.tabs');
+check('reis bezig: de app opent op de dagpagina van vandaag', await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t === 'dag' && [...document.querySelectorAll('h2')].some(h => h.textContent.includes('Dag 3'))), await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t + ' ' + [...document.querySelectorAll('h2')].map(x => x.textContent).join('|').slice(0, 120)));
+
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
 promptAntwoord = 'Tweede reis';

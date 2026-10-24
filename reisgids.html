@@ -25,6 +25,8 @@
   nav.tabs { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
   nav.tabs button { padding:5px 10px; font-size:.88rem; }
   nav.tabs button.slot { opacity:.55; }
+  nav.tabs button.klaar { background:color-mix(in srgb, var(--goed) 16%, var(--card)); border-color:var(--goed); color:var(--goed); font-weight:600; }
+  nav.tabs button.klaar.act { background:var(--goed); color:#fff; }
   nav.tabs button.act { background:var(--accent); border-color:var(--accent); color:#fff; }
   h2 { font-size:1.15rem; margin:0 0 6px; }
   h3 { font-size:1rem; margin:14px 0 6px; }
@@ -2067,7 +2069,7 @@ function render() {
   $('#reisKeuze').innerHTML = Object.values(DB.reizen).map(x => `<option value="${x.id}" ${x.id === DB.actief ? 'selected' : ''}>${esc(x.naam)}</option>`).join('');
   $('#reisKeuze').hidden = !Object.keys(DB.reizen).length;
   if (t && vergrendeld(tab) && !toegang(t, tab)) { const h = huidigeStap(t); melding(`Bevestig eerst stap ${STAPPEN.indexOf(h) + 1} (${STAPNAAM[h]}) voordat u verder gaat.`, true); tab = h; }
-  $('#tabs').innerHTML = TABS.map(([k, n]) => { const stap = vergrendeld(k) && t, slot = stap && !toegang(t, k), ok = STAPPEN.includes(k) && t && stapOk(t, k); return `<button data-t="${k}" class="${k === tab ? 'act' : ''}${slot ? ' slot' : ''}" ${k === tab ? 'aria-current="page"' : ''} ${slot ? 'aria-disabled="true" title="Eerst de vorige stap bevestigen"' : ''}>${slot ? '🔒 ' : ok ? '✔ ' : ''}${n}</button>`; }).join('');
+  $('#tabs').innerHTML = TABS.map(([k, n]) => { const stap = vergrendeld(k) && t, slot = stap && !toegang(t, k), ok = STAPPEN.includes(k) && t && stapOk(t, k); return `<button data-t="${k}" class="${k === tab ? 'act' : ''}${slot ? ' slot' : ''}${ok ? ' klaar' : ''}" ${k === tab ? 'aria-current="page"' : ''} ${slot ? 'aria-disabled="true" title="Eerst de vorige stap bevestigen"' : ''}>${slot ? '🔒 ' : ok ? '✔ ' : ''}${n}</button>`; }).join('');
   if (!t && tab !== 'start') tab = 'start';
   let pre = '';
   if (t && toegang(t, 'dag') && tab !== 'boek') pre += herinneringBanner(t);
@@ -2103,6 +2105,7 @@ function demoReis() {
 /* ====================== Start ====================== */
 laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
+{ const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
 window.__rr = { fotoGet, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
