@@ -1988,13 +1988,16 @@ function roamVuller() {
   })();
 }
 const ROAM_BLADWIJZER = 'javascript:' + encodeURIComponent('(' + roamVuller.toString() + ')()');
-A.roamKopieer = async () => {
+A.roamKopieer = () => {
   const z = roamZoek(T()), veld = roamFormulier(z);
   if (!z.van.length || !z.naar.length || !z.vroegste || !z.laatste || z.dagenMin == null || z.dagenMax == null) return melding('Vul eerst vertrek- en aankomstluchthavens, de periode van de heenvlucht en het verblijf of de terugperiode in.', true);
   const tekst = 'ROAM:' + JSON.stringify(veld);
-  try { await navigator.clipboard.writeText(tekst); } catch { const a = document.createElement('textarea'); a.value = tekst; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch { } a.remove(); }
-  window.open(ROAM, 'roam', 'noopener');
-  melding('Zoekopdracht gekopieerd en Get-Roam geopend. Klik daar op uw bladwijzer “Roam invullen”.');
+  /* alles binnen dezelfde tik (geen await ervoor): anders blokkeert de telefoon het nieuwe tabblad */
+  const w = window.open(ROAM, '_blank');
+  const reserve = () => { const a = document.createElement('textarea'); a.value = tekst; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch { } a.remove(); };
+  try { navigator.clipboard.writeText(tekst).catch(reserve); } catch { reserve(); }
+  if (!w) return melding('Het tabblad van Get-Roam werd geblokkeerd. De zoekopdracht is wel gekopieerd: open Get-Roam zelf via de knop hieronder en tik op de bladwijzer “Roam invullen”.', true);
+  melding('Zoekopdracht gekopieerd en Get-Roam geopend. Tik daar op uw bladwijzer “Roam invullen”.');
 };
 A.roamBwKlaar = () => { try { localStorage.setItem('rr_roam_bw', '1'); } catch { } rerender(); };
 A.kopieOpen = async b => { window.open(b.dataset.u, b.dataset.n || '_blank', 'noopener'); await A.kopie(b); };
@@ -2280,7 +2283,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 q'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 r'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
