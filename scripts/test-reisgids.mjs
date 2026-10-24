@@ -223,7 +223,7 @@ await page.selectOption('#f_boek_modus', 'verslag');
 await page.fill('#f_verslag_titel', 'Onze reis door Portugal'); await page.fill('#f_verslag_voorwoord', 'Dit is het verhaal van onze reis.\n\nWat een avontuur.'); await page.fill('#f_verslag_nawoord', 'Tot de volgende keer.');
 await page.selectOption('#f_verslag_omslag', { index: 1 }); await page.waitForTimeout(500);
 const vtxt = await page.textContent('#boekUit');
-for (const s of ['REISVERSLAG', 'Onze reis door Portugal', 'Voorwoord', 'Dit is het verhaal', 'De reis in cijfers', 'De route', 'Hoogtepunten en favorieten', 'Zonsondergang aan de rivier', 'Pastelaria', 'Mooie eerste dag in de stad.', 'Eerste foto', 'Wat het kostte', 'Nawoord', 'Tot de volgende keer']) check(`reisverslag bevat "${s}"`, vtxt.includes(s));
+for (const s of ['REISVERSLAG', 'Onze reis door Portugal', 'Voorwoord', 'Dit is het verhaal', 'De reis in cijfers', 'De route', 'Inhoud', 'Hoogtepunten', 'Bezocht en favorieten', 'Over dit boek', 'Zonsondergang aan de rivier', 'Pastelaria', 'Mooie eerste dag in de stad.', 'Eerste foto', 'Wat het kostte', 'Nawoord', 'Tot de volgende keer']) check(`reisverslag bevat "${s}"`, vtxt.includes(s));
 check('reisverslag bevat geen planningsonderdelen (voorbereiding, hotelbeoordeling, bronnen)', !/Hotelbeoordeling|Voorbereiding|Bronnen, peildata/.test(vtxt));
 check('omslagfoto en dagfoto staan erin', (await page.locator('#boekUit img').count()) >= 2 && await page.evaluate(() => document.querySelector('#boekUit').classList.contains('verslag')));
 const dlV = page.waitForEvent('download'); await page.click('[data-a=boekHTML]'); const dv = readFileSync(await (await dlV).path(), 'utf8');
@@ -237,6 +237,25 @@ await page.selectOption('#f_boek_modus', 'gids');
 const [dl] = await Promise.all([page.waitForEvent('download'), page.evaluate(() => { location.hash = 'data'; }).then(() => page.reload()).then(() => page.click('[data-a=export][data-f="1"]'))]);
 const backup = JSON.parse(readFileSync(await dl.path(), 'utf8'));
 check('back-up bevat reis en foto', Object.keys(backup.reizen).length === 1 && Object.keys(backup.fotos).length >= 1);
+
+console.log('Knop "Maak reisverslag" en vluchtgegevens plakken');
+await page.evaluate(() => { __rr.T().boek.modus = 'gids'; __rr.opslaan(); location.hash = 'dagboek'; }); await page.reload();
+check('dagboek heeft de knop "Maak reisverslag"', await page.locator('[data-a=maakVerslag]').count() >= 1);
+await page.locator('[data-a=maakVerslag]').first().click(); await page.waitForSelector('#boekUit .omslag');
+check('knop opent het reisverslag', await page.evaluate(() => __rr.T().boek.modus === 'verslag' && location.hash === '#boek'));
+check('verslag heeft inhoudsopgave met links naar de onderdelen', await page.locator('#boekUit .toc a[href^="#s-"]').count() >= 5 && await page.locator('#s-route').count() === 1);
+const pl = await page.evaluate(() => { const r = __rr.leesVlucht('KLM KL 1234 FRA 08:15 -> DFW 11:40  Fri 12 Mar 2027\nReturn 02 Apr 2027 DFW 16:20 -> FRA 07:45 +1 KL 1235  1 stop  €1.234 per person https://get-roam.com/x', '2027-03-01'); return r; });
+const pv = pl.velden;
+check('plakken: luchthavens, data, tijden en nummers herkend', pv.van === 'FRA' && pv.naar === 'DFW' && pv.heenDatum === '2027-03-12' && pv.terugDatum === '2027-04-02' && pv.heenVertrek === '08:15' && pv.terugAankomst === '07:45' && pv.heenNr === 'KL 1234' && pv.terugNr === 'KL 1235', JSON.stringify(pv));
+check('plakken: prijs, valuta, per persoon en maatschappij herkend', pv.prijs === 1234 && pv.prijsValuta === 'EUR' && pv.prijsPer === 'pp' && pv.maatschappij === 'KLM', JSON.stringify(pv));
+const pl2 = await page.evaluate(() => __rr.leesVlucht('Prijs 2,345 USD, 12 maart', '2027-03-01').velden);
+check('plakken: bedrag met duizendtal, datum zonder jaar gebruikt zoekjaar; niet-herkende velden blijven leeg', pl2.prijs === 2345 && pl2.prijsValuta === 'USD' && pl2.heenDatum === '2027-03-12' && !pl2.prijsPer && !pl2.van);
+check('plakken: lege tekst vult niets behalve de bron', JSON.stringify(await page.evaluate(() => Object.keys(__rr.leesVlucht('hallo', '').velden))) === '["bron"]');
+await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+await page.fill('#plakVlucht', 'AMS DFW 12 Mar 2027 10:00 18:00 Return 02 Apr 2027 12:00 06:00 $1,500 total'); await page.click('[data-a=plakLees]');
+check('plakken: voorbeeld toont wat is gevonden voordat er iets wordt ingevuld', (await page.locator('[data-a=plakNeem]').count()) === 1 && !(await page.evaluate(() => __rr.T().vlucht.heenDatum === '2027-03-12')));
+await page.evaluate(() => { window.__bevVoor = JSON.stringify(__rr.T().bevestigd); }); await page.click('[data-a=plakNeem]');
+{ const dbg = await page.evaluate(() => JSON.stringify([__rr.T().vlucht, __rr.T().bevestigd])); check('plakken: Neem over vult stap 2, bevestigt niets', await page.evaluate(() => { const v = __rr.T().vlucht; return v.van === 'AMS' && v.naar === 'DFW' && v.heenDatum === '2027-03-12' && v.prijs === 1500 && v.prijsPer === 'totaal' && JSON.stringify(__rr.T().bevestigd) === window.__bevVoor; }), dbg.slice(0, 300)); }
 
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();

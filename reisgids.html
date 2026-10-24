@@ -89,7 +89,13 @@
   .boek .fg3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .boek.verslag p { font-size:1.02em; line-height:1.65; }
   .boek.verslag figure img { max-height:88mm; border-radius:4px; }
-  .boek.verslag .omslag { padding:10px 0 24px; }
+  .boek.verslag .omslag { padding:10px 0 24px; text-align:center; }
+  .boek.verslag h2 { border-bottom:2px solid #333; padding-bottom:4px; font-family:Georgia,serif; }
+  .boek.verslag .toc { columns:2; line-height:1.9; }
+  .boek.verslag .toc a { color:inherit; text-decoration:none; }
+  .boek .hotelkaart { display:flex; gap:12px; align-items:flex-start; }
+  .boek .hotelkaart img { width:150px; max-height:100px; object-fit:cover; border-radius:4px; }
+  .verslagkaart { border-left:4px solid var(--prim,#2563eb); }
   #printBlad { display:none; }
   .pv { white-space:pre-wrap; border-bottom:1px dotted #999; display:inline-block; min-width:2ch; }
   .boek.deelprint > [data-sec]:not(.kies) { display:none !important; }
@@ -864,6 +870,7 @@ VIEWS.start = () => {
     </div></section>`;
   if (t.importNotities && t.importNotities.length) h += `<section class="card"><h2>Opmerkingen bij het inlezen van uw intake</h2><ul>${t.importNotities.map(x => `<li>${esc(x)}</li>`).join('')}</ul><div class="rij"><button class="klein" data-a="notitiesWeg">Gelezen, verberg</button></div></section>`;
   { const hs = huidigeStap(t), ia = STAPPEN.indexOf(hs), alles = STAPPEN.every(x => stapOk(t, x)); h += `<section class="card"><h2>Volgende stap</h2><p>${alles ? 'Alle planningsstappen zijn door u bevestigd. U kunt nu onderweg de dagpagina’s en het dagboek gebruiken.' : `Stap ${ia + 1} van ${STAPPEN.length}: <b>${esc(STAPNAAM[hs])}</b>. De app vraagt alleen wat nog ontbreekt.`}</p><div class="rij"><button class="prim" data-a="tab" data-t="${alles ? 'dag' : hs}">${alles ? 'Naar onderweg' : 'Ga verder met stap ' + (ia + 1)} →</button></div></section>`; }
+  if (t.dagen.length && STAPPEN.every(x => stapOk(t, x))) { const laatste = t.dagen[t.dagen.length - 1].datum; h += verslagKnop(t, okD(laatste) && vandaagIn() > laatste); }
   h += `<section class="card"><h2>Voortgang intake</h2><table class="rtab"><thead><tr><th>Onderdeel</th><th>Ingevuld</th><th>Nog te doen</th><th></th></tr></thead><tbody>` +
     S.map(s => { const tabNaam = CHKTAB[s.naam], bev = STAPCHK[tabNaam] ? stapOk(t, tabNaam) : null; return `<tr><td data-l="Onderdeel"><b>${s.naam}</b></td><td data-l="Ingevuld">${s.klaar}/${s.totaal} ${badge(s.ontbreekt.length ? 'l' : 'g', s.ontbreekt.length ? 'onvolledig' : 'compleet')} ${bev === null ? '' : badge(bev ? 'g' : 'n', bev ? 'door u bevestigd' : 'nog te bevestigen')}</td><td data-l="Nog te doen" class="noot">${s.ontbreekt.length ? 'Ontbreekt: ' + s.ontbreekt.map(esc).join(', ') + '. Dit onderdeel is daardoor minder nauwkeurig.' : '—'}</td><td><button class="klein" data-a="tab" data-t="${tabNaam}">Open</button></td></tr>`; }).join('') + `</tbody></table></section>`;
   h += `<section class="card"><h2>Aandachtspunten</h2>${W.length ? W.map(([k, m]) => `<div class="banner ${k === 'fout' ? 'fout' : ''}">${esc(m)}</div>`).join('') : '<p class="noot">Geen aandachtspunten gevonden op basis van de ingevulde gegevens. Dat is geen garantie: controleer weer, wegen en officiële waarschuwingen zelf.</p>'}</section>`;
@@ -893,6 +900,8 @@ VIEWS.vlucht = () => {
       ${fld('vlucht.maxStops', 'Maximaal aantal overstappen per richting', 's', { opts: [['', 'geen voorkeur'], ['0', 'alleen rechtstreeks'], ['1', 'max. 1'], ['2', 'max. 2']] })}${fld('vlucht.maxUren', 'Maximale vliegtijd (uren)', 'n', { min: 0 })}${fld('vlucht.maxPrijsUsd', 'Maximumprijs (in $, zoals Get-Roam vraagt)', 'n', { min: 0 })}
       ${fld('vlucht.bagage', 'Bagage-eis', 't', { h: 'Get-Roam kan hier niet op filteren: controleer dit bij de boeking.' })}
     </div><div class="box" data-calc="roam"></div>`);
+  h += sectie('Stap 2a (sneller): plak de vluchtgegevens uit Get-Roam', 'Kopieer op de Get-Roam-pagina de tekst van de vlucht die u wilt (selecteren, kopiëren) en plak die hier. De app zoekt luchthavens, data, tijden, prijs en vluchtnummers en laat eerst zien wat ze heeft gevonden. Pas na “Neem over” worden de velden van stap 2 gevuld; controleer ze daarna. De lezer is niet getest op echte Get-Roam-tekst: wat niet herkend wordt, vult u zelf in.',
+    `<textarea id="plakVlucht" rows="6" placeholder="Plak hier de tekst van de vlucht">${esc(plak.tekst)}</textarea><div class="rij"><button data-a="plakLees">Lees de tekst</button>${plak.res ? '<button class="prim" data-a="plakNeem">Neem over in stap 2</button>' : ''}</div>${plak.res ? plakVoorbeeld(plak.res) : ''}`);
   h += sectie('Stap 2: goedkoopste vlucht uit Get-Roam invullen', 'Vul de gekozen vlucht in. Tijden zijn de lokale tijd van de luchthaven. Alleen wat u hier invult wordt gebruikt; de app haalt geen vluchtprijzen op.',
     `<div class="grid">
       ${fld('vlucht.maatschappij', 'Maatschappij', 't')}${fld('vlucht.stops', 'Overstappen (heen / terug)', 't', { ph: 'bijv. 1 / 0' })}
@@ -1159,6 +1168,7 @@ VIEWS.dag = () => {
     <p class="noot">Officiële waarschuwingen en radar: <a target="_blank" rel="noopener" href="${OFF.wmo}">WMO-waarschuwingen wereldwijd</a> · <a target="_blank" rel="noopener" href="${OFF.meteoalarm}">MeteoAlarm (Europa)</a> · <a target="_blank" rel="noopener" href="${OFF.nws}">National Weather Service (VS)</a>. Deze app geeft zelf geen officiële waarschuwingen; schakel noodmeldingen op uw telefoon in.</p></section>`;
   h += `<section class="card"><h2>Snelkoppelingen</h2><div class="rij" style="margin-top:0"><a class="knop" target="_blank" rel="noopener" href="${esc(mapsRoute(van, dest))}">Route naar bestemming</a><a class="knop" target="_blank" rel="noopener" href="${esc(mapsZoek('restaurant near ' + dest))}">Restaurants</a><a class="knop" target="_blank" rel="noopener" href="${esc(mapsZoek('supermarket near ' + dest))}">Supermarkt</a><a class="knop" target="_blank" rel="noopener" href="${esc(mapsZoek('bar near ' + dest))}">Café/bar</a>${hotel && hotel.link ? `<a class="knop" target="_blank" rel="noopener" href="${esc(hotel.link)}">Hotel boeking</a>` : ''}</div>
     ${d.links.map((l, k) => `<div class="grid" style="margin-top:8px">${fld(p + '.links.' + k + '.t', 'Naam', 't')}${fld(p + '.links.' + k + '.u', 'Link (bijv. verkeersinfo/511 van de regio)', 'u')}<div><button class="klein gevaar" data-a="del" data-p="${p}.links" data-i="${k}">✕</button> ${l.u ? `<a target="_blank" rel="noopener" href="${esc(l.u)}">open</a>` : ''}</div></div>`).join('')}<div class="rij"><button class="klein" data-a="add" data-p="${p}.links" data-n="link">+ Eigen link</button></div></section>`;
+  if (i === t.dagen.length - 1 && toegang(t, 'gids')) h += verslagKnop(t, true);
   h += `<section class="card"><h2>Afvinklijst</h2>${d.check.map((c, k) => `<div class="vink"><input type="checkbox" id="c${k}" data-b="${p}.check.${k}.ok" ${c.ok ? 'checked' : ''}><div><label for="c${k}">${esc(c.t)}</label></div></div>`).join('')}<div style="margin-top:10px">${fld(p + '.notitie', 'Eigen notities', 'a', { rows: 3 })}</div></section>`;
   return h;
 };
@@ -1185,6 +1195,7 @@ VIEWS.dagboek = () => {
     ${fld(p + '.weerHand', 'Weer – eigen beschrijving (wordt als handmatig getoond)', 't', { w: 1 })}</div>
     <h3>Weer van deze dag</h3>${weerHTML(d)}<div class="rij"><button data-a="weer" data-i="${i}">Weer ophalen</button></div>
     <h3>Foto’s</h3>${fotoBlok(i)}</section>`;
+  h += verslagKnop(t, i === t.dagen.length - 1);
   return h;
 };
 
@@ -1216,6 +1227,60 @@ function dagBudget(t, d) {
   return { act: an ? act : null, onb, eten, ov, tot: (an ? act : 0) + (eten || 0) + (ov || 0) };
 }
 
+/* ====================== Vluchtgegevens plakken ====================== */
+const plak = { tekst: '', res: null };
+const MAANDEN = { jan: 1, januari: 1, january: 1, feb: 2, februari: 2, february: 2, mar: 3, mrt: 3, maart: 3, march: 3, apr: 4, april: 4, mei: 5, may: 5, jun: 6, juni: 6, june: 6, jul: 7, juli: 7, july: 7, aug: 8, augustus: 8, august: 8, sep: 9, sept: 9, september: 9, okt: 10, oct: 10, oktober: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12 };
+const MAATSCHAPPIJEN = ['Lufthansa', 'KLM', 'Delta', 'United', 'American Airlines', 'Condor', 'Brussels Airlines', 'Air France', 'British Airways', 'Emirates', 'Qatar Airways', 'Turkish Airlines', 'Iberia', 'Air Canada', 'Eurowings', 'Edelweiss', 'Swiss', 'Austrian', 'TAP', 'ITA Airways', 'SAS', 'Finnair', 'Icelandair', 'Virgin Atlantic', 'JetBlue', 'Alaska Airlines', 'Southwest', 'Norse', 'Play', 'Aer Lingus', 'LOT', 'Etihad', 'Singapore Airlines', 'Cathay Pacific'];
+function leesBedrag(x) {
+  x = x.replace(/\s/g, ''); const p = x.lastIndexOf('.'), k = x.lastIndexOf(',');
+  if (p >= 0 && k >= 0) x = p > k ? x.replace(/,/g, '') : x.replace(/\./g, '').replace(',', '.');
+  else if (k >= 0) x = /,\d{3}$/.test(x) ? x.replace(/,/g, '') : x.replace(',', '.');
+  else if (p >= 0 && /\.\d{3}$/.test(x)) x = x.replace(/\./g, '');
+  const n = parseFloat(x); return isNaN(n) ? null : Math.round(n);
+}
+function leesVlucht(tekst, ref) {
+  const out = {}, nota = [], jr = (ref && /^\d{4}/.test(ref)) ? +ref.slice(0, 4) : null;
+  const pad = n => String(n).padStart(2, '0'), ymd = (y, m, d) => (m >= 1 && m <= 12 && d >= 1 && d <= 31) ? `${y}-${pad(m)}-${pad(d)}` : null;
+  /* luchthavencodes in volgorde van voorkomen */
+  const codes = []; for (const m of tekst.matchAll(/\b([A-Z]{3})\b/g)) if (LUCHTHAVENS.some(l => l[0] === m[1]) && !codes.includes(m[1])) codes.push(m[1]);
+  if (codes[0]) out.van = codes[0]; if (codes[1]) out.naar = codes[1];
+  if (codes.length > 2) nota.push('Meer dan twee luchthavencodes gevonden (' + codes.join(', ') + '); de eerste twee zijn gebruikt.');
+  /* datums */
+  const dat = [];
+  const voeg = (idx, d) => { if (d) dat.push([idx, d]); };
+  for (const m of tekst.matchAll(/\b(\d{4})-(\d{2})-(\d{2})\b/g)) voeg(m.index, ymd(+m[1], +m[2], +m[3]));
+  for (const m of tekst.matchAll(/\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})\b/g)) voeg(m.index, ymd(+m[3], +m[2], +m[1]));
+  for (const m of tekst.matchAll(/\b(\d{1,2})\s+([A-Za-z]{3,9})\.?,?(?:\s+(\d{4}))?/g)) { const mm = MAANDEN[m[2].toLowerCase()]; if (mm) { const y = m[3] ? +m[3] : jr; if (y) voeg(m.index, ymd(y, mm, +m[1])); else nota.push('Datum zonder jaartal genegeerd: ' + m[0].trim()); } }
+  for (const m of tekst.matchAll(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?(?:\s+(\d{4}))?\b/g)) { const mm = MAANDEN[m[1].toLowerCase()]; if (mm && !/^\d{1,2}\s/.test(tekst.slice(m.index - 3, m.index + 3))) { const y = m[3] ? +m[3] : jr; if (y) voeg(m.index, ymd(y, mm, +m[2])); else nota.push('Datum zonder jaartal genegeerd: ' + m[0].trim()); } }
+  dat.sort((a, b) => a[0] - b[0]); const dd = []; dat.forEach(([, d]) => { if (!dd.includes(d)) dd.push(d); });
+  if (dd[0]) out.heenDatum = dd[0]; if (dd[1]) out.terugDatum = dd[1];
+  if (dd.length > 2) nota.push('Meer dan twee datums gevonden; de eerste twee zijn gebruikt.');
+  /* tijden */
+  const tijden = []; for (const m of tekst.matchAll(/\b(\d{1,2}):([0-5]\d)\s?([AaPp][Mm])?/g)) { let u = +m[1]; if (m[3]) { const pm = /p/i.test(m[3]); if (u === 12) u = pm ? 12 : 0; else if (pm) u += 12; } if (u <= 23) tijden.push(pad(u) + ':' + m[2]); }
+  const tk = ['heenVertrek', 'heenAankomst', 'terugVertrek', 'terugAankomst']; tijden.slice(0, 4).forEach((x, i) => out[tk[i]] = x);
+  if (tijden.length && tijden.length < 4) nota.push(`Slechts ${tijden.length} tijd(en) gevonden; de rest vult u zelf in.`);
+  /* prijs */
+  const pm = tekst.match(/(€|\$|£|EUR|USD|GBP|CHF|CAD|AUD)\s?(\d[\d.,]*)/) || (() => { const m = tekst.match(/(\d[\d.,]*)\s?(€|\$|£|EUR|USD|GBP|CHF|CAD|AUD)\b/); return m ? [m[0], m[2], m[1]] : null; })();
+  if (pm) { const b = leesBedrag(pm[2]); if (b != null) { out.prijs = b; out.prijsValuta = { '€': 'EUR', '$': 'USD', '£': 'GBP' }[pm[1]] || pm[1]; } }
+  if (/per\s+(person|persoon|passenger|passagier)|p\.?\s?p\.?\b|pp\b/i.test(tekst)) out.prijsPer = 'pp'; else if (/\b(total|totaal|for\s+\d\s+(adults|passengers|travell?ers))/i.test(tekst)) out.prijsPer = 'totaal';
+  if (out.prijs != null && !out.prijsPer) nota.push('Niet te zien of de prijs per persoon of voor de groep is: kies dit zelf.');
+  /* vluchtnummers */
+  const nrs = []; for (const m of tekst.matchAll(/\b([A-Z][A-Z0-9]|[A-Z0-9][A-Z])\s?(\d{2,4})\b/g)) if (!/^\d\d$/.test(m[1])) nrs.push(m[1] + ' ' + m[2]);
+  if (nrs[0]) out.heenNr = nrs[0]; if (nrs[1]) out.terugNr = nrs[1];
+  /* overstappen, maatschappij, link */
+  const st = [...tekst.matchAll(/(\d)\s*(?:stops?|overstap(?:pen)?)/gi)].map(m => m[1]); const nonstop = /non-?stop|direct|rechtstreeks/i.test(tekst);
+  if (st.length >= 2) out.stops = st[0] + ' / ' + st[1]; else if (st.length === 1) out.stops = st[0]; else if (nonstop) out.stops = '0 / 0';
+  const ms = MAATSCHAPPIJEN.filter(x => new RegExp('\\b' + x.replace(/ /g, '\\s') + '\\b', 'i').test(tekst)); if (ms.length) out.maatschappij = ms.join(' / ');
+  const url = tekst.match(/https?:\/\/[^\s)]+/); if (url) out.link = url[0];
+  out.bron = 'Get-Roam (geplakt)';
+  return { velden: out, nota };
+}
+const PLAKNAMEN = { maatschappij: 'Maatschappij', stops: 'Overstappen', van: 'Vertrekluchthaven', naar: 'Aankomstluchthaven', heenDatum: 'Heen: datum', heenVertrek: 'Heen: vertrektijd', heenAankomst: 'Heen: aankomsttijd', heenNr: 'Vluchtnummer heen', terugDatum: 'Terug: datum', terugVertrek: 'Terug: vertrektijd', terugAankomst: 'Terug: aankomsttijd', terugNr: 'Vluchtnummer terug', prijs: 'Prijs', prijsValuta: 'Valuta', prijsPer: 'Per persoon of groep', link: 'Link', bron: 'Bron' };
+function plakVoorbeeld(res) {
+  const k = Object.keys(PLAKNAMEN), g = k.filter(x => res.velden[x] != null && res.velden[x] !== ''), n = k.filter(x => !g.includes(x));
+  return `<div class="box"><b>Gevonden (${g.length}):</b><table class="rtab"><tbody>${g.map(x => `<tr><td>${PLAKNAMEN[x]}</td><td>${esc(x.endsWith('Datum') ? dFmt(res.velden[x]) : x === 'prijsPer' ? (res.velden[x] === 'pp' ? 'per persoon' : 'voor de hele groep') : res.velden[x])}</td></tr>`).join('') || '<tr><td>Niets herkend. Vul stap 2 zelf in.</td></tr>'}</tbody></table>${n.length ? `<p class="noot">Niet gevonden: ${n.map(x => PLAKNAMEN[x]).join(', ')}.</p>` : ''}${res.nota.map(x => `<div class="banner">${esc(x)}</div>`).join('')}</div>`;
+}
+
 /* ====================== Reisboek ====================== */
 VIEWS.boek = () => {
   const t = T(), o = t.boek, vs = o.modus === 'verslag';
@@ -1230,42 +1295,74 @@ VIEWS.boek = () => {
     <div class="rij"><label for="boekDeel" style="margin:0">Onderdeel:</label><select id="boekDeel" style="width:auto"><option value="alles">Alles</option></select><button class="prim" data-a="printDeel">Afdrukken / opslaan als PDF</button></div>
     <div class="rij"><button data-a="print">Alles afdrukken</button><button data-a="boekHTML">Download als één HTML-bestand (met foto’s)</button></div></section><div id="boekUit" class="boek${vs ? ' verslag' : ''}"><p class="noot">Wordt samengesteld…</p></div>`;
 };
+function verslagKnop(t, nadruk) {
+  const d = t.dagen, n = d.length, leeg = d.filter(x => !(x.dagboek.tekst || x.dagboek.werkelijk || x.dagboek.hoogtepunt || x.dagboek.fotos.length)).length;
+  return `<section class="card verslagkaart noprint"><h2>${nadruk ? 'De reis is voorbij: maak het reisverslag' : 'Reisverslag maken'}</h2><p class="noot">Maakt een compleet naslagwerk van de reis: voorwoord, route, hoogtepunten, waar u sliep (met foto), elke dag met dagboek en foto’s, lokale informatie en tips, kosten en nawoord. Daarna slaat u het op als PDF.${n ? ` Nu zijn ${n - leeg} van de ${n} dagen met dagboek of foto’s gevuld.` : ''}</p><div class="rij"><button class="prim" data-a="maakVerslag">Maak reisverslag</button></div></section>`;
+}
 function verslagHTML(t, src) {
-  const r = t.reis, v = t.verslag, R = kostenRegels(t), ks = kostenSom(R), pers = personen(t), nu = new Date(), plaatsen = [...new Set(t.dagen.map(d => d.plaats).filter(Boolean))];
+  const r = t.reis, v = t.verslag, vl = t.vlucht, R = kostenRegels(t), ks = kostenSom(R), pers = personen(t), nu = new Date(), plaatsen = [...new Set(t.dagen.map(d => d.plaats).filter(Boolean))];
   const werk = Object.values(t.werkelijk).map(num).filter(x => x != null), fotoTel = sum(t.dagen.map(d => d.dagboek.fotos.length));
   const par = x => '<p>' + esc(x).replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
   const tbl = (kop, rijen, kl = []) => `<table><thead><tr>${kop.map((k, i) => `<th class="${kl[i] || ''}">${k}</th>`).join('')}</tr></thead><tbody>${rijen.map(rw => `<tr>${rw.map((c, i) => `<td class="${kl[i] || ''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const TL = { aankomst: 'Aankomstdag', rijdag: 'Rijdag', verblijfsdag: 'Verblijfsdag', vertrek: 'Vertrekdag' };
   const weer = d => d.weer ? `${d.weer.tmin != null ? NF.format(d.weer.tmin) : '—'} tot ${d.weer.tmax != null ? NF.format(d.weer.tmax) : '—'} °C${d.weer.regen != null ? ', ' + NF1.format(d.weer.regen) + ' mm neerslag' : ''} (${esc(d.weer.label)})` : '';
-  const cov = src[v.omslag];
-  let h = `<div class="voorblad omslag" data-sec="voorblad" data-naam="Omslag">${cov ? `<img src="${cov}" alt="" style="width:100%;max-height:125mm;object-fit:cover;border-radius:6px;margin-bottom:18px">` : ''}<div class="meta">REISVERSLAG</div><h1>${esc(v.titel || t.naam)}</h1><p style="font-size:1.1rem">${dFmt(r.vertrek)} – ${dFmt(r.terug)}</p><p>${plaatsen.map(esc).join(' → ') || ''}</p><p class="bron">Samengesteld op ${esc(nu.toLocaleString('nl-NL'))}</p></div>`;
-  if (v.voorwoord) h += `<div class="bsec" data-sec="voorwoord" data-naam="Voorwoord"><h2>Voorwoord</h2>${par(v.voorwoord)}</div>`;
+  const cov = src[v.omslag], toc = [];
+  const sec = (id, naam, inhoud, kl = 'bsec') => { toc.push([id, naam]); return `<div class="${kl}" id="s-${id}" data-sec="${id}" data-naam="${esc(naam)}"><h2>${esc(naam)}</h2>${inhoud}</div>`; };
+  const tijd = (dat, tm) => [dat ? dFmt(dat) : '', tm].filter(Boolean).join(' ');
+  let h = `<div class="voorblad omslag" data-sec="voorblad" data-naam="Omslag">${cov ? `<img src="${cov}" alt="" style="width:100%;max-height:125mm;object-fit:cover;border-radius:6px;margin-bottom:18px">` : ''}<div class="meta">REISVERSLAG EN NASLAGWERK</div><h1>${esc(v.titel || t.naam)}</h1><p style="font-size:1.1rem">${dFmt(r.vertrek)} – ${dFmt(r.terug)}</p><p>${plaatsen.map(esc).join(' → ') || ''}</p><p class="bron">Samengesteld op ${esc(nu.toLocaleString('nl-NL'))}</p></div>`;
+  let delen = '';
+  if (v.voorwoord) delen += sec('voorwoord', 'Voorwoord', par(v.voorwoord));
   const cijfers = [['dagen', duurDagen(t) ?? '—'], ['nachten', t.dagen.length ? t.dagen.filter(d => d.type !== 'vertrek').length : '—'], ['plaatsen', plaatsen.length || '—'], ['afstand (route)', totaalKm(t) ? NF.format(totaalKm(t)) + ' km' : '—'], ['foto’s', fotoTel], ['reizigers', pers]];
-  h += `<div class="bsec" data-sec="cijfers" data-naam="De reis in cijfers"><h2>De reis in cijfers</h2><div class="fg3">${cijfers.map(([k, x]) => `<div class="vak" style="text-align:center"><b style="font-size:1.4rem">${x}</b><br><span class="bron">${k}</span></div>`).join('')}</div>${ks.bekend || werk.length ? `<p>Kosten: gepland ${mny(ks.bekend)}${werk.length ? `, werkelijk genoteerd ${mny(sum(werk))}` : ''}${num(r.budget) != null ? `, budget ${mny(r.budget)}` : ''}.</p>` : ''}</div>`;
-  h += `<div class="bsec" data-sec="route" data-naam="De route"><h2>De route</h2>${kaartSVG(t)}` + (t.dagen.length ? tbl(['Dag(en)', 'Datum', 'Plaats', 'Nachten'], blokken(t).map(b => [b.van === b.tot ? b.van + 1 : (b.van + 1) + '–' + (b.tot + 1), b.van === b.tot ? dFmt(t.dagen[b.van].datum) : dFmt(t.dagen[b.van].datum) + ' – ' + dFmt(t.dagen[b.tot].datum), esc(b.plaats || '?'), b.nachten]), ['', '', '', 'r']) : '') + `</div>`;
-  const hoog = t.dagen.map((d, i) => [i + 1, d]).filter(([, d]) => d.dagboek.hoogtepunt || d.dagboek.favorieten);
-  if (hoog.length) h += `<div class="bsec" data-sec="hoogtepunten" data-naam="Hoogtepunten"><h2>Hoogtepunten en favorieten</h2><ul>${hoog.map(([i, d]) => `<li><b>Dag ${i}${d.plaats ? ' · ' + esc(d.plaats) : ''}:</b> ${esc(d.dagboek.hoogtepunt || '')}${d.dagboek.hoogtepunt && d.dagboek.favorieten ? ' ' : ''}${d.dagboek.favorieten ? `<i>Favorieten: ${esc(d.dagboek.favorieten).replace(/\n/g, '; ')}</i>` : ''}</li>`).join('')}</ul></div>`;
+  delen += sec('cijfers', 'De reis in cijfers', `<div class="fg3">${cijfers.map(([k, x]) => `<div class="vak" style="text-align:center"><b style="font-size:1.4rem">${x}</b><br><span class="bron">${k}</span></div>`).join('')}</div>${ks.bekend || werk.length ? `<p>Kosten: gepland ${mny(ks.bekend)}${werk.length ? `, werkelijk genoteerd ${mny(sum(werk))}` : ''}${num(r.budget) != null ? `, budget ${mny(r.budget)}` : ''}.</p>` : ''}`);
+  /* reisgegevens */
+  const reg = [];
+  if (vl.nodig && (vl.van || vl.naar || okD(vl.heenDatum))) reg.push(['Heenvlucht', `${esc(vl.van || '?')} → ${esc(vl.naar || '?')}${vl.maatschappij ? ' · ' + esc(vl.maatschappij) : ''}${vl.heenNr ? ' · ' + esc(vl.heenNr) : ''}`, esc(tijd(vl.heenDatum, vl.heenVertrek))]);
+  if (vl.nodig && (okD(vl.terugDatum))) reg.push(['Terugvlucht', `${esc(vl.terugVan || vl.naar || '?')} → ${esc(vl.van || '?')}${vl.terugNr ? ' · ' + esc(vl.terugNr) : ''}`, esc(tijd(vl.terugDatum, vl.terugVertrek))]);
+  const au = t.auto; if (au.nodig && (au.ophaalPlaats || au.verhuurder)) reg.push(['Huurauto', `${esc(au.verhuurder || 'Huurauto')}${au.ophaalPlaats ? ', ophalen in ' + esc(au.ophaalPlaats) : ''}`, esc(tijd(au.ophaalDatum, au.ophaalTijd)) + (okD(au.inleverDatum) ? ' – ' + esc(tijd(au.inleverDatum, au.inleverTijd)) : '')]);
+  if (reg.length) delen += sec('reisgegevens', 'Reisgegevens', tbl(['Onderdeel', 'Wat', 'Wanneer (lokale tijd)'], reg));
+  delen += sec('route', 'De route', `${kaartSVG(t)}` + (t.dagen.length ? tbl(['Dag(en)', 'Datum', 'Plaats', 'Nachten'], blokken(t).map(b => [b.van === b.tot ? b.van + 1 : (b.van + 1) + '–' + (b.tot + 1), b.van === b.tot ? dFmt(t.dagen[b.van].datum) : dFmt(t.dagen[b.van].datum) + ' – ' + dFmt(t.dagen[b.tot].datum), esc(b.plaats || '?'), b.nachten]), ['', '', '', 'r']) : ''));
+  const hoog = t.dagen.map((d, i) => [i + 1, d]).filter(([, d]) => d.dagboek.hoogtepunt);
+  if (hoog.length) delen += sec('hoogtepunten', 'Hoogtepunten', `<ul>${hoog.map(([i, d]) => `<li><b>Dag ${i}${d.plaats ? ' · ' + esc(d.plaats) : ''}:</b> ${esc(d.dagboek.hoogtepunt)}</li>`).join('')}</ul>`);
+  /* waar we sliepen */
+  const hot = t.hotels.lijst.filter(x => x.naam);
+  if (hot.length) delen += sec('slapen', 'Waar we sliepen', hot.map(x => `<div class="vak hotelkaart">${src[x.foto] ? `<img src="${src[x.foto]}" alt="">` : ''}<div><b>${esc(x.naam)}</b> · ${esc(x.plaats || '')}<br>${esc(x.adres || '')}${x.tel ? ' · ' + esc(x.tel) : ''}<br><span class="bron">${okD(x.van) ? dFmt(x.van) : ''} – ${okD(x.tot) ? dFmt(x.tot) : ''} · ${nachten(x)} nacht(en)</span></div></div>`).join(''));
+  /* dagen */
+  let dh = '';
   t.dagen.forEach((d, i) => {
-    const db = d.dagboek, fotos = db.fotos.filter(f => src[f.id]), heeft = db.tekst || db.werkelijk || fotos.length || db.hoogtepunt || db.favorieten;
-    h += `<div class="bdag" data-sec="dag${i + 1}" data-naam="Dag ${i + 1} ${esc(d.plaats || '')}"><h2>Dag ${i + 1} · ${wd(d.datum)} ${dFmt(d.datum)}${d.plaats ? ' · ' + esc(d.plaats) : ''}</h2><div class="meta">${TL[d.type] || ''}${d.km ? ' · ' + NF.format(d.km) + ' km' : ''}${weer(d) ? ' · ' + weer(d) : ''}</div>`;
-    if (db.hoogtepunt) h += `<div class="vak"><b>Hoogtepunt:</b> ${esc(db.hoogtepunt)}</div>`;
-    if (db.werkelijk) h += `<p><b>Wat we deden:</b> ${esc(db.werkelijk).replace(/\n/g, '<br>')}</p>`;
-    if (db.tekst) h += par(db.tekst);
-    if (!heeft && d.programma.length) h += `<p class="bron">Gepland: ${d.programma.map(it => esc([it.tijd, it.titel].filter(Boolean).join(' '))).join(' · ')}</p>`;
-    if (db.favorieten) h += `<p><b>Favorieten:</b> ${esc(db.favorieten).replace(/\n/g, '; ')}</p>`;
-    if (db.weerHand) h += `<p class="bron">Weer (eigen beschrijving): ${esc(db.weerHand)}</p>`;
-    if (fotos.length) h += `<div class="fg">${fotos.map(f => `<figure><img src="${src[f.id]}" alt="${esc(f.cap)}"><figcaption>${esc(f.cap)}</figcaption></figure>`).join('')}</div>`;
-    h += `</div>`;
+    const db = d.dagboek, fotos = db.fotos.filter(f => src[f.id]), heeft = db.tekst || db.werkelijk || fotos.length || db.hoogtepunt || db.favorieten, hv = okD(d.datum) ? hotelVoorNacht(t, d.datum) : null;
+    dh += `<div class="bdag" id="s-dag${i + 1}" data-sec="dag${i + 1}" data-naam="Dag ${i + 1} ${esc(d.plaats || '')}"><h2>Dag ${i + 1} · ${wd(d.datum)} ${dFmt(d.datum)}${d.plaats ? ' · ' + esc(d.plaats) : ''}</h2><div class="meta">${TL[d.type] || ''}${d.km ? ' · ' + NF.format(d.km) + ' km' : ''}${weer(d) ? ' · ' + weer(d) : ''}${hv && hv.naam ? ' · overnacht: ' + esc(hv.naam) : ''}</div>`;
+    if (db.hoogtepunt) dh += `<div class="vak"><b>Hoogtepunt:</b> ${esc(db.hoogtepunt)}</div>`;
+    if (db.werkelijk) dh += `<p><b>Wat we deden:</b> ${esc(db.werkelijk).replace(/\n/g, '<br>')}</p>`;
+    if (db.tekst) dh += par(db.tekst);
+    if (!heeft && d.programma.length) dh += `<p class="bron">Gepland: ${d.programma.map(it => esc([it.tijd, it.titel].filter(Boolean).join(' '))).join(' · ')}</p>`;
+    if (db.favorieten) dh += `<p><b>Bezocht en favorieten:</b> ${esc(db.favorieten).replace(/\n/g, '; ')}</p>`;
+    if (db.weerHand) dh += `<p class="bron">Weer (eigen beschrijving): ${esc(db.weerHand)}</p>`;
+    if (fotos.length) dh += `<div class="fg">${fotos.map(f => `<figure><img src="${src[f.id]}" alt="${esc(f.cap)}"><figcaption>${esc(f.cap)}</figcaption></figure>`).join('')}</div>`;
+    dh += `</div>`; toc.push(['dag' + (i + 1), `Dag ${i + 1} · ${d.plaats || ''}`.trim()]);
   });
+  delen += dh;
+  /* lokale informatie */
+  let lok = '';
+  const info = t.info.filter(x => x.waarde);
+  if (info.length) lok += `<h3>Praktisch</h3>` + tbl(['Onderwerp', 'Waarde', 'Gecontroleerd'], info.map(x => [esc(x.onderwerp), esc(x.waarde), x.geverifieerd ? '✔ ' + dFmt(x.datum) : 'niet geverifieerd']));
+  const vc = t.valutaLokaal; if (vc.code && vc.koers) lok += `<p><b>Geld:</b> lokale valuta ${esc(vc.code)}; koers ${esc(vc.koers)} ${esc(vc.code)} per ${esc(r.valuta)} (${vc.datum ? dFmt(vc.datum) : 'datum onbekend'}${vc.bron ? ', ' + esc(vc.bron) : ''}).</p>`;
+  const tzs = [...new Set(t.dagen.map(d => d.tz).filter(Boolean))]; if (tzs.length > 1) lok += `<p><b>Tijdzones onderweg:</b> ${tzs.map(esc).join(', ')}.</p>`;
+  const wp = plaatsen.map(pl => { const w = t.dagen.filter(d => d.plaats === pl && d.weer && d.weer.tmax != null).map(d => d.weer); if (!w.length) return null; const g = k => sum(w.map(x => x[k]).filter(x => x != null)) / w.filter(x => x[k] != null).length; return [esc(pl), NF.format(g('tmin')) + ' tot ' + NF.format(g('tmax')) + ' °C', w.some(x => x.regen != null) ? NF1.format(g('regen')) + ' mm/dag' : '—', esc([...new Set(w.map(x => x.label))].join(', '))]; }).filter(Boolean);
+  if (wp.length) lok += `<h3>Weer per plaats</h3>` + tbl(['Plaats', 'Temperatuur (gemiddeld)', 'Neerslag', 'Soort gegevens'], wp);
+  const fav = t.dagen.filter(d => d.dagboek.favorieten).map(d => [esc(d.plaats || ''), esc(d.dagboek.favorieten).replace(/\n/g, '<br>')]);
+  if (fav.length) lok += `<h3>Plaatsen, restaurants en adresjes om te onthouden</h3>` + tbl(['Plaats', 'Wat'], fav);
+  if (lok) delen += sec('lokaal', 'Lokale informatie en tips', lok);
   const rij = R.filter(x => x.b != null || num(t.werkelijk[x.key]) != null);
-  if (rij.length) h += `<div class="bsec" data-sec="kosten" data-naam="Kosten"><h2>Wat het kostte</h2>` + tbl(['Onderdeel', 'Post', 'Gepland', 'Werkelijk'], rij.map(x => [x.o, esc(x.post), x.b == null ? '—' : mny(x.b), num(t.werkelijk[x.key]) != null ? mny(num(t.werkelijk[x.key])) : '—']).concat([['<b>Totaal</b>', '', `<b>${mny(ks.bekend)}</b>`, werk.length ? `<b>${mny(sum(werk))}</b>` : '—']]), ['', '', 'r', 'r']) + `<p class="bron">Gepland = bekende posten uit de planning (excl. borg); werkelijk = wat u zelf noteerde bij de kosten. Onbekende bedragen zijn niet meegeteld.</p></div>`;
-  if (v.nawoord) h += `<div class="bsec" data-sec="nawoord" data-naam="Nawoord"><h2>Nawoord</h2>${par(v.nawoord)}</div>`;
-  return h;
+  if (rij.length) delen += sec('kosten', 'Wat het kostte', tbl(['Onderdeel', 'Post', 'Gepland', 'Werkelijk'], rij.map(x => [x.o, esc(x.post), x.b == null ? '—' : mny(x.b), num(t.werkelijk[x.key]) != null ? mny(num(t.werkelijk[x.key])) : '—']).concat([['<b>Totaal</b>', '', `<b>${mny(ks.bekend)}</b>`, werk.length ? `<b>${mny(sum(werk))}</b>` : '—']]), ['', '', 'r', 'r']) + `<p class="bron">Gepland = bekende posten uit de planning (excl. borg); werkelijk = wat u zelf noteerde bij de kosten. Onbekende bedragen zijn niet meegeteld.</p>`);
+  if (v.nawoord) delen += sec('nawoord', 'Nawoord', par(v.nawoord));
+  delen += sec('over', 'Over dit boek', `<p class="bron">Dit boek is samengesteld uit uw eigen dagboek, foto’s en planning. Lokale informatie, weer en koersen zijn alleen opgenomen als u ze zelf hebt ingevuld of opgehaald (bron en datum staan erbij). Niets is aangevuld uit het hoofd of geschat. Weergegevens komen van Open-Meteo, wisselkoersen van de ECB (Frankfurter).</p>`);
+  h += `<div class="bsec inhoud" id="s-inhoud" data-sec="inhoud" data-naam="Inhoud"><h2>Inhoud</h2><ol class="toc">${toc.map(([id, n]) => `<li><a href="#s-${id}">${esc(n)}</a></li>`).join('')}</ol></div>`;
+  return h + delen;
 }
 async function bouwBoek(dataUrls) {
   const t = T(), uit = $('#boekUit'); if (!t) return ''; const o = t.boek;
   const vs = o.modus === 'verslag';
-  const ids = [...(vs || (o.foto && o.dagboek) ? t.dagen.flatMap(d => d.dagboek.fotos.map(f => f.id)) : []), ...(vs && t.verslag.omslag ? [t.verslag.omslag] : []), ...(!vs && o.foto ? t.hotels.lijst.filter(h => h.bevestigd && h.foto).map(h => h.foto) : [])];
+  const ids = [...(vs || (o.foto && o.dagboek) ? t.dagen.flatMap(d => d.dagboek.fotos.map(f => f.id)) : []), ...(vs && t.verslag.omslag ? [t.verslag.omslag] : []), ...((vs || o.foto) ? t.hotels.lijst.filter(h => h.bevestigd && h.foto).map(h => h.foto) : [])];
   const src = {};
   for (const id of ids) { try { src[id] = dataUrls ? await blobNaarData(await fotoGet(id)) : await fotoUrl(id); } catch { src[id] = ''; } }
   const html = vs ? verslagHTML(t, src) : reisboekHTML(t, src);
@@ -1682,6 +1779,18 @@ A.vasteVertrek = () => { voegToe('zoekVan', ['FRA', 'DUS', 'AMS', 'BRU']); opsla
 A.kopieOpen = async b => { window.open(b.dataset.u, '_blank', 'noopener'); await A.kopie(b); };
 A.notitiesWeg = () => { delete T().importNotities; opslaan(); rerender(); };
 A.dagNav = b => { dagSel += +b.dataset.d; rerender(); scrollTo(0, 0); };
+A.plakLees = () => { const t = T(); plak.tekst = $('#plakVlucht').value; const v = t.vlucht; plak.res = leesVlucht(plak.tekst, v.exactVan || (v.maandVan ? v.maandVan + '-01' : '')); rerender(); };
+A.plakNeem = () => {
+  const t = T(); if (!plak.res) return; const f = plak.res.velden;
+  Object.keys(PLAKNAMEN).forEach(k => { if (f[k] != null && f[k] !== '') t.vlucht[k] = f[k]; });
+  if (f.prijs != null && !t.vlucht.prijsDatum) t.vlucht.prijsDatum = vandaagIn();
+  plak.res = null; plak.tekst = ''; opslaan(); rerender(); melding('Overgenomen in stap 2. Controleer de velden met de pagina van Get-Roam.');
+};
+A.maakVerslag = () => {
+  const t = T(), leeg = t.dagen.filter(x => !(x.dagboek.tekst || x.dagboek.werkelijk || x.dagboek.hoogtepunt || x.dagboek.fotos.length)).length;
+  if (leeg && !confirm(`Bij ${leeg} dag(en) is nog niets in het dagboek of bij de foto’s gezet. Toch het reisverslag maken? U kunt later terugkomen en opnieuw maken.`)) return;
+  t.boek.modus = 'verslag'; opslaan(); tab = 'boek'; location.hash = tab; render(); scrollTo(0, 0);
+};
 A.vandaag = b => {
   const t = T(); if (!t.dagen.length) { tab = 'route'; return render(); }
   let i = t.dagen.findIndex(d => d.datum === vandaagIn(d.tz)); const gevonden = i >= 0;
@@ -1929,7 +2038,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
-window.__rr = { fotoGet, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { fotoGet, leesVlucht, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>

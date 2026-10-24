@@ -14,7 +14,7 @@ De gebruiker beoordeelt prijzen en kiest zelf: toon altijd bron, datum en link; 
 Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft tot dan vergrendeld. Nooit automatisch doorgaan.
 1. **Vlucht** → 2. **Auto** → 3. **Hotels**. Pas na bevestiging van de hotels opent de **interactieve reisgids**: Reisgids (intake, praktisch,
    voorbereiding), Route, Onderweg (dagpagina's), Dagboek en Reisboek/verslag. Start, Kosten en Gegevens zijn altijd open.
-1. **Vlucht:** zoekcriteria voor Get-Roam (meerdere vertrek- en aankomstluchthavens als blokjes, periode, min/max dagen); luchthavens
+1. **Vlucht:** (na het zoeken in Get-Roam kan de gebruiker de tekst van de gekozen vlucht plakken; de app leest die heuristisch en toont een voorbeeld, pas "Neem over" vult stap 2; niet getest op echte Get-Roam-tekst) zoekcriteria voor Get-Roam (meerdere vertrek- en aankomstluchthavens als blokjes, periode, min/max dagen); luchthavens
    binnen een straal komen uit de eigen lijst (LUCHTHAVENS). De gekozen vlucht bepaalt de reisdata en de huurperiode (niet gevraagd).
 2. **Auto:** eerst advies huurauto versus trein/bus; intake (klasse, versnelling, kilometers, brandstofbeleid, kinderzitjes, grens,
    volledige verzekering) en DiscoverCars-zoekprofiel. Full Coverage van DiscoverCars is een vergoedingspolis (eerst zelf betalen).
@@ -25,7 +25,7 @@ Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft t
 4. **Interactieve reisgids:** dagpagina's met actieve dagboekvragen (hoogtepunt, wat deden jullie, eten en drinken, weer, onthouden) en
    een herinnering als het dagboek van vandaag leeg is; foto's per dag via in-app camera (elke foto direct bewaard), telefooncamera of
    galerij (verdeeld over de dagen op opnamedatum/EXIF); verwijderen gaat naar een prullenbak (herstelbaar). Een webpagina kan niet
-   zelf in de fotorol kijken: volledig automatisch uploaden bestaat niet. Uitvoer: tab "Reisboek en verslag" (reisgids of verhalend
+   zelf in de fotorol kijken: volledig automatisch uploaden bestaat niet. Aan het eind van de reis: knop "Maak reisverslag" (Start, Onderweg laatste dag, Dagboek) → naslagwerk met inhoudsopgave, reisgegevens, route, hoogtepunten, waar we sliepen (foto), dagen, lokale informatie en tips, kosten, nawoord. Uitvoer: tab "Reisboek en verslag" (reisgids of verhalend
    reisverslag), elk blad en onderdeel apart af te drukken of als PDF op te slaan.
 
 ## Vaste voorkeuren vluchten (gelden voor de keuze in Get-Roam)
