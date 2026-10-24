@@ -391,6 +391,17 @@ promptAntwoord = 'Reis voor andere reiziger';
 await page.click('[data-a=nieuw]');
 check('andere reis start met de basisdekking als standaard', await page.evaluate(() => __rr.T().auto.verzekeringKeuze === 'basis'));
 
+
+console.log('Intake van intake.html omzetten en inlezen');
+const fx = join(mkdtempSync(join(tmpdir(), 'rr-intake-')), 'intake.json'), uitf = join(dirname(fx), 'uit.json');
+writeFileSync(fx, JSON.stringify({ reis: { naam: 'Rondreis VS', plaats: 'Dallas', periodeVan: '2027-03-01', periodeTot: '2027-06-01', duurMin: 22, duurMax: 25, personen: 2 }, vlucht: { straal1: 500, maxUren: 15, maxOverstappen: 1, maaltijden: true, openJaw: 'nee' }, reiskosten: { liters: 30, literprijs: 2.5, parkeren: 200 }, auto: { klasse: 'intermediate', km: true, brandstof: true, verzekering: true, automaat: true, afleveren: 'zelfde' }, hotels: { prijsDoel: 100, prijsRuimte: 35, minWaardering: 8, minGoogle: 4, ontbijt: true, badkamer: true, wifi: true, parkeerHotel: true, maxKmPerVerplaatsing: 400, maxRijuren: 6 }, overig: { interesses: 'Historie, musea, casino, strand, muziek, bar (50+)', rustdag: true } }));
+const uitTekst = execFileSync('node', [join(hier, 'intake-naar-reisgids.mjs'), fx, uitf], { encoding: 'utf8' });
+check('script noemt de luchthavens binnen 500 km van Dallas en waarschuwt over afwijkende prijsruimte', /DFW/.test(uitTekst) && /LET OP: Uw intake had 35%/.test(uitTekst), uitTekst.slice(0, 200));
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+await page.setInputFiles('input[type=file][data-ch=importeer]', uitf); await page.waitForTimeout(500);
+const im = await page.evaluate(() => { const t = __rr.T(); return { n: t.naam, bev: Object.keys(t.bevestigd).length, van: t.vlucht.zoekVan, naar: t.vlucht.zoekNaar, d: [t.vlucht.exactVan, t.vlucht.exactTot, t.vlucht.dagenMin, t.vlucht.dagenMax], km: [t.gids.maxKm, t.gids.maxUren], uitz: t.hotels.crit.maxUitz, ints: t.gids.interesses.join() }; });
+check('geïmporteerde reis: zoekcriteria, hotelgrenzen en interesses uit de intake, geen enkele stap bevestigd', im.n === 'Rondreis VS' && im.bev === 0 && im.van === 'FRA, DUS, AMS, BRU' && /DFW/.test(im.naar) && im.d.join() === '2027-03-01,2027-06-01,22,25' && im.km.join() === '400,6' && im.uitz === 150 && /stad/.test(im.ints) && /musea/.test(im.ints), JSON.stringify(im));
+check('na het inlezen is alleen stap 1 toegankelijk', (await page.locator('#tabs button.slot').count()) === 5);
 check('geen scriptfouten in de console', consoleFouten.length === 0, consoleFouten.join(' | '));
 await browser.close();
 console.log(`\n${ok} geslaagd, ${fouten} mislukt`);
