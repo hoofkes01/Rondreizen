@@ -1707,12 +1707,13 @@ const CALC = {
     if (z.dagenMin != null && z.dagenMax != null && z.dagenMax < z.dagenMin) w.push('Het maximum aantal dagen is lager dan het minimum.');
     [...z.van, ...z.naar].filter(x => !/^[A-Z]{3}$/.test(x)).forEach(x => w.push(`“${x}” is geen IATA-code van 3 letters; Get-Roam zoekt dan op naam.`));
     if (t.reis.kind > 0) w.push(`Get-Roam kent alleen volwassenen: de ${t.reis.kind} kind(eren) staan niet in de zoekopdracht; controleer de prijs voor het hele gezelschap bij de boeking.`);
+    const klaar = !ontbr.length;
     return `<b>Zoekopdracht voor Get-Roam</b>${ontbr.length ? `<div class="banner">Nog in te vullen: ${ontbr.join(', ')}.</div>` : ''}${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}
+      <div class="rij"><button class="prim" data-a="roamPost" style="font-size:1.1rem;padding:12px 22px" ${klaar ? '' : 'aria-disabled="true"'}>Zoek in Get-Roam met deze gegevens ↗</button></div>
+      <p class="noot">Eén klik opent Get-Roam in een eigen tabblad met alles al ingevuld en gestart. Controleer daar even de velden. Get-Roam toont prijzen in dollars en heeft geen bagagefilter. Vul na het zoeken de goedkoopste uitkomst hieronder in bij stap 2.</p>
+      <details class="sub"><summary>Lukt dat niet? Zo vult u het zelf in</summary>
       <table class="rtab"><thead><tr><th>Veld in Get-Roam</th><th>Waarde</th><th></th></tr></thead><tbody>${rij.map(r => `<tr><td data-l="Veld">${esc(r[0])}</td><td data-l="Waarde">${r[1] === '' ? '<span class="noot">—</span>' : '<b>' + esc(r[1]) + '</b>'}</td><td>${r[1] === '' ? '' : `<button class="klein" data-a="kopie" data-v="${esc(r[1])}">Kopieer</button>`}</td></tr>`).join('')}</tbody></table>
-      <div class="rij"><button class="prim" data-a="roamPost" style="font-size:1.05rem;padding:10px 18px">Zoek in Get-Roam met deze gegevens ↗</button></div>
-      <p class="noot">Eén klik opent Get-Roam in een eigen tabblad met de zoekopdracht al ingevuld en gestart (opnieuw klikken gebruikt hetzelfde tabblad). Controleer daar de ingevulde velden. Lukt dit niet, dan hieronder de handmatige weg:</p>
-      <div class="rij"><button data-a="openNaast" data-u="${ROAM}" data-n="roam">Get-Roam naast deze app openen ↗</button><a class="knop" target="roam" rel="noopener" href="${ROAM}">Open Get-Roam flexible search ↗</a><button data-a="kopieOpen" data-v="${esc(alles)}" data-u="${ROAM}" data-n="roam">Kopieer alles en open Get-Roam</button><button data-a="kopie" data-v="${esc(alles)}">Kopieer alle velden</button></div>
-      <p class="noot">Get-Roam toont prijzen in dollars en heeft geen bagagefilter. Vul na het zoeken de goedkoopste uitkomst hieronder in bij stap 2.</p>`;
+      <div class="rij"><button data-a="openNaast" data-u="${ROAM}" data-n="roam">Get-Roam naast deze app openen ↗</button><a class="knop" target="roam" rel="noopener" href="${ROAM}">Open Get-Roam flexible search ↗</a><button data-a="kopieOpen" data-v="${esc(alles)}" data-u="${ROAM}" data-n="roam">Kopieer alles en open Get-Roam</button><button data-a="kopie" data-v="${esc(alles)}">Kopieer alle velden</button></div></details>`;
   },
   vluchtCheck: () => {
     const t = T(), v = t.vlucht, z = roamZoek(t), m = [], vp = vluchtPrijs(t);

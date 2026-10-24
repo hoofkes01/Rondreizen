@@ -572,7 +572,7 @@ check('app leest de intake zelf in: zoekcriteria, hotelgrenzen en interesses, ge
 check('afwijking van de intake wordt gemeld (35% prijsruimte)', /35%/.test(im.noot));
 check('na het inlezen staat u in stap 1 en zijn de andere stappen en de reisgids nog dicht', (await page.textContent('#tabs .act')).includes('1 Vlucht') && (await page.locator('#tabs button.slot').count()) === 7);
 check('zoekopdracht voor Get-Roam is meteen klaar', /DFW/.test(await page.textContent('[data-calc=roam]')) && /22/.test(await page.textContent('[data-calc=roam]')));
-const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=roam] [data-a=kopieOpen]')]);
+const [pop] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => document.querySelectorAll('[data-calc=roam] details').forEach(d => d.open = true)).then(() => page.click('[data-calc=roam] [data-a=kopieOpen]'))]);
 check('één klik kopieert de zoekopdracht en opent Get-Roam', pop.url().startsWith('https://get-roam.com/flexible-search') && /Gekopieerd/.test(await page.textContent('#melding')), pop.url()); await pop.close();
 await page.click('[data-t=start]');
 check('startpagina toont de volgende stap en leidt er direct naartoe', /Volgende stap/.test(await page.textContent('#app')) && await (async () => { await page.click('.card:has(h2:has-text("Volgende stap")) [data-a=tab]'); return (await page.textContent('#tabs .act')).includes('1 Vlucht'); })());
