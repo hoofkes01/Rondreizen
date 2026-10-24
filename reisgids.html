@@ -951,6 +951,10 @@ VIEWS.vlucht = () => {
       ${fld('vlucht.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld('vlucht.ref', 'Boekingsreferentie (optioneel)', 't', { h: 'Geen paspoort- of kaartnummers.' })}${fld('vlucht.link', 'Link naar de aanbieding/boeking', 'u')}
       ${fld('vlucht.notitie', 'Notities', 'a', { w: 1, rows: 2 })}
     </div><div class="box" data-calc="vluchtCheck"></div>`);
+  { const c = controleVlucht(t); h += sectie('Controleer dezelfde vlucht op een tweede plek', 'Kiwi.com is uw basis. Controleer de gekozen vlucht daarna met exact dezelfde data bij Skyscanner en Get-Roam. Vergelijk de totaalprijs <b>inclusief 2 koffers van 23 kg</b> en kijk of het dezelfde vluchten zijn.',
+    c.ok ? `<div class="rij"><a class="knop prim" target="_blank" rel="noopener" href="${esc(c.sky)}">Controleer op Skyscanner ↗</a><button data-a="roamKopieer" data-m="controle">Controleer op Get-Roam (heen ${esc(dFmt(t.vlucht.heenDatum))}, ${c.n} nachten) ↗</button></div>
+      <p class="noot">Skyscanner opent met ${esc(t.vlucht.van)} → ${esc(t.vlucht.naar)}, ${esc(dFmt(t.vlucht.heenDatum))} en ${esc(dFmt(t.vlucht.terugDatum))}, ${t.reis.volw || 2} volwassenen. Stel daar zelf de bagage in. Get-Roam heeft geen bagagefilter: tel de koffers er zelf bij op. Bij Get-Roam geldt weer de bladwijzer “Roam invullen” (uitleg bij de Get-Roam-knop hierboven).</p>${c.open ? '<div class="banner">U vliegt terug vanaf een andere luchthaven dan waar u aankomt: Skyscanner controleert hier alleen heen en terug op dezelfde luchthaven. Controleer de terugvlucht dan zelf.</div>' : ''}`
+      : '<p class="noot">Vul bij “Stap 2: uw gekozen vlucht” de vertrekluchthaven, de aankomstluchthaven (een plaats of code, bijv. Frankfurt en Dallas) en de heen- en terugdatum in, dan staan hier de controleknoppen.</p>'); }
   h += sectie('Dit zijn nu de data van uw rondreis', '', `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>`);
   h += sectie('Overige reisgegevens (optioneel)', 'Mag leeg blijven; de app gebruikt wat u invult voor kosten en reisboek.', `<div class="grid">
       ${fld('naam', 'Naam van de reis', 't')}${fld('reis.landen', 'Land(en) / regio’s', 't', { ph: 'bijv. Verenigde Staten' })}
@@ -1624,6 +1628,15 @@ function kiwiLink(t) {
   const pad = ['https://www.kiwi.com/en/search/results', uniek(van.map(c => KIWI[c])).join(','), uniek(naar.map(c => KIWI[c])).join(','), heen]; if (terug) pad.push(terug);
   return { url: pad.join('/') + `/?adults=${t.reis.volw || 2}${t.reis.kind ? '&children=' + t.reis.kind : ''}&sortBy=price`, mis, reden: '' };
 }
+/* Controle van dezelfde vlucht: exacte data op Skyscanner (link met codes en data, op 24-10-2026 op de echte site gecontroleerd) en op Get-Roam (periode = één dag). */
+function controleVlucht(t) {
+  const v = t.vlucht, cd = x => { const l = x && String(x).trim() ? lhZoek(x) : null; return l ? l.code : ''; }, a = cd(v.van), b = cd(v.naar), terugVan = cd(v.terugVan);
+  const ok = /^[A-Z]{3}$/.test(a) && /^[A-Z]{3}$/.test(b) && okD(v.heenDatum) && okD(v.terugDatum);
+  const yy = d => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
+  const n = ok ? diffD(v.terugDatum, v.heenDatum) : null, open = !!terugVan && terugVan !== b;
+  return { ok, open, n, sky: ok ? `https://www.skyscanner.nl/transport/vluchten/${a.toLowerCase()}/${b.toLowerCase()}/${yy(v.heenDatum)}/${yy(v.terugDatum)}/?adultsv2=${t.reis.volw || 2}&cabinclass=economy&rtn=1` : '',
+    roam: ok ? { van: [a], naar: [b], vroegste: v.heenDatum, laatste: v.heenDatum, dagenMin: n, dagenMax: n, adults: t.reis.volw || 2, maxPrijs: null, maxStops: '', maxUren: null } : null };
+}
 function roamZoek(t) {
   const v = t.vlucht;
   const vroegste = okD(v.exactVan) ? v.exactVan : (/^\d{4}-\d{2}$/.test(v.maandVan || '') ? v.maandVan + '-01' : '');
@@ -2004,8 +2017,10 @@ function roamVuller() {
   })();
 }
 const ROAM_BLADWIJZER = 'javascript:' + encodeURIComponent('(' + roamVuller.toString() + ')()');
-A.roamKopieer = () => {
-  const z = roamZoek(T()), veld = roamFormulier(z);
+A.roamKopieer = b => {
+  const ctl = b && b.dataset && b.dataset.m === 'controle', z = ctl ? controleVlucht(T()).roam : roamZoek(T());
+  if (ctl && !z) return melding('Vul eerst bij de gekozen vlucht de vertrek- en aankomstplaats en de heen- en terugdatum in.', true);
+  const veld = roamFormulier(z);
   if (!z.van.length || !z.naar.length || !z.vroegste || !z.laatste || z.dagenMin == null || z.dagenMax == null) return melding('Vul eerst vertrek- en aankomstluchthavens, de periode van de heenvlucht en het verblijf of de terugperiode in.', true);
   const tekst = 'ROAM:' + JSON.stringify(veld);
   /* alles binnen dezelfde tik (geen await ervoor): anders blokkeert de telefoon het nieuwe tabblad */
@@ -2299,10 +2314,10 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 s'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 t'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
-window.__rr = { fotoGet, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { fotoGet, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>

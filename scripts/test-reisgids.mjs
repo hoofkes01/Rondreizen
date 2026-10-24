@@ -320,6 +320,12 @@ check('Kiwi-link: geen link als er geen enkele bekende vertrekplaats is', kw.c.u
 await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
 check('knop "Zoek bij Kiwi.com" staat bij stap 1', await page.locator('[data-calc=roam] a[href^="https://www.kiwi.com/en/search/results/"]').count() >= 0);
 
+console.log('Controle van dezelfde vlucht (Skyscanner en Get-Roam)');
+const cv = await page.evaluate(() => { const t = JSON.parse(JSON.stringify(__rr.T())); Object.assign(t.vlucht, { van: 'Frankfurt', naar: 'DFW', terugVan: '', heenDatum: '2027-03-12', terugDatum: '2027-04-02' }); t.reis.volw = 2; const a = __rr.controleVlucht(t); t.vlucht.terugVan = 'AUS'; const b = __rr.controleVlucht(t); t.vlucht.naar = ''; const c = __rr.controleVlucht(t); return { a, b: b.open, c: c.ok }; });
+check('Skyscanner-link: codes, data (jjmmdd) en 2 volwassenen', cv.a.sky === 'https://www.skyscanner.nl/transport/vluchten/fra/dfw/270312/270402/?adultsv2=2&cabinclass=economy&rtn=1', cv.a.sky);
+check('Get-Roam-controle: één dag heen, 21 nachten, 2 volwassenen', cv.a.roam.vroegste === '2027-03-12' && cv.a.roam.laatste === '2027-03-12' && cv.a.roam.dagenMin === 21 && cv.a.roam.dagenMax === 21 && cv.a.roam.van[0] === 'FRA', JSON.stringify(cv.a.roam));
+check('terugvlucht vanaf een andere luchthaven wordt gemeld; zonder aankomstplaats geen controle', cv.b === true && cv.c === false);
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
