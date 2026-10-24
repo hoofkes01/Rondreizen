@@ -386,7 +386,7 @@ check('voorlopig-melding zolang de vlucht niet als geboekt staat', /nog niet als
 const dc = await page.textContent('[data-calc=dcZoek]');
 check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('Denver') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
 check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
-check('bij 1 uur marge vóór vertrek waarschuwt de app dat dat krap is', /krap/.test(await page.textContent('[data-calc=autoTijden]')));
+check('de app legt uit dat het het uiterste inlevertijdstip in het contract is en dat eerder inleveren mag', /uiterste tijdstip[\s\S]*eerder inleveren mag/.test(await page.textContent('[data-calc=autoTijden]')));
 check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
 await page.check('#f_auto_afwijkend');
 await page.fill('#f_auto_ophaalTijd', '12:00');

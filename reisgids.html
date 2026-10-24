@@ -966,7 +966,7 @@ const autoSectie = () => {
     ${au.afwijkend ? `<div class="grid">
       ${fld('auto.ophaalPlaats', 'Ophaallocatie', 't', { r: 1 })}${fld('auto.ophaalDatum', 'Ophaaldatum', 'd')}${fld('auto.ophaalTijd', 'Ophaaltijd (lokaal)', 'h')}
       ${fld('auto.inleverPlaats', 'Inleverlocatie', 't', { r: 1 })}${fld('auto.inleverDatum', 'Inleverdatum', 'd')}${fld('auto.inleverTijd', 'Inlevertijd (lokaal)', 'h')}
-      ${fld('auto.bufferOphaal', 'Ophalen: minuten na aankomst vlucht', 'n', { min: 0, h: 'Voorstel 60 (bagage, douane).' })}${fld('auto.bufferInlever', 'Inleveren: minuten vóór vertrek terugvlucht', 'n', { min: 0, h: 'Standaard 60 (uw keuze). Dat is krap, zie de melding bij de huurperiode.' })}
+      ${fld('auto.bufferOphaal', 'Ophalen: minuten na aankomst vlucht', 'n', { min: 0, h: 'Voorstel 60 (bagage, douane).' })}${fld('auto.bufferInlever', 'Inleveren: minuten vóór vertrek terugvlucht', 'n', { min: 0, h: 'Standaard 60 (uw keuze). Dit is het uiterste inlevertijdstip in het contract; eerder inleveren mag. Een later tijdstip beschermt u tegen bijbetalen bij files.' })}
     </div>` : ''}
     ${eenrichting ? `<div class="grid">${fld('auto.eenrichtingToeslag', `Eenrichtingstoeslag (${esc(t.reis.valuta)})`, 'n', { min: 0, h: 'Andere inleverlocatie. Leeg = onbekend, 0 = geen toeslag.' })}</div>` : ''}
     <h3>Auto zoeken bij DiscoverCars</h3><div class="box" style="margin-top:0" data-calc="dcZoek"></div>
@@ -1673,7 +1673,7 @@ const CALC = {
     const t = T(), a = t.auto, v = t.vlucht; if (!a.nodig) return 'Geen huurauto: geen ophaal- en inlevertijd nodig.';
     const pk = tMin(a.ophaalDatum, a.ophaalTijd), dr = tMin(a.inleverDatum, a.inleverTijd), w = [];
     if (v.nodig && (!v.heenAankomst || !v.terugVertrek)) w.push('Vul bij de vlucht de aankomsttijd heen en de vertrektijd terug in (lokale tijd); dan worden de tijden hieronder automatisch ingevuld.');
-    if ((num(a.bufferInlever) ?? 60) < 120) w.push(`Let op: de auto wordt ${num(a.bufferInlever) ?? 60} minuten vóór vertrek van de terugvlucht ingeleverd (uw keuze). Dat is krap: bagage afgeven sluit bij veel maatschappijen 45 tot 60 minuten voor vertrek en de verhuurder heeft vaak nog een shuttle naar de terminal nodig. Controleer de sluitingstijd van uw maatschappij en de ligging van het inleverpunt.`);
+    w.push(`Inleveren om ${a.inleverTijd || '—'} is het <b>uiterste tijdstip in het huurcontract</b>, ${num(a.bufferInlever) ?? 60} minuten vóór vertrek van de terugvlucht. Levert u later in, dan betaalt u meestal bij; eerder inleveren mag. Dat ruime contracttijdstip beschermt u dus bij files. Plan zelf wel dat u ruim voor dat tijdstip bij het inleverpunt bent.`);
     if (v.nodig && !['geboekt', 'betaald'].includes(v.status)) w.push('Voorlopig: de vlucht staat nog niet als geboekt. Zet de status op “geboekt” zodra u bevestigd hebt; boek de auto pas daarna.');
     const rij = (kop, d, tm, pl) => `<div><b>${kop}:</b> ${okD(d) ? wd(d) + ' ' + dFmt(d) : '—'} om ${esc(tm || '—')} (lokale tijd${pl ? ', ' + esc(pl) : ''})</div>`;
     let uit = rij('Ophalen', a.ophaalDatum, a.ophaalTijd, a.ophaalPlaats) + rij('Inleveren', a.inleverDatum, a.inleverTijd, a.inleverPlaats);
@@ -2219,7 +2219,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 l'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 m'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
