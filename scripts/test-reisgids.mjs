@@ -311,6 +311,15 @@ const blu = new URL(bl);
 check('Booking.com-link: plaats, datums, volwassenen, kamers en valuta ingevuld', blu.hostname === 'www.booking.com' && blu.searchParams.get('ss') === 'Austin, Verenigde Staten' && blu.searchParams.get('checkin') === '2027-03-10' && blu.searchParams.get('checkout') === '2027-03-12' && blu.searchParams.get('group_adults') === '2' && blu.searchParams.get('no_rooms') === '1' && blu.searchParams.get('selected_currency') === 'EUR', bl);
 check('Booking.com-link: filters score 8+, gratis annuleren, maximumprijs, ontbijt en wifi', blu.searchParams.get('nflt') === 'review_score=80;fc=2;price=EUR-min-100-1;mealplan=1;hotelfacility=107', blu.searchParams.get('nflt'));
 
+console.log('Kiwi.com-link met één tik');
+const kw = await page.evaluate(() => { const t = JSON.parse(JSON.stringify(__rr.T())); Object.assign(t.vlucht, { zoekVan: 'FRA, AMS, BRU', zoekNaar: 'DFW, DAL, AUS, XXX', exactVan: '2027-03-01', exactTot: '2027-03-31', terugVan: '2027-03-25', terugTot: '2027-04-30', dagenMin: 22, dagenMax: 27 }); t.reis.volw = 2; t.reis.kind = 0; const a = __rr.kiwiLink(t); Object.assign(t.vlucht, { dagenMin: null, dagenMax: null }); const b = __rr.kiwiLink(t); t.vlucht.zoekVan = 'BRU'; const c = __rr.kiwiLink(t); return { a, b, c }; });
+check('Kiwi-link: plaatsnamen, periode heen, verblijf 22-27, 2 volwassenen, goedkoopste eerst', kw.a.url === 'https://www.kiwi.com/en/search/results/frankfurt-germany,amsterdam-netherlands/dallas-texas-united-states,austin-texas-united-states/2027-03-01_2027-03-31/22-27/?adults=2&sortBy=price', kw.a.url);
+check('Kiwi-link: onbekende plaatsen (Brussel, XXX) staan er niet in maar worden gemeld', kw.a.mis.van.join() === 'BRU' && kw.a.mis.naar.join() === 'XXX');
+check('Kiwi-link: zonder verblijf gebruikt de link de terugperiode', /2027-03-01_2027-03-31\/2027-03-25_2027-04-30\//.test(kw.b.url), kw.b.url);
+check('Kiwi-link: geen link als er geen enkele bekende vertrekplaats is', kw.c.url === '' && /Vul eerst/.test(kw.c.reden));
+await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+check('knop "Zoek bij Kiwi.com" staat bij stap 1', await page.locator('[data-calc=roam] a[href^="https://www.kiwi.com/en/search/results/"]').count() >= 0);
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
