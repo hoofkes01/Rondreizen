@@ -1024,6 +1024,16 @@ function optieVelden(i, k) {
     ${fld(p + '.ligging', 'Ligging: bij activiteiten, eten, openbaar vervoer', 'a', { w: 1, rows: 2 })}${fld(p + '.notitie', 'Notities', 'a', { w: 1, rows: 2 })}
   </div>`;
 }
+/* Booking.com-zoeklink, vooringevuld. De parameters (ss, checkin, checkout, group_adults, no_rooms, selected_currency en nflt met review_score, fc=2 gratis annuleren,
+   price, mealplan=1 ontbijt, hotelfacility=107 gratis wifi) zijn op 24-10-2026 gecontroleerd op de echte site; parkeren (hotelfacility=2) is niet gecontroleerd en zit er niet in. */
+function bookingLink(t, h) {
+  const c = t.hotels.crit, mb = num(c.minBooking), rs = mb == null ? null : mb >= 9 ? 90 : mb >= 8 ? 80 : mb >= 7 ? 70 : mb >= 6 ? 60 : null, cur = t.reis.valuta || 'EUR', f = [];
+  if (rs) f.push('review_score=' + rs); f.push('fc=2');
+  if (num(c.maxPrijs) != null) f.push(`price=${cur}-min-${Math.round(num(c.maxPrijs))}-1`);
+  if (eis(c.ontbijt)) f.push('mealplan=1'); if (eis(c.wifi)) f.push('hotelfacility=107');
+  const q = new URLSearchParams({ ss: [h.plaats, t.reis.landen].filter(Boolean).join(', '), checkin: h.van, checkout: h.tot, group_adults: String(t.reis.volw || 2), group_children: String(t.reis.kind || 0), no_rooms: String(h.kamers || c.kamers || 1), selected_currency: cur });
+  return 'https://www.booking.com/searchresults.html?' + q.toString() + '&nflt=' + encodeURIComponent(f.join(';'));
+}
 function hotelBrief(t, i) {
   const h = t.hotels.lijst[i], c = t.hotels.crit, jn = v => eis(v) ? 'ja' : 'nee';
   return [`Zoek 3 hotels in ${h.plaats}`, `Aankomst ${h.van}, vertrek ${h.tot} (${nachten(h)} nachten), ${persVoor(t, 'Verblijf')} reizigers, ${h.kamers || 1} kamer(s)`,
@@ -1077,7 +1087,7 @@ VIEWS.verblijf = () => {
       ${hh.bevestigd ? `<div class="banner" style="border-color:var(--goed)"><div class="rij" style="margin:0;align-items:flex-start">${hh.foto ? `<img data-foto="${esc(hh.foto)}" alt="${esc(hh.naam)}" style="width:240px;max-width:100%;border-radius:8px">` : '<div class="noot" style="width:240px;max-width:100%;border:1px dashed var(--lijn);border-radius:8px;padding:30px 10px;text-align:center">Nog geen foto. Voeg die toe bij de gekozen optie hieronder.</div>'}<div style="flex:1;min-width:220px">✔ Bevestigd: <b>${esc(hh.naam)}</b> (optie ${'ABC'[hh.gekozen]}) op ${esc(new Date(hh.bevestigdOp).toLocaleString('nl-NL'))}<br><b>Adres:</b> ${esc(hh.adres || 'nog invullen')} ${hh.adres ? `<a target="_blank" rel="noopener" href="${esc(mapsZoek(hh.naam + ' ' + hh.adres))}">kaart</a>` : ''}${hh.tel ? ` · ${esc(hh.tel)}` : ''}<br>${mny(num(hh.prijs))} per kamer per nacht (laagste prijs${hh.bron ? ' bij ' + esc(hh.bron) : ''})${hh.link ? ` · <a target="_blank" rel="noopener" href="${esc(hh.link)}">boekingslink</a>` : ''}<br><b>Gratis annuleren:</b> ${hh.annulerenGratis === 'ja' ? (okD(hh.annuleerTot) ? 'tot en met ' + dFmt(hh.annuleerTot) + ' — zoek vóór die datum opnieuw (Booking.com, Agoda.com, hotelwebsite) en boek zo nodig goedkoper of beter' : 'ja (vul de uiterste datum in)') : '<span class="fout">niet bevestigd</span>'}<br><button class="klein" data-a="hotelTerug" data-i="${i}">Keuze intrekken</button></div></div></div>` : '<p class="noot">Kies hieronder één van de drie hotels en bevestig het. Zonder uw bevestiging wordt er geen hotel gekozen.</p>'}
       <div class="grid">${fld(p + '.plaats', 'Plaats', 't')}${fld(p + '.van', 'Incheckdatum', 'd')}${fld(p + '.tot', 'Uitcheckdatum', 'd')}${fld(p + '.kamers', 'Aantal kamers', 'n', { min: 1 })}${fld(p + '.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld(p + '.ref', 'Bevestigingsnummer (optioneel)', 't')}
         ${fld(p + '.uitzondering', `Uitzondering voor deze plaats: een hotel tot ${mny(num(c.maxUitz))} p.n. is toegestaan (normaal maximaal ${mny(num(c.maxPrijs))})`, 'c', { w: 1 })}</div>
-      <div class="rij"><button class="klein" data-a="kopie" data-v="${esc(hotelBrief(t, i))}">Kopieer hotelopdracht (voor Booking.com of Claude)</button><a class="knop klein" target="_blank" rel="noopener" href="${esc(mapsZoek('hotels in ' + (hh.plaats || '')))}">Hotels op de kaart</a><button class="klein gevaar" data-a="del" data-p="hotels.lijst" data-i="${i}">Verblijf verwijderen</button></div>
+      <div class="rij">${okD(hh.van) && okD(hh.tot) && hh.plaats ? `<a class="knop prim" target="_blank" rel="noopener" href="${esc(bookingLink(t, hh))}">Zoek op Booking.com ↗ (al ingevuld)</a>` : '<span class="noot">Vul plaats en datums in om de Booking.com-zoeklink te zien.</span>'}<button class="klein" data-a="kopie" data-v="${esc(hotelBrief(t, i))}">Kopieer hotelopdracht (voor Booking.com of Claude)</button><a class="knop klein" target="_blank" rel="noopener" href="${esc(mapsZoek('hotels in ' + (hh.plaats || '')))}">Hotels op de kaart</a><button class="klein gevaar" data-a="del" data-p="hotels.lijst" data-i="${i}">Verblijf verwijderen</button></div>
       <h3>Vergelijking van de drie opties</h3><div data-calc="vergelijk" data-i="${i}"></div>
       ${[0, 1, 2].map(k => `<details class="sub" ${hh.gekozen === k || (!hh.bevestigd && k === 0) ? 'open' : ''}><summary>Optie ${'ABC'[k]}: ${esc(hh.opties[k].naam || '(nog leeg)')} <span data-calc="optiebadge" data-i="${i}" data-k="${k}"></span></summary>${optieVelden(i, k)}<div class="box" data-calc="optie" data-i="${i}" data-k="${k}"></div></details>`).join('')}
     </section>`;
@@ -2270,10 +2280,10 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 p'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 q'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
-window.__rr = { fotoGet, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { fotoGet, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>
