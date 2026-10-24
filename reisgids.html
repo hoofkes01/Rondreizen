@@ -780,7 +780,7 @@ function dagTabelRijen(t) {
   const S = t.stops.filter(x => x.plaats && num(x.nachten) > 0), zonder = S.filter(x => !x.geo), st = t.route.start, ei = t.route.eind || t.route.start;
   const max = num(t.gids.maxKm), maxU = num(t.gids.maxUren), v = num(t.route.snelheid) || 75, rijen = []; let dag = 1, prev = st, pn = st ? (st.plaats || 'begin') : '';
   const rit = (a, an, b, bn) => { if (!a || !b) return null; const km = legKm(t, a, b); return km < 5 ? { van: an, naar: bn, km: 0, uren: 0 } : { van: an, naar: bn, km, uren: km / v }; };
-  const status = r => !r ? '' : ((max != null && r.km > max) || (maxU != null && r.uren > maxU)) ? 'boven' : 'ok';
+  const status = r => !r || !r.km ? '' : ((max != null && r.km > max) || (maxU != null && r.uren > maxU)) ? 'boven' : 'ok';
   S.forEach((x, i) => {
     const r = x.geo ? rit(prev, pn, x.geo, x.plaats) : null;
     for (let k = 0; k < num(x.nachten); k++) { rijen.push({ dag, plaats: x.plaats, rit: k === 0 ? r : null, status: k === 0 ? status(r) : '', nacht: k + 1, van: x.plaats }); dag++; }
