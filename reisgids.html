@@ -902,10 +902,10 @@ VIEWS.vlucht = () => {
     ${lhBlok('zoekVan', 'Vertrekluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u vandaan wilt vertrekken. Get-Roam zoekt ze allemaal tegelijk.')}${lhBlok('zoekNaar', 'Aankomstluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u wilt aankomen. Typ de code (bijv. DFW) of een plaats (bijv. Dallas).')}
     <details class="sub" ${String(v.zoekPlaats || '').trim() ? 'open' : ''}><summary>Luchthavens in de buurt van een plaats toevoegen</summary><div class="grid" style="margin-top:8px">${fld('vlucht.zoekPlaats', 'Plaats of luchthaven', 't', { ph: 'bijv. Dallas' })}${fld('vlucht.straal', 'Binnen hoeveel km (hemelsbreed)', 'n', { min: 0 })}</div><div class="rij"><button data-a="luchthavensVullen">Voeg die luchthavens toe aan de aankomstluchthavens</button></div><div class="box" data-calc="luchthavensStraal"></div></details>
     <h3>Wanneer en hoe lang?</h3><div class="grid">
-      <div class="wide"><b>Heenvlucht: in welke periode mag u vertrekken?</b></div>
-      ${fld('vlucht.exactVan', 'Heenvlucht: vroegste dag', 'd', { r: 1 })}${fld('vlucht.exactTot', 'Heenvlucht: laatste dag', 'd', { r: 1 })}
-      <div class="wide"><b>Terugvlucht: in welke periode mag u terugvliegen?</b></div>
-      ${fld('vlucht.terugVan', 'Terugvlucht: vroegste dag', 'd', { r: 1 })}${fld('vlucht.terugTot', 'Terugvlucht: laatste dag', 'd', { r: 1 })}
+      <div class="wide"><b>Periode heenvlucht</b> <span class="noot">(binnen welke dagen mag u vertrekken?)</span></div>
+      ${fld('vlucht.exactVan', 'Periode heenvlucht: van', 'd', { r: 1 })}${fld('vlucht.exactTot', 'Periode heenvlucht: tot en met', 'd', { r: 1 })}
+      <div class="wide"><b>Periode terugvlucht</b> <span class="noot">(binnen welke dagen mag u terugvliegen?)</span></div>
+      ${fld('vlucht.terugVan', 'Periode terugvlucht: van', 'd', { r: 1 })}${fld('vlucht.terugTot', 'Periode terugvlucht: tot en met', 'd', { r: 1 })}
       <div class="wide"><b>Verblijf (mag leeg blijven)</b></div>
       ${fld('vlucht.dagenMin', 'Verblijf: minimaal aantal dagen', 'n', { min: 1, h: 'Leeg = volgt uit de twee perioden. Invullen maakt de zoekopdracht scherper.' })}${fld('vlucht.dagenMax', 'Verblijf: maximaal aantal dagen', 'n', { min: 1 })}
       ${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 1, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1, h: 'Get-Roam heeft alleen een veld voor volwassenen.' })}${fld('reis.kindLeeftijden', 'Leeftijden kinderen', 't')}
@@ -2163,7 +2163,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 d'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 e'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
