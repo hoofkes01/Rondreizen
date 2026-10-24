@@ -305,6 +305,12 @@ await page.click('[data-calc=perseCheck] [data-a=perseStop]'); await page.waitFo
 check('plaats wordt aan de route toegevoegd en de melding verdwijnt', await page.evaluate(() => __rr.T().stops.some(x => x.plaats === 'San Antonio')) && !/niet in uw route staat/.test(await page.textContent('[data-calc=perseCheck]')));
 await page.evaluate(() => { const t = __rr.T(); t.gids.perse = []; t.stops = t.stops.filter(x => x.plaats !== 'San Antonio'); __rr.opslaan(); });
 
+console.log('Booking.com-zoeklink per verblijf');
+const bl = await page.evaluate(() => { const t = __rr.T(); return __rr.bookingLink({ ...t, reis: { ...t.reis, landen: 'Verenigde Staten', volw: 2, kind: 0, valuta: 'EUR' }, hotels: { ...t.hotels, crit: { ...t.hotels.crit, maxPrijs: 100, minBooking: 8, ontbijt: 'ja', wifi: 'ja' } } }, { plaats: 'Austin', van: '2027-03-10', tot: '2027-03-12', kamers: 1 }); });
+const blu = new URL(bl);
+check('Booking.com-link: plaats, datums, volwassenen, kamers en valuta ingevuld', blu.hostname === 'www.booking.com' && blu.searchParams.get('ss') === 'Austin, Verenigde Staten' && blu.searchParams.get('checkin') === '2027-03-10' && blu.searchParams.get('checkout') === '2027-03-12' && blu.searchParams.get('group_adults') === '2' && blu.searchParams.get('no_rooms') === '1' && blu.searchParams.get('selected_currency') === 'EUR', bl);
+check('Booking.com-link: filters score 8+, gratis annuleren, maximumprijs, ontbijt en wifi', blu.searchParams.get('nflt') === 'review_score=80;fc=2;price=EUR-min-100-1;mealplan=1;hotelfacility=107', blu.searchParams.get('nflt'));
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
@@ -534,6 +540,7 @@ check('keuze intrekken: verblijf weer leeg, opties blijven', await page.evaluate
 check('overzicht per dag toont hotelstatus', /nog te bevestigen|geen verblijf/.test(await page.textContent('[data-calc=dagHotels]')));
 const brief = await page.evaluate(() => document.querySelector('[data-a=kopie][data-v*="Zoek 3 hotels"]').dataset.v);
 check('hotelopdracht bevat plaats, data, maximumprijs, uitzondering en criteria', /Zoek 3 hotels in/.test(brief) && /Maximumprijs 100/.test(brief) && /tot 150/.test(brief) && /Booking minimaal 8/.test(brief) && /Eigen badkamer: ja/.test(brief) && /veiligheid is altijd een eis/.test(brief), brief);
+check('bij elk verblijf staat een vooringevulde Booking.com-link (knop)', await page.locator('section.card:has(h2:has-text("Verblijf 1")) a[href^="https://www.booking.com/searchresults.html?"]').count() === 1);
 
 console.log('Auto-intake: soort auto per land, voorwaarden, extra kosten');
 await page.click('[data-t=auto]');
