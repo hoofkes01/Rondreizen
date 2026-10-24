@@ -364,7 +364,7 @@ check('zonder gekozen vlucht: geen reisdata', (await page.textContent('[data-cal
 await page.fill('#f_vlucht_van', 'AMS'); await page.fill('#f_vlucht_naar', 'DEN');
 await page.fill('#f_vlucht_heenDatum', '2027-04-02'); await page.fill('#f_vlucht_heenAankomstDatum', '2027-04-03'); await page.fill('#f_vlucht_terugDatum', '2027-04-26');
 const rd = await page.evaluate(() => { const t = __rr.T(); return [t.reis.vertrek, t.reis.terug, t.auto.ophaalDatum, t.auto.inleverDatum, t.auto.ophaalPlaats]; });
-check('reisdata = aankomstdatum heen t/m terugvlucht; auto neemt data en plaats over', rd.join('|') === '2027-04-03|2027-04-26|2027-04-03|2027-04-26|DEN', rd.join('|'));
+check('reisdata = aankomstdatum heen t/m terugvlucht; auto neemt data en plaats over (plaatsnaam, geen code)', rd.join('|') === '2027-04-03|2027-04-26|2027-04-03|2027-04-26|Denver', rd.join('|'));
 check('aantal nachten (23) staat bij de vlucht', (await page.textContent('[data-calc=reisdatums]')).includes('23 nachten'));
 const chk = await page.textContent('[data-calc=vluchtCheck]');
 check('verblijf van 24 dagen valt binnen 21-25: geen melding over duur', !/korter dan|langer dan/.test(chk), chk);

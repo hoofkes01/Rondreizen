@@ -428,6 +428,7 @@ const LUCHTHAVENS = [ /* [code, naam, land, breedtegraad, lengtegraad]; coördin
 const normT = x => (x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ');
 const luchthavenKm = (a, b) => { const r = Math.PI / 180, dl = (b[4] - a[4]) * r, p1 = a[3] * r, p2 = b[3] * r, x = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)); };
 /* zoekt de plaats of luchthaven en geeft alle luchthavens binnen de straal (dichtstbij eerst) */
+const lhNaam = x => { const l = LUCHTHAVENS.find(y => y[0] === String(x || '').trim().toUpperCase()); return l ? l[1] : (x || ''); };
 function luchthavensBijPlaats(plaats, straal = 500, max = 15) {
   const n = normT(plaats).trim(); if (!n) return { voorkeur: null, lijst: [] };
   const tr = LUCHTHAVENS.filter(l => normT(`${l[1]} ${l[2]} ${l[0]}`).includes(n)).sort((a, b) => (normT(a[1]).startsWith(n) ? 0 : 1) - (normT(b[1]).startsWith(n) ? 0 : 1));
@@ -895,8 +896,8 @@ VIEWS.start = () => {
 
 function lhBlok(veld, titel, uitleg) {
   const lijst = codes(T().vlucht[veld]);
-  return `<div class="item" style="margin:6px 0"><label>${esc(titel)}</label><div class="rij" style="margin:4px 0">${lijst.length ? lijst.map(c => { const l = LUCHTHAVENS.find(x => x[0] === c); return `<span class="b b-n" style="font-size:.9rem;padding:3px 10px">${esc(c)}${l ? ' ' + esc(l[1]) : ''} <button class="klein" style="border:0;padding:0 4px;background:none" data-a="luchthavenWeg" data-f="${veld}" data-c="${esc(c)}" aria-label="Verwijder ${esc(c)}">✕</button></span>`; }).join('') : '<span class="noot">Nog geen luchthavens gekozen.</span>'}</div>
-    <div class="rij" style="margin:0"><input type="text" id="in_${veld}" list="lhLijst" data-enter="${veld}" placeholder="code of plaats, bijv. AMS of Amsterdam" style="max-width:340px"><button data-a="luchthavenToe" data-f="${veld}">+ Toevoegen</button>${veld === 'zoekVan' ? '<button data-a="vasteVertrek">Voeg FRA, DUS, AMS en BRU toe</button>' : ''}</div><div class="hint">${esc(uitleg)}</div></div>`;
+  return `<div class="item" style="margin:6px 0"><label>${esc(titel)}</label><div class="rij" style="margin:4px 0">${lijst.length ? lijst.map(c => { const l = LUCHTHAVENS.find(x => x[0] === c); return `<span class="b b-n" style="font-size:.9rem;padding:3px 10px">${l ? esc(l[1]) + ' <span class="noot">(' + esc(c) + ')</span>' : esc(c)} <button class="klein" style="border:0;padding:0 4px;background:none" data-a="luchthavenWeg" data-f="${veld}" data-c="${esc(c)}" aria-label="Verwijder ${esc(c)}">✕</button></span>`; }).join('') : '<span class="noot">Nog geen luchthavens gekozen.</span>'}</div>
+    <div class="rij" style="margin:0"><input type="text" id="in_${veld}" list="lhLijst" data-enter="${veld}" placeholder="plaats, bijv. Amsterdam of Dallas" style="max-width:340px"><button data-a="luchthavenToe" data-f="${veld}">+ Toevoegen</button>${veld === 'zoekVan' ? '<button data-a="vasteVertrek">Voeg FRA, DUS, AMS en BRU toe</button>' : ''}</div><div class="hint">${esc(uitleg)}</div></div>`;
 }
 VIEWS.vlucht = () => {
   const t = T(), v = t.vlucht;
@@ -1557,10 +1558,10 @@ function syncDatums(t) {
   const aan = tMin(start, v.heenAankomst), vert = tMin(eind, v.terugVertrek);
   if (aan != null) [od, ot] = minNaarDT(aan + (num(au.bufferOphaal) ?? 60));
   if (vert != null) [id, it] = minNaarDT(vert - (num(au.bufferInlever) ?? 180));
-  const volg = (key, nieuw, vorig) => { if (nieuw && (!au[key] || au[key] === vorig)) au[key] = nieuw; };
+  const volg = (key, nieuw, vorig, alt) => { if (nieuw && (!au[key] || au[key] === vorig || (alt && au[key] === alt))) au[key] = nieuw; };
   volg('ophaalDatum', od, p.od); volg('ophaalTijd', ot, p.ot); volg('inleverDatum', id, p.id); volg('inleverTijd', it, p.it);
   const tv = v.terugVan || v.naar;
-  volg('ophaalPlaats', v.naar, p.naar); volg('inleverPlaats', tv, p.terugVan);
+  volg('ophaalPlaats', lhNaam(v.naar), lhNaam(p.naar), p.naar); volg('inleverPlaats', lhNaam(tv), lhNaam(p.terugVan), p.terugVan);
   t.sync = { start: start || p.start, eind: eind || p.eind, naar: v.naar || p.naar, terugVan: tv || p.terugVan, od: od || p.od, ot: ot || p.ot, id: id || p.id, it: it || p.it };
 }
 const codes = txt => String(txt || '').split(/[,;\n]+/).map(x => x.trim()).filter(Boolean).map(x => /^[a-z]{3}$/i.test(x) ? x.toUpperCase() : x);
@@ -1696,7 +1697,6 @@ const CALC = {
   dcZoek: () => {
     const t = T(), a = t.auto, v = t.vlucht; if (!a.nodig) return '';
     const zelfde = !a.inleverPlaats || a.inleverPlaats === a.ophaalPlaats, kl = KLASSEN.find(k => k[0] === a.klasse), br = BRANDSTOF[a.brandstofBeleid];
-    const lhNaam = x => { const l = LUCHTHAVENS.find(y => y[0] === String(x || '').trim().toUpperCase()); return l ? l[1] : x; };
     const loc = [['Pick-up location', lhNaam(a.ophaalPlaats)], ['Return car in same location', zelfde ? 'ja' : 'nee: ' + lhNaam(a.inleverPlaats)], ['Pick-up date', engDatum(a.ophaalDatum)], ['Time', a.ophaalTijd], ['Drop-off date', engDatum(a.inleverDatum)], ['Time (drop-off)', a.inleverTijd], ['Driver’s age', a.leeftijd ?? '']];
     const prof = [['Car type / category', kl ? kl[2] : ''], ['Transmission', a.versnelling === 'automaat' ? 'Automatic' : a.versnelling === 'schakel' ? 'Manual' : ''], ['Fuel / power', a.brandstofSoort], ['Passengers', personen(t)], ['Large suitcases', num(a.koffers) ?? ''], ['Mileage', a.kmType === 'onbeperkt' ? 'Unlimited mileage' : a.kmType === 'beperkt' ? `Limited: ${a.kmLimiet || '?'} km per ${a.kmPer === 'dag' ? 'day' : 'rental'}` : ''], ['Fuel policy', br ? br[1] : ''], ['Child seats', a.zitjes === 'ja' ? `yes, ${a.zitjesAantal || '?'}` : a.zitjes === 'nee' ? 'no' : ''], ['Cross-border', a.grens === 'ja' ? 'yes: ' + (a.grensLanden || '?') : 'no'], ['Insurance', a.verzekeringKeuze === 'volledig' ? 'Full Coverage' : 'basic protection (excess applies)'], ['Second driver', a.tweede ? 'yes' : 'no']];
     const tab = (kop, rows) => `<table class="rtab"><thead><tr><th>${kop}</th><th>Waarde</th><th></th></tr></thead><tbody>${rows.map(r => `<tr><td data-l="Veld">${esc(r[0])}</td><td data-l="Waarde">${r[1] === '' || r[1] == null ? '<span class="noot">—</span>' : '<b>' + esc(r[1]) + '</b>'}</td><td>${r[1] === '' || r[1] == null ? '' : `<button class="klein" data-a="kopie" data-v="${esc(r[1])}">Kopieer</button>`}</td></tr>`).join('')}</tbody></table>`;
@@ -1895,7 +1895,7 @@ function lhZoek(tekst) {
 }
 A.luchthavenToe = b => {
   const f = b.dataset.f, x = lhZoek($('#in_' + f).value);
-  if (!x) return melding('Geen luchthaven gevonden. Typ de drielettercode (bijv. AMS) of een plaats uit de lijst.', true);
+  if (!x) return melding('Geen luchthaven gevonden. Typ de plaats (bijv. Amsterdam) en kies hem uit het lijstje.', true);
   if (!voegToe(f, [x.code])) return melding(`${x.code} staat er al bij.`);
   opslaan(); rerender(); melding(x.bekend ? `${x.code} ${x.naam} toegevoegd.` : `${x.code} toegevoegd; deze code staat niet in de eigen lijst, controleer hem.`, !x.bekend);
 };
@@ -2218,7 +2218,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 j'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 k'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
