@@ -303,6 +303,12 @@ check('Get-Roam-formulier: velden zoals hun eigen formulier (fly_from, fly_to, d
   check('knop verstuurt de zoekopdracht als formulier naar Get-Roam', !!post && /fly_from=FRA%2CAMS/.test(post) && /fly_to=DFW/.test(post) && /date_from=2027-03-01/.test(post) && /nights_in_dst_to=25/.test(post), String(post).slice(0, 200));
   for (const pg of ctx.pages()) if (pg !== page) await pg.close(); }
 
+console.log('Naast elkaar werken met DiscoverCars');
+await page.evaluate(() => { location.hash = 'auto'; }); await page.reload();
+{ const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=dcZoek] [data-a=openNaast]')]);
+  await pop.waitForLoadState().catch(() => { });
+  check('DiscoverCars opent in een eigen venster naast de app (geen tracking-parameter)', pop.url() === 'https://www.discovercars.com/', pop.url()); await pop.close(); }
+
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
 promptAntwoord = 'Tweede reis';
