@@ -343,6 +343,17 @@ for (const [h, verwacht] of [['vlucht', ['https://www.kiwi.com/en/', 'https://ge
   check(`tabblad ${h}: rechtstreekse links bovenaan`, verwacht.every(u => l.includes(u)), l.join(' ').slice(0, 200));
 }
 
+console.log('Plaatsen plakken in stap 3');
+await page.evaluate(() => { location.hash = 'verblijf'; }); await page.reload();
+await page.evaluate(() => { document.querySelectorAll('details.sub').forEach(d => d.open = true); });
+await page.evaluate(() => { const t = __rr.T(); t.stops = []; __rr.opslaan(); }); await page.reload();
+await page.evaluate(() => { document.querySelectorAll('details.sub').forEach(d => d.open = true); });
+await page.fill('#plakStops', 'Dallas; 1\nAustin; 2\nSan Antonio - 2\nNew Orleans: 3 nachten\nDallas; 2\nHouston');
+await page.click('[data-a=stopsPlakken]'); await page.waitForTimeout(300);
+const ps = await page.evaluate(() => __rr.T().stops.map(x => x.plaats + ':' + x.nachten).join(','));
+check('plaatsen plakken: volgorde blijft, dubbele plaats (begin en eind) mag, zonder nachten wordt het 2', ps === 'Dallas:1,Austin:2,San Antonio:2,New Orleans:3,Dallas:2,Houston:2', ps);
+await page.evaluate(() => { const t = __rr.T(); t.stops = []; __rr.opslaan(); });
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));

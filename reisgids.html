@@ -1077,6 +1077,10 @@ VIEWS.verblijf = () => {
     <h3>Hoe vaak 1, 2, 3 of 4 nachten op één plek?</h3>
     <div class="grid">${fld('route.n1', 'Aantal plaatsen met 1 nacht', 'n', { min: 0 })}${fld('route.n2', 'Aantal plaatsen met 2 nachten', 'n', { min: 0 })}${fld('route.n3', 'Aantal plaatsen met 3 nachten', 'n', { min: 0 })}${fld('route.n4', 'Aantal plaatsen met 4 nachten', 'n', { min: 0 })}</div>
     <div class="rij"><button data-a="patroonRijen">Lege plaatsen aanmaken uit dit patroon</button></div>
+    <details class="sub"><summary>Of: een lijst met plaatsen plakken (één per regel: plaats; nachten)</summary>
+      <p class="noot">Plak hier een voorgestelde route in de gewenste volgorde, bijvoorbeeld <code>Austin; 2</code>. Een plaats mag twee keer voorkomen (begin en eind). De volgorde blijft zoals u hem plakt. Gebruik daarna <b>niet</b> “Neem de voorgestelde volgorde over”, tenzij u de volgorde wilt laten herschikken.</p>
+      <textarea id="plakStops" rows="8" placeholder="Austin; 2&#10;San Antonio; 2"></textarea>
+      <div class="rij"><label class="knop klein" style="margin:0"><input type="checkbox" id="plakStopsVervang"> Vervang de huidige lijst</label><button class="prim" data-a="stopsPlakken">Plaatsen toevoegen</button></div></details>
     <div class="box" data-calc="patroonCheck"></div>
     <h3>Uw plaatsen en waar u 1, 2, 3 of 4 nachten blijft</h3>
     <table class="rtab"><thead><tr><th>Plaats</th><th>Nachten</th><th>Locatie</th><th></th></tr></thead><tbody>${t.stops.map((x, i) => `<tr><td data-l="Plaats"><input type="text" data-b="stops.${i}.plaats" value="${esc(x.plaats)}" placeholder="bijv. Santa Fe"></td><td data-l="Nachten"><input type="number" min="1" data-b="stops.${i}.nachten" value="${esc(x.nachten)}" style="width:90px"></td><td data-l="Locatie" class="noot">${x.geo ? esc(x.geo.naam) : '—'}</td><td><button class="klein" data-a="omhoog" data-p="stops" data-i="${i}">↑</button> <button class="klein" data-a="omlaag" data-p="stops" data-i="${i}">↓</button> <button class="klein gevaar" data-a="del" data-p="stops" data-i="${i}">✕</button></td></tr>`).join('')}</tbody></table>
@@ -1942,6 +1946,13 @@ A.stopsNaarDagen = () => {
   t.dagen.sort((a, b) => a.datum.localeCompare(b.datum)); verblijvenUitStops(t); opslaan(); rerender();
   melding(`${tot + 1} dagen en ${t.hotels.lijst.length} verblijven aangemaakt. Afstanden zijn geschat: controleer ze in Google Maps. Kies daarna per verblijf een hotel.`);
 };
+A.stopsPlakken = () => {
+  const t = T(), tekst = ($('#plakStops') || {}).value || '', regels = tekst.split(/\n+/).map(x => x.trim()).filter(Boolean), nieuw = [];
+  for (const r of regels) { const m = /^(.*?)\s*[;:\t]\s*(\d+)\s*(?:nachten?)?$/i.exec(r) || /^(.*?)\s+-\s+(\d+)\s*(?:nachten?)?$/i.exec(r) || [null, r, '']; const plaats = m[1].trim(); if (plaats) nieuw.push({ ...NIEUW.stop(), plaats, nachten: m[2] === '' ? 2 : Math.max(1, +m[2]) }); }
+  if (!nieuw.length) return melding('Niets gevonden. Zet per regel een plaats en het aantal nachten, bijvoorbeeld “Austin; 2”.', true);
+  if ($('#plakStopsVervang') && $('#plakStopsVervang').checked) t.stops = [];
+  t.stops.push(...nieuw); opslaan(); rerender(); melding(`${nieuw.length} plaats(en) toegevoegd (${sum(nieuw.map(x => x.nachten))} nachten). Tik nu op “Locaties opzoeken”.`);
+};
 A.patroonRijen = () => {
   const t = T(), r = t.route, rijen = []; [[1, r.n1], [2, r.n2], [3, r.n3], [4, r.n4]].forEach(([n, c]) => { for (let k = 0; k < (num(c) || 0); k++) rijen.push(Object.assign(NIEUW.stop(), { nachten: n })); });
   if (!rijen.length) return melding('Vul eerst in hoe vaak 2, 3 of 4 nachten.', true);
@@ -2331,7 +2342,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 v'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 w'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
