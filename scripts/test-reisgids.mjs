@@ -285,6 +285,14 @@ await page.evaluate(() => { const t = __rr.T(); const vandaag = new Intl.DateTim
 await page.goto(url); await page.waitForSelector('nav.tabs');
 check('reis bezig: de app opent op de dagpagina van vandaag', await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t === 'dag' && [...document.querySelectorAll('h2')].some(h => h.textContent.includes('Dag 3'))), await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t + ' ' + [...document.querySelectorAll('h2')].map(x => x.textContent).join('|').slice(0, 120)));
 
+console.log('Te regelen voor de reis');
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+check('startpagina toont "Te regelen voor de reis" met visum, stekkers en valuta', await page.locator('h2:has-text("Te regelen voor de reis")').count() >= 1 && /verloopstekkers|valuta/i.test(await page.locator('section:has(h2:has-text("Te regelen voor de reis"))').first().innerText()));
+await page.click('[data-a=tab][data-t=regelen]');
+check('knop opent het tabblad Te regelen, met visum, stekkertype en valuta', await page.evaluate(() => document.querySelector('nav.tabs button.act').dataset.t === 'regelen' && /Visum/.test(app.innerHTML) && /Stekkertype/.test(app.innerHTML) && /Lokale valuta/.test(app.innerText)));
+check('Te regelen staat altijd open, ook zonder bevestigde stappen', await page.evaluate(() => { const t = __rr.T(); return !document.querySelector('nav.tabs button[data-t=regelen]').classList.contains('slot'); }));
+check('oudere reizen krijgen de taken voor verloopstekkers en valuta erbij', await page.evaluate(() => { const t = __rr.T(); return t.voorbereiding.some(x => /tekker/i.test(x.tekst)) && t.voorbereiding.some(x => /pinpas/i.test(x.tekst)); }));
+
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
 promptAntwoord = 'Tweede reis';

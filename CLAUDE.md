@@ -12,8 +12,8 @@ De gebruiker beoordeelt prijzen en kiest zelf: toon altijd bron, datum en link; 
 
 ## Werkwijze in de app (leidend)
 Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft tot dan vergrendeld. Nooit automatisch doorgaan.
-1. **Vlucht** → 2. **Auto** → 3. **Hotels**. Pas na bevestiging van de hotels opent de **interactieve reisgids**: Reisgids (intake, praktisch,
-   voorbereiding), Route, Onderweg (dagpagina's), Dagboek en Reisboek/verslag. Start, Kosten en Gegevens zijn altijd open.
+1. **Vlucht** → 2. **Auto** → 3. **Hotels**. Pas na bevestiging van de hotels opent de **interactieve reisgids**: Reisgids (intake,
+   voorbereiding), Route, Onderweg (dagpagina's), Dagboek en Reisboek/verslag. Start, Te regelen (visum, stekkers, valuta, voorbereiding), Kosten en Gegevens zijn altijd open.
 1. **Vlucht:** (na het zoeken in Get-Roam kan de gebruiker de tekst van de gekozen vlucht plakken; de app leest die heuristisch en toont een voorbeeld, pas "Neem over" vult stap 2; niet getest op echte Get-Roam-tekst) zoekcriteria voor Get-Roam (meerdere vertrek- en aankomstluchthavens als blokjes, periode, min/max dagen); luchthavens
    binnen een straal komen uit de eigen lijst (LUCHTHAVENS). De gekozen vlucht bepaalt de reisdata en de huurperiode (niet gevraagd). Het gekozen aanbod (vlucht én auto) kan worden geplakt (heuristische lezer met voorbeeld; pas "Neem over" vult; andere valuta dan de reis wordt niet overgenomen; niet getest op echte sitetekst) en als screenshot worden bewaard (alleen op het apparaat; in het reisboek bij "boekingsnummers opnemen"). Tekst in screenshots wordt niet uitgelezen (geen OCR).
 2. **Auto:** eerst advies huurauto versus trein/bus; intake (klasse, versnelling, kilometers, brandstofbeleid, kinderzitjes, grens,
