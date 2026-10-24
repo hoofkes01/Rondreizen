@@ -369,7 +369,7 @@ console.log('Naast elkaar werken met DiscoverCars');
 await page.evaluate(() => { location.hash = 'auto'; }); await page.reload();
 { const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=dcZoek] [data-a=openNaast]')]);
   await pop.waitForLoadState().catch(() => { });
-  check('DiscoverCars opent in een eigen venster naast de app (geen tracking-parameter)', pop.url() === 'https://www.discovercars.com/', pop.url()); await pop.close(); }
+  check('DiscoverCars opent in een eigen venster naast de app (exact de link van de gebruiker)', pop.url() === 'https://www.discovercars.com/?utm_source=chatgpt.com', pop.url()); await pop.close(); }
 
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
@@ -421,7 +421,7 @@ const dc = await page.textContent('[data-calc=dcZoek]');
 check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('Denver') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
 check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
 check('de app legt uit dat het het uiterste inlevertijdstip in het contract is en dat eerder inleveren mag', /uiterste tijdstip[\s\S]*eerder inleveren mag/.test(await page.textContent('[data-calc=autoTijden]')));
-check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
+check('link naar DiscoverCars is exact de link die de gebruiker gebruikt (met ?utm_source=chatgpt.com), gewoon openen in een nieuw tabblad', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/?utm_source=chatgpt.com' && (await page.getAttribute('[data-calc=dcZoek] a.knop', 'target')) === '_blank');
 await page.check('#f_auto_afwijkend');
 await page.fill('#f_auto_ophaalTijd', '12:00');
 await page.click('[data-t=vlucht]'); await page.fill('#f_vlucht_heenAankomst', '22:00');
