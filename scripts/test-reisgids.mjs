@@ -194,7 +194,7 @@ console.log('  (pdf: ' + pdf + ')');
 check('in printweergave verdwijnt de menubalk', printKop === 'none', printKop);
 console.log('Afdrukken per blad en per onderdeel van het reisboek');
 const dir = mkdtempSync(join(tmpdir(), 'rr-blad-'));
-const koppen = { start: 'Welkom', vlucht: '1 Vlucht', auto: '2 Autohuur', verblijf: '3 Hotels', gids: 'Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
+const koppen = { start: 'Reizen', vlucht: '1 Vlucht', auto: '2 Autohuur', verblijf: '3 Hotels', gids: 'Reisgidsintake', route: 'Route in één oogopslag', dag: 'Dag 1', dagboek: 'Dagboek', kosten: 'Kostenoverzicht', data: 'Gegevens, back-up' };
 for (const [k, kop] of Object.entries(koppen)) {
   await page.evaluate(x => { location.hash = x; }, k); await page.reload(); await page.waitForTimeout(250);
   await page.evaluate(() => { window.__stop = __rr.bereidPrint(); });

@@ -857,9 +857,14 @@ const VIEWS = {};
 
 VIEWS.start = () => {
   const t = T();
-  let h = `<section class="card"><h2>Welkom</h2><p class="noot">Plan een rondreis, gebruik de gids onderweg, houd een dagboek met foto’s bij en bewaar alles als printbaar reisboek. Alle gegevens staan alleen in deze browser (niet in de openbare repo). Maak regelmatig een back-up op het tabblad Gegevens.</p>
-    <div class="rij"><button class="prim" data-a="nieuw">+ Nieuwe reis</button><button data-a="demo">Demo-reis laden (verzonnen gegevens)</button><label class="knop" style="margin:0">Back-up of intake inlezen<input type="file" accept="application/json,.json" data-ch="importeer" hidden></label></div></section>`;
-  if (!t) return h + `<p class="noot">Er is nog geen reis. Maak een nieuwe reis aan om te beginnen.</p>`;
+  const heeft = Object.keys(DB.reizen).length > 0;
+  let h = heeft ? `<section class="card"><h2>Reizen</h2><p class="noot">Alle gegevens staan alleen in deze browser. Maak regelmatig een back-up op het tabblad Gegevens.</p>
+    <div class="rij"><button data-a="nieuw">+ Nog een reis</button><button data-a="demo">Demo-reis laden (verzonnen gegevens)</button><label class="knop" style="margin:0">Back-up of intake inlezen<input type="file" accept="application/json,.json" data-ch="importeer" hidden></label></div></section>`
+    : `<section class="card"><h2>Welkom: zo begint u</h2><p class="noot">U hoeft niets te kiezen in de knoppen bovenin. Begin met de grote knop hieronder; de app leidt u daarna stap voor stap.</p>
+    <ol><li><b>Maak een reis aan</b> (knop hieronder, alleen een naam).</li><li><b>Stap 1 Vlucht:</b> zoekgegevens klaarzetten voor Get-Roam, uw gekozen vlucht invullen en bevestigen.</li><li><b>Stap 2 Auto</b> en <b>stap 3 Hotels:</b> idem. Pas na uw bevestiging van elke stap gaat de volgende open.</li><li>Daarna de <b>reisgids</b> voor onderweg met dagboek, foto’s en het reisverslag.</li></ol>
+    <div class="rij"><button class="prim" data-a="nieuw" style="font-size:1.05rem;padding:10px 18px">Begin hier: nieuwe reis</button></div>
+    <h3>Heeft u al iets?</h3><div class="rij" style="margin-top:0"><label class="knop" style="margin:0">Back-up of oude intake (.json) inlezen<input type="file" accept="application/json,.json" data-ch="importeer" hidden></label><button data-a="demo">Eerst de demo bekijken (verzonnen gegevens)</button></div></section>`;
+  if (!t) return h;
   const S = voortgang(t), W = waarschuwingen(t), d = duurDagen(t);
   const R = kostenRegels(t), ks = kostenSom(R);
   h += `<section class="card"><h2>${esc(t.naam)} ${t.demo ? badge('l', 'DEMO – verzonnen gegevens') : ''}</h2>
