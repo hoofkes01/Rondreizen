@@ -559,7 +559,7 @@ function nieuweReis(naam) {
     id: uid(), naam: naam || 'Nieuwe reis', gemaakt: new Date().toISOString(), demo: false,
     reis: { landen: '', startplaats: '', eindplaats: '', vertrek: '', terug: '', flexibel: false, volw: 2, kind: 0, kindLeeftijden: '', reisvorm: 'rondreis', tempo: 'normaal', valuta: 'EUR', budget: null, taal: 'nl', detail: 'normaal', toegang: '', wensen: '', toonMijl: false },
     vlucht: { nodig: true, personen: null, zoekVan: '', zoekNaar: '', zoekPlaats: '', straal: 500, maandVan: '', maandTot: '', exactVan: '', exactTot: '', terugVan: '', terugTot: '', dagenMin: null, dagenMax: null, maxStops: '', maxUren: null, maxPrijsUsd: null, bagage: '1 koffer van 23 kg per persoon',
-      van: '', naar: '', terugVan: '', maatschappij: '', stops: '', heenDatum: '', heenVertrek: '', heenAankomstDatum: '', heenAankomst: '', heenNr: '', terugDatum: '', terugVertrek: '', terugAankomstDatum: '', terugAankomst: '', terugNr: '',
+      van: '', naar: '', terugVan: '', maatschappij: '', heenOverstapVia: '', heenOverstapMin: null, terugOverstapVia: '', terugOverstapMin: null, losseTickets: false, stops: '', heenDatum: '', heenOverstapVia: '', heenOverstapMin: null, terugOverstapVia: '', terugOverstapMin: null, losseTickets: false, heenVertrek: '', heenAankomstDatum: '', heenAankomst: '', heenNr: '', terugDatum: '', terugVertrek: '', terugAankomstDatum: '', terugAankomst: '', terugNr: '',
       prijs: null, prijsValuta: 'EUR', prijsPer: '', koers: null, koersDatum: '', prijsType: 'schatting', bron: 'Get-Roam', prijsDatum: '', status: 'idee', ref: '', link: '', liters: 30, literprijs: 2.45, literprijsDatum: '', parkeren: 200, extra: null, notitie: '' },
     auto: { nodig: true, vervoer: '', afwijkend: false, personen: null, land: '', verhuurder: '', klasse: 'intermediate', versnelling: 'automaat', koffers: 2, ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '',
       kmType: 'onbeperkt', kmLimiet: null, kmPer: 'dag', kmExtra: null, zitjes: '', zitjesAantal: null, zitjesKosten: null, grens: 'nee', grensLanden: '', grensToeslag: null, grensOk: false, eenrichtingToeslag: null, creditcard: false,
@@ -923,6 +923,9 @@ VIEWS.vlucht = () => {
   h += sectie('Stap 2: goedkoopste vlucht uit Get-Roam invullen', 'Vul de gekozen vlucht in. Tijden zijn de lokale tijd van de luchthaven. Alleen wat u hier invult wordt gebruikt; de app haalt geen vluchtprijzen op.',
     `<div class="grid">
       ${fld('vlucht.maatschappij', 'Maatschappij', 't')}${fld('vlucht.stops', 'Overstappen (heen / terug)', 't', { ph: 'bijv. 1 / 0' })}
+      ${fld('vlucht.heenOverstapVia', 'Overstap heen: in welke plaats?', 't', { ph: 'bijv. Frankfurt' })}${fld('vlucht.heenOverstapMin', 'Overstaptijd heen (minuten)', 'n', { min: 0, h: 'Bijv. 105 = 1 uur 45.' })}
+      ${fld('vlucht.terugOverstapVia', 'Overstap terug: in welke plaats?', 't', { ph: 'bijv. Atlanta' })}${fld('vlucht.terugOverstapMin', 'Overstaptijd terug (minuten)', 'n', { min: 0 })}
+      ${fld('vlucht.losseTickets', 'Losse tickets (zelf overstappen, niet één boeking)', 'c', { h: 'Dan zorgt niemand voor uw bagage of vervolgvlucht bij vertraging.' })}
       ${fld('vlucht.van', 'Vertrekluchthaven', 't')}${fld('vlucht.naar', 'Aankomstluchthaven', 't')}${fld('vlucht.terugVan', 'Terugvlucht vanaf (indien anders)', 't')}
       ${fld('vlucht.heenDatum', 'Heenvlucht: vertrekdatum', 'd')}${fld('vlucht.heenVertrek', 'Vertrektijd (lokaal)', 'h')}${fld('vlucht.heenAankomstDatum', 'Aankomstdatum (lokaal)', 'd', { h: 'Leeg = zelfde dag. Met deze datum begint de rondreis.' })}${fld('vlucht.heenAankomst', 'Aankomsttijd (lokaal)', 'h')}${fld('vlucht.heenNr', 'Vluchtnummer heen', 't')}
       ${fld('vlucht.terugDatum', 'Terugvlucht: vertrekdatum', 'd', { h: 'Met deze datum eindigt de rondreis.' })}${fld('vlucht.terugVertrek', 'Vertrektijd (lokaal)', 'h')}${fld('vlucht.terugAankomstDatum', 'Aankomstdatum (lokaal)', 'd')}${fld('vlucht.terugAankomst', 'Aankomsttijd (lokaal)', 'h')}${fld('vlucht.terugNr', 'Vluchtnummer terug', 't')}
@@ -1763,6 +1766,12 @@ const CALC = {
     if (okD(v.terugDatum) && z.terugTot && v.terugDatum > z.terugTot) m.push('De terugvlucht ligt na de laatste dag van uw terugperiode.');
     if (okD(v.heenDatum) && okD(v.terugDatum)) { const n = diffD(v.terugDatum, v.heenDatum); if (n < 0) m.push('De terugvlucht ligt vóór de heenvlucht.'); else { if (z.dagenMin != null && n < z.dagenMin) m.push(`Verblijf van ${n} dagen is korter dan uw minimum (${z.dagenMin}).`); if (z.dagenMax != null && n > z.dagenMax) m.push(`Verblijf van ${n} dagen is langer dan uw maximum (${z.dagenMax}).`); } }
     if (v.naar && z.naar.length && !z.naar.includes(v.naar.toUpperCase())) m.push(`Aankomstluchthaven ${v.naar} stond niet in uw zoeklijst.`);
+    for (const [r, via, mi] of [['heen', v.heenOverstapVia, v.heenOverstapMin], ['terug', v.terugOverstapVia, v.terugOverstapMin]]) {
+      const n = num(mi), e = overstapEis(via, v.losseTickets), uu = x => `${Math.floor(x / 60)} uur${x % 60 ? ' ' + (x % 60) : ''}`;
+      if (n == null) { if (via && via.trim()) m.push(`Overstap ${r} in ${via}: vul de overstaptijd in minuten in, dan controleert de app hem.`); continue; }
+      if (n < e.min) m.push(`Overstap ${r}${via ? ' in ' + e.plaats : ''}: ${uu(n)} is te kort. Minimaal ${uu(e.min)} (${e.reden}).`);
+      else if (n < e.adv) m.push(`Overstap ${r}${via ? ' in ' + e.plaats : ''}: ${uu(n)} is net genoeg. Aanbevolen is ${uu(e.adv)} (${e.reden}).`);
+    }
     if (v.van && z.van.length && !z.van.includes(v.van.toUpperCase())) m.push(`Vertrekluchthaven ${v.van} stond niet in uw zoeklijst.`);
     const kn = v.prijsValuta !== t.reis.valuta ? `<div class="rij"><button data-a="koersVlucht">Koers ${esc(v.prijsValuta)} → ${esc(t.reis.valuta)} ophalen (ECB)</button><span class="noot">${num(v.koers) ? `1 ${esc(t.reis.valuta)} = ${v.koers} ${esc(v.prijsValuta)} (${dFmt(v.koersDatum)})` : 'Nog geen koers: de prijs wordt pas meegeteld als hij bekend is.'}</span></div>` : '';
     return `${m.map(x => `<div class="banner">${esc(x)}</div>`).join('')}<div>${vp.b == null ? `<span class="let">Prijs nog niet meetellend.</span> ${esc(vp.opm)}` : `<b>Prijs voor ${persVoor(t, 'Vlucht')} reizigers: ${mny(vp.b)}</b> ${vp.opm ? '<span class="noot">(' + esc(vp.opm) + ')</span>' : ''}`}</div>${kn}`;
@@ -1888,6 +1897,14 @@ A.bevestig = b => {
   else { tab = 'route'; location.hash = tab; render(); scrollTo(0, 0); melding('Alle drie de stappen zijn bevestigd: de interactieve reisgids is nu open.'); }
 };
 const voegToe = (veld, nieuw) => { const v = T().vlucht, l = codes(v[veld]); let n = 0; nieuw.forEach(c => { if (!l.includes(c)) { l.push(c); n++; } }); v[veld] = l.join(', '); return n; };
+/* minimale overstaptijd (min) en advies per situatie; zie docs/vluchten.md voor de bronnen */
+function overstapEis(via, losse) {
+  const l = via ? lhZoek(via) : null, land = l ? (LUCHTHAVENS.find(x => x[0] === l.code) || [])[2] : '';
+  let min = 105, adv = 120, reden = 'overstap op één ticket, Europa of elders';
+  if (land === 'Verenigde Staten') { min = 150; adv = 180; reden = 'overstap in de VS: douane en immigratie, bagage opnieuw afgeven, soms andere terminal'; }
+  if (losse) { min = Math.max(min, 240); adv = Math.max(adv, 300); reden = 'losse tickets: bij vertraging heeft u geen recht op doorboeken'; }
+  return { min, adv, reden, land, plaats: l ? l.naam : (via || '') };
+}
 function lhZoek(tekst) {
   const t = String(tekst || '').trim(); if (!t) return null;
   const m = /^([A-Za-z]{3})(\s|–|-|$)/.exec(t);
@@ -2219,10 +2236,10 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 m'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 n'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
-window.__rr = { fotoGet, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { fotoGet, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>

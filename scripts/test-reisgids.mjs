@@ -271,6 +271,20 @@ check('eigen minimum en maximum voor het verblijf gaan voor de afgeleide waarden
 const pt = await page.evaluate(() => __rr.leesVlucht('12 Mar 2027 ... 02 Apr 2027 ... 20 Apr 2027', '2027-03-01', { min: 1, max: 60, van: '2027-03-01', tot: '2027-03-31', tVan: '2027-04-10', tTot: '2027-04-30' }).velden);
 check('plakken: terugvlucht moet in de terugperiode vallen (02 apr valt erbuiten, 20 apr niet)', pt.heenDatum === '2027-03-12' && pt.terugDatum === '2027-04-20', JSON.stringify(pt));
 
+console.log('Overstaptijd controleren');
+const oe = await page.evaluate(() => ({ eu: __rr.overstapEis('Frankfurt', false), us: __rr.overstapEis('Atlanta', false), los: __rr.overstapEis('Atlanta', true), leeg: __rr.overstapEis('', false) }));
+check('overstapregels: Europa 105/120, VS 150/180, losse tickets 240/300 minuten', oe.eu.min === 105 && oe.eu.adv === 120 && oe.us.min === 150 && oe.us.adv === 180 && oe.us.land === 'Verenigde Staten' && oe.los.min === 240 && oe.los.adv === 300 && oe.leeg.min === 105, JSON.stringify(oe));
+await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+await page.fill('#f_vlucht_heenOverstapVia', 'Atlanta'); await page.fill('#f_vlucht_heenOverstapMin', '105');
+check('overstap van 1 uur 45 in de VS wordt als te kort gemeld', /Overstap heen in Atlanta: 1 uur 45 is te kort[\s\S]*2 uur 30/.test(await page.textContent('[data-calc=vluchtCheck]')), (await page.textContent('[data-calc=vluchtCheck]')).slice(0, 200));
+await page.fill('#f_vlucht_heenOverstapMin', '160');
+check('160 minuten in de VS: net genoeg, advies 3 uur', /net genoeg[\s\S]*3 uur/.test(await page.textContent('[data-calc=vluchtCheck]')));
+await page.fill('#f_vlucht_heenOverstapMin', '200');
+check('200 minuten in de VS: geen melding over de overstap', !/Overstap heen/.test(await page.textContent('[data-calc=vluchtCheck]')));
+await page.fill('#f_vlucht_heenOverstapVia', 'Frankfurt'); await page.fill('#f_vlucht_heenOverstapMin', '105');
+check('105 minuten in Frankfurt (één ticket): geen te-korte-melding, wel advies 2 uur', /net genoeg[\s\S]*2 uur/.test(await page.textContent('[data-calc=vluchtCheck]')) && !/te kort/.test(await page.textContent('[data-calc=vluchtCheck]')));
+await page.fill('#f_vlucht_heenOverstapVia', ''); await page.fill('#f_vlucht_heenOverstapMin', '');
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
