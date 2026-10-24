@@ -1,5 +1,7 @@
 # Hotels
 
+- **Elk hotel moet gratis annuleerbaar zijn**, met de uiterste annuleerdatum erbij. Zo kan later opnieuw worden gezocht naar een goedkoper of beter hotel (vergelijk vóór die datum opnieuw bij Booking.com, Agoda.com en de hotelwebsite).
+
 - Altijd in een veilige buurt: controleer Google-reviews en Booking-reviews, plus het officiële reisadvies (Buitenlandse Zaken).
 - Vergelijk Booking, Agoda en de site van het hotel zelf (vaak goedkoper of betere voorwaarden).
 - Zo dicht mogelijk bij de "place to be" met wat leven in de buurt, maar niet te druk (60+).

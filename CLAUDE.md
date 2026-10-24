@@ -1,96 +1,49 @@
 # Rondreisplanner – afspraken
 
-WERKWIJZE (leidend): lees eerst OVERDRACHT.md. Eén stap tegelijk; na elke stap STOP, korte melding (max 10 regels) en wacht op
-de bevindingen van de gebruiker. Zuinig met tokens: lees geen hele bestanden, gebruik grep/head, laat scripts de pagina's uitlezen.
-Zoekscripts draaien: delegeer aan de sub-agent `zoeker` (Haiku, .claude/agents/zoeker.md). Bouwen, uitleesfunctie aanpassen,
-beoordelen en hotelafwegingen doe je zelf met het sterkere model. De gebruiker beoordeelt prijzen en kiest zelf:
-geef altijd link, regels en ruw bestand erbij. Aan het eind: eindcheck met Opus (zie OVERDRACHT.md, stap 5).
+De hele planner is één app: `reisgids.html` (geen build, geen server, geen Claude nodig; gegevens alleen in de browser). De gebruiker vult de intake in de app zelf in (of leest een oude intake.json in via Start → "Back-up of intake inlezen"); de app gaat daarna direct stap voor stap verder. Vluchten zoeken gebeurt in **Get-Roam**
+(https://get-roam.com/flexible-search), autohuur in **DiscoverCars** (https://www.discovercars.com/), hotels alleen bij **Booking.com,
+Agoda.com of de hotelwebsite zelf**. De app zoekt zelf niets: zij zet de zoekgegevens klaar (kopieerknoppen) en legt de keuzes vast.
+Skyscanner en de bijbehorende scripts zijn verwijderd (zie de git-geschiedenis als naslag).
 
 Gebruiker is een leek in techniek: gewone woorden, doe zelf wat kan, één taak tegelijk voor de gebruiker (zie OVERDRACHT.md).
 Taal: Nederlands. Bedragen met punt als duizendtalscheiding, zonder decimalen (12.500).
 Gebruiker is financieel adviseur: kritisch op fouten en zwakke aannames, geen verwijzing naar een adviseur.
+De gebruiker beoordeelt prijzen en kiest zelf: toon altijd bron, datum en link; verzin geen prijzen, reviews of waarschuwingen.
 
-## Vaste zoekregels
-- Altijd 2 volwassenen, per persoon 1 koffer van 23 kg (prijs dus incl. ruimbagage).
-- Reisduur 21 tot 25 dagen.
-- Vertrek alleen vanaf Frankfurt (FRA), Düsseldorf (DUS), Amsterdam (AMS), Brussel (BRU).
-- Twee fasen, in deze volgorde (andere vertrekluchthavens pas in fase 2):
-  1. Fase 1, alleen Frankfurt: de gebruiker geeft een PERIODE (vroegste en laatste heendatum) en een plaats. Het script zoekt
-     slim binnen die periode: grove scan elke 7 dagen, verfijnen rond de 2 goedkoopste heendatums, dan de reisduur 21 tot 25
-     dagen, dan de luchthavens binnen 500 km op het gekozen datumpaar. Uitkomst: de goedkoopste data.
-  2. Fase 2, pas op die data: zoek vanaf alle vier de vertrekluchthavens (ook Frankfurt) naar alle aankomstluchthavens binnen
-     1000 km van de voorkeursluchthaven. Reden: de rondreis kan op meerdere plekken beginnen (eerste reis: USA).
-- Vliegtijd maximaal 14 uur per enkele reis (heen en terug apart; ook rechtstreeks). Rechtstreeks heeft voorkeur.
-  Overstap alleen als de totaalprijs minstens 200 lager (100 p.p.) is dan de goedkoopste rechtstreekse vlucht naar dezelfde
-  bestemming. Zonder rechtstreekse vlucht: goedkoopste overstap binnen 14 uur.
-- Toon voor de gekozen data altijd het prijsverschil tussen de vertrekluchthavens per aankomstluchthaven (t.o.v. Frankfurt en
-  t.o.v. de goedkoopste). De scripts en de planner doen dit.
-- Open vraag aan gebruiker: bij een rondreis kan heen naar A en terug vanuit B (open jaw) goedkoper of praktischer zijn dan
-  heen en terug op dezelfde luchthaven. De scripts zoeken nu alleen heen en terug op dezelfde luchthaven.
-- Let op omvang fase 2: 4 vertrekpunten x aankomstluchthavens = veel pagina's (standaard max 20 aankomsten = 80 pagina's).
-  Meld het aantal vooraf aan de gebruiker; het script doet dat ook (--max2 beperkt het aantal).
+## Werkwijze in de app (leidend)
+Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft tot dan vergrendeld. Nooit automatisch doorgaan.
+1. **Vlucht** → 2. **Auto** → 3. **Hotels**. Pas na bevestiging van de hotels opent de **interactieve reisgids**: Reisgids (intake, praktisch,
+   voorbereiding), Route, Onderweg (dagpagina's), Dagboek en Reisboek/verslag. Start, Kosten en Gegevens zijn altijd open.
+1. **Vlucht:** (na het zoeken in Get-Roam kan de gebruiker de tekst van de gekozen vlucht plakken; de app leest die heuristisch en toont een voorbeeld, pas "Neem over" vult stap 2; niet getest op echte Get-Roam-tekst) zoekcriteria voor Get-Roam (meerdere vertrek- en aankomstluchthavens als blokjes, periode, min/max dagen); luchthavens
+   binnen een straal komen uit de eigen lijst (LUCHTHAVENS). De gekozen vlucht bepaalt de reisdata en de huurperiode (niet gevraagd). Het gekozen aanbod (vlucht én auto) kan worden geplakt (heuristische lezer met voorbeeld; pas "Neem over" vult; andere valuta dan de reis wordt niet overgenomen; niet getest op echte sitetekst) en als screenshot worden bewaard (alleen op het apparaat; in het reisboek bij "boekingsnummers opnemen"). Tekst in screenshots wordt niet uitgelezen (geen OCR).
+2. **Auto:** eerst advies huurauto versus trein/bus; intake (klasse, versnelling, kilometers, brandstofbeleid, kinderzitjes, grens,
+   volledige verzekering) en DiscoverCars-zoekprofiel. Full Coverage van DiscoverCars is een vergoedingspolis (eerst zelf betalen).
+3. **Hotels:** criteria (max € 100; uitzondering tot € 150 alleen na bevestiging per plaats; Booking ≥ 8, Google ≥ 4; ≥ 25 reviews per
+   bron; ≤ 10% slecht; gratis annuleerbaar met uiterste datum; ontbijt, parkeren, wifi, eigen badkamer, goede wijk; veiligheid altijd een
+   eis), patroon van 1/2/3/4 nachten per plaats, routevoorstel met max km per dag, per verblijf 3 hotelopties; de gebruiker bevestigt er
+   één. Prijzen alleen bij Booking.com, Agoda.com of de hotelwebsite (laagste telt). Na bevestiging staan adres en foto bij het verblijf.
+4. **Interactieve reisgids:** dagpagina's met actieve dagboekvragen (hoogtepunt, wat deden jullie, eten en drinken, weer, onthouden) en
+   een herinnering als het dagboek van vandaag leeg is; foto's per dag via in-app camera (elke foto direct bewaard), telefooncamera of
+   galerij (verdeeld over de dagen op opnamedatum/EXIF); verwijderen gaat naar een prullenbak (herstelbaar). Een webpagina kan niet
+   zelf in de fotorol kijken: volledig automatisch uploaden bestaat niet. Aan het eind van de reis: knop "Maak reisverslag" (Start, Onderweg laatste dag, Dagboek) → naslagwerk met inhoudsopgave, reisgegevens, route, hoogtepunten, waar we sliepen (foto), dagen, lokale informatie en tips, kosten, nawoord. Aan het eind van de reis: knop "Maak reisverslag" (Start, laatste dagpagina, Dagboek) → naslagwerk met inhoudsopgave, reisgegevens, route, hoogtepunten, waar we sliepen (foto), dagen, lokale informatie en tips, kosten, nawoord. Uitvoer: tab "Reisboek en verslag" (reisgids of verhalend
+   reisverslag), elk blad en onderdeel apart af te drukken of als PDF op te slaan.
+
+## Vaste voorkeuren vluchten (gelden voor de keuze in Get-Roam)
+- Altijd 2 volwassenen, per persoon 1 koffer van 23 kg (Get-Roam kan daar niet op filteren: controleren bij de boeking).
+- Reisduur 21 tot 25 dagen. Vertrek vanaf Frankfurt (FRA), Düsseldorf (DUS), Amsterdam (AMS), Brussel (BRU).
+- Vliegtijd maximaal 14 uur per enkele reis, rechtstreeks heeft voorkeur; overstap alleen als het totaal minstens € 200 goedkoper is.
+- Reiskosten naar de luchthaven: 30 liter benzine + € 200 parkeren, alleen in de kostenraming.
 
 ## Bestanden
-- index.html: de planner (luchthavens, links, prijsregels). Alles in één bestand, geen build.
-- intake.html: intakeformulier (vlucht, reiskosten, autohuur, hotels, overig) → intake.json. Reiskosten naar de luchthaven staan vast
-  op 30 liter benzine + 200 euro parkeren en komen alleen in de kostenraming van de reisgids (docs/reisgids.md).
-- scripts/lib.mjs: luchthavens (leest LUCHTHAVENS uit index.html), straal, URL, uitlezen, regels.
-- scripts/zoek.mjs: één zoekopdracht (VAN NAAR HEEN TERUG) → resultaten/*.json, .txt, .png.
-- scripts/plan.mjs: de volledige routine in twee fasen (fase 1 alleen Frankfurt; fase 2 alle vertrekpunten x aankomsten binnen 1000 km).
-- scripts/browser.mjs: zichtbare Chrome met vast profiel (.browser-profiel); gebruiker doet de robotcontrole.
-- scripts/test.mjs: test alles wat zonder Skyscanner kan (`npm test`).
+- reisgids.html: de app. sw.js + manifest.webmanifest + icoon*: offline en installeerbaar op het beginscherm (alleen via https, bijv. GitHub Pages). index.html: doorverwijzing.
+- scripts/test-reisgids.mjs: browsertest (`npm test`; Playwright; zet `CHROMIUM=<pad naar chrome>` als de standaardbrowser ontbreekt).
+- docs/databronnen.md: bronnenregister. docs/*.md: wensen per onderdeel (lees alleen het onderdeel waar je aan werkt):
+  vluchten.md, autohuur.md, hotels.md, reisgids.md.
 
-## Werkwijze op de pc (zuinig met tokens)
-Het script leest de pagina's uit en Claude beoordeelt alleen de uitkomst. Claude leest NIET zelf hele
-resultaatpagina's, tenzij het script niets kan uitlezen (dan: lees alleen het relevante deel van het .txt-bestand).
-Gebruik voor het routinewerk (scripts draaien, resultaten ophalen) een lichter model (`/model`, bijv. Haiku);
-het zwaardere model alleen voor de eindkeuze en bij fouten.
-1. De gebruiker vult intake.html in en bewaart het bestand als `intake.json` in de repo-map (staat in .gitignore, NIET committen).
-   Controleer eerst of bestemming en periode zijn ingevuld.
-2. `node scripts/plan.mjs --intake=intake.json`, of met vlaggen:
-   `node scripts/plan.mjs --plaats=Denver --van=2027-03-01 --tot=2027-05-31`
-   (optioneel `--stap=7`, `--straal=500`, `--straal2=1000`, `--max2=20`, `--maxuren=14`, `--prijs=pp|totaal`). De gebruiker rondt de robotcontrole zelf af en
-   controleert het bagagefilter (1 ruimbagage 23 kg p.p.); omzeil die controle nooit.
-3. Rapporteer per bestemming de beste keuze volgens de regels, met link, en noem wat je niet kon verifiëren.
+## Privacy
+De repo is publiek. Zet geen boekingsnummers, namen, hoteladressen, foto's of persoonlijke gegevens in de repo. Reisgegevens staan alleen
+in de browser van de gebruiker (back-up als JSON buiten de repo). `reizen/`, `intake.json` en `resultaten/` staan in .gitignore.
 
-## Eerste keer op de pc: ijking (verplicht, voor je de resultaten vertrouwt)
-De uitleesfunctie `leesAanbod` en de URL-parameters zijn nooit tegen de echte site getest.
-1. `npm i && npx playwright install chromium && npm test`
-2. `node scripts/zoek.mjs FRA LIS 2027-03-10 2027-04-02` en vergelijk het resultaat met het scherm:
-   aantal aanbiedingen, prijs (per persoon of totaal? stel `--prijs` in), reistijd, rechtstreeks ja/nee.
-3. Klopt iets niet: pas `leesAanbod` in scripts/lib.mjs aan op de echte tekst in `resultaten/*.txt`, voeg
-   die tekst toe als testgeval in scripts/test.mjs en draai `npm test`.
-4. Controleer dat de prijs inclusief 2 koffers is en dat `preferdirects`/maandkalender-parameters werken.
-
-## Overdracht van de cloudsessie naar de pc
-Gebruiker werkt op de pc met Claude Code en de Chrome-koppeling. Daarmee kan Skyscanner in de
-eigen Chrome worden bediend; de gebruiker rondt zelf een robotcontrole af.
-Stand van zaken: planner (index.html) werkt; zoeken op Skyscanner is nog nooit uitgevoerd en de
-URL-parameters zijn ongetest. Eerste taak op de pc: één testzoekopdracht (bijv. FRA-LIS, 23 dagen)
-en controleren of de links, de maandkalender en het bagagefilter (2 x 23 kg) kloppen.
-Daarna: Frankfurt-eerst-routine voor meerdere bestemmingen binnen 500 km uitvoeren.
-
-## Roadmap (door gebruiker aangegeven, in deze volgorde)
-1. Vluchten zoeken (nu in aanbouw, zie boven).
-2. Autohuur zoeken.
-3. Rondreisvoorstel op basis van parameters van de gebruiker (route, dagen, interesses, budget).
-4. Interactieve reisgids per dag, ter plekke digitaal te gebruiken (telefoon, ook met slecht bereik), met:
-   lokaal weer, weerbericht en weerwaarschuwingen, entreeprijzen, route naar en adres van het hotel,
-   restaurants binnen een ingestelde prijsrange.
-
-Ontwerpafspraken voor latere stappen (nog te bevestigen met de gebruiker):
-- Reisgegevens per reis als aparte JSON in `reizen/<naam>.json`; de gids is een statische pagina die dat leest.
-- Offline bruikbaar (PWA met service worker, gegevens vooraf opgehaald); weer ververst zodra er bereik is.
-- Weer: Open-Meteo (gratis, geen sleutel). Waarschuwingen: officiële dienst per land (bijv. MeteoAlarm/KNMI/DWD).
-- Entreeprijzen en restaurantprijzen: alleen uit officiële sites of een betaalde bron (bijv. Google Places API);
-  nooit schatten zonder dat te vermelden. Prijs en datum van de bron altijd tonen.
-- Routes naar hotel: deeplinks naar Google Maps/Apple Maps met het adres; geen eigen navigatie.
-- PRIVACY: de repo is publiek. Zet geen boekingsnummers, namen, hoteladressen of persoonlijke gegevens in de repo.
-  Houd reisgegevens lokaal of maak de repo privé voordat reizen erin komen.
-
-## Wensen per onderdeel (lees het bestand pas als je aan dat onderdeel werkt, bespaart tokens)
-- Vluchten (zitplaatsen, maaltijden): docs/vluchten.md
-- Autohuur: docs/autohuur.md
-- Hotels (eisen, veiligheidstoets, beoordeling als onderbouwde afweging): docs/hotels.md
-- Reisgids (voorbereidingspagina, dagkoers en betalen, avondadresje per dag): docs/reisgids.md
-
+## Nog niet gebouwd
+Automatisch zoeken van vluchten/auto's/hotels, automatisch ophalen van reviews en prijzen, routeberekening via een routing-API,
+live officiële waarschuwingen (alleen links), cloudopslag en synchronisatie. Zie ook de tab Gegevens in de app.
