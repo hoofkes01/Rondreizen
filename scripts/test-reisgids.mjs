@@ -410,24 +410,8 @@ const roamForm = await page.evaluate(() => __rr.roamFormulier({ van: ['FRA', 'AM
 check('Get-Roam-formulier: velden zoals hun eigen formulier (fly_from, fly_to, date_from, nights, adults, filters)', roamForm.fly_from === 'FRA,AMS' && roamForm.fly_to === 'DFW,DAL' && roamForm.date_from === '2027-03-01' && roamForm.date_to === '2027-05-31' && roamForm.nights_in_dst_from === 22 && roamForm.nights_in_dst_to === 25 && roamForm.adults === 2 && roamForm.search_type === 'specific_destinations' && roamForm.date_option === 'range' && roamForm.advanced_filters === 'yes' && roamForm.max_stopovers === '1' && roamForm.max_fly_duration === 14 && roamForm.price_to === undefined, JSON.stringify(roamForm));
 await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
 await page.evaluate(() => { const v = __rr.T().vlucht; v.zoekVan = 'FRA, AMS'; v.zoekNaar = 'DFW'; v.exactVan = '2027-03-01'; v.exactTot = '2027-05-31'; v.dagenMin = 22; v.dagenMax = 25; __rr.opslaan(); }); await page.reload();
-{ const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=roam] [data-a=roamKopieer]')]);
-  const kl = await page.evaluate(() => navigator.clipboard.readText().catch(() => '')).catch(() => '');
-  check('knop opent Get-Roam in een eigen tabblad', pop.url().startsWith('https://get-roam.com/flexible-search'), pop.url());
-  check('knop meldt dat de zoekopdracht gekopieerd is en wat de volgende stap is', /gekopieerd[\s\S]*Roam invullen/.test(await page.textContent('#melding')));
-  await pop.close(); }
-check('de bladwijzer staat op de pagina als sleepbare link (javascript:) met de uitleg', await page.evaluate(() => { const a = document.querySelector('[data-calc=roam] a.knop[href^="javascript:"]'); return !!a && /Roam invullen/.test(a.textContent) && a.getAttribute('href').length > 500; }));
-{ /* de bladwijzer zelf, op een nagebouwde Get-Roam-pagina met dezelfde veld-id's als hun formulier */
-  const mock = await ctx.newPage();
-  await mock.setContent(`<form id="flexibleSearchForm"><input type="radio" name="search_type" value="specific_destinations"><input type="radio" name="date_option" value="range"><input type="hidden" id="fly_from_codes"><input type="hidden" id="fly_to_destinations"><input type="date" id="date_from"><input type="date" id="date_to"><input type="number" id="nights_in_dst_from"><input type="number" id="nights_in_dst_to"><input type="number" id="adults"><input type="radio" name="advanced_filters" value="yes"><input type="number" id="price_to"><select id="max_stopovers"><option value="">any</option><option value="1">1</option></select><input type="number" id="max_fly_duration"></form>`);
-  const zin = await page.evaluate(() => 'ROAM:' + JSON.stringify(__rr.roamFormulier({ van: ['FRA', 'AMS'], naar: ['DFW', 'DAL'], vroegste: '2027-03-01', laatste: '2027-05-31', dagenMin: 22, dagenMax: 25, adults: 2, maxPrijs: 900, maxStops: '1', maxUren: 14 })));
-  const brc = await page.evaluate(() => __rr.roamVuller.toString());
-  let tekst = ''; mock.on('dialog', d => { tekst = d.message(); d.accept(); });
-  await mock.evaluate(z => { Object.defineProperty(navigator, 'clipboard', { value: { readText: async () => z }, configurable: true }); }, zin);
-  await mock.evaluate(c => { (0, eval)('(' + c + ')()'); }, brc); await mock.waitForTimeout(500);
-  const w = await mock.evaluate(() => ({ van: document.getElementById('fly_from_codes').value, naar: document.getElementById('fly_to_destinations').value, d1: document.getElementById('date_from').value, d2: document.getElementById('date_to').value, n1: document.getElementById('nights_in_dst_from').value, n2: document.getElementById('nights_in_dst_to').value, ad: document.getElementById('adults').value, pr: document.getElementById('price_to').value, st: document.getElementById('max_stopovers').value, du: document.getElementById('max_fly_duration').value, zk: document.querySelector('[name=search_type]').checked, dk: document.querySelector('[name=date_option]').checked, af: document.querySelector('[name=advanced_filters]').checked }));
-  check('bladwijzer vult het Get-Roam-formulier: luchthavens, periode, nachten, volwassenen en filters', w.van === 'FRA,AMS' && w.naar === 'DFW,DAL' && w.d1 === '2027-03-01' && w.d2 === '2027-05-31' && w.n1 === '22' && w.n2 === '25' && w.ad === '2' && w.pr === '900' && w.st === '1' && w.du === '14' && w.zk && w.dk && w.af, JSON.stringify(w));
-  check('bladwijzer meldt wat ze heeft ingevuld en vraagt zelf op Search te klikken', /FRA,AMS naar DFW,DAL/.test(tekst) && /klik op Search/.test(tekst), tekst);
-  await mock.close(); }
+await page.reload();
+check('geen bladwijzer-uitleg of Get-Roam-invulknop meer in stap 1', await page.locator('[data-a=roamKopieer], a[href^="javascript:"]').count() === 0 && !/bladwijzer/i.test(await page.textContent('#app')));
 
 console.log('Naast elkaar werken met DiscoverCars');
 await page.evaluate(() => { location.hash = 'auto'; }); await page.reload();
