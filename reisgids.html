@@ -1279,12 +1279,19 @@ function plakPrijs(tekst, label) {
   const m = deel.match(/(€|\$|£|EUR|USD|GBP|CHF|CAD|AUD)\s?(\d[\d.,]*)/) || (() => { const x = deel.match(/(\d[\d.,]*)\s?(€|\$|£|EUR|USD|GBP|CHF|CAD|AUD)\b/); return x ? [x[0], x[2], x[1]] : null; })();
   if (!m) return null; const b = leesBedrag(m[2]); return b == null ? null : { bedrag: b, valuta: SYMV[m[1]] || m[1] };
 }
-function leesVlucht(tekst, ref) {
+function leesVlucht(tekst, ref, eis = {}) {
   const out = {}, nota = [];
   const codes = []; for (const m of tekst.matchAll(/\b([A-Z]{3})\b/g)) if (LUCHTHAVENS.some(l => l[0] === m[1]) && !codes.includes(m[1])) codes.push(m[1]);
   if (codes[0]) out.van = codes[0]; if (codes[1]) out.naar = codes[1];
   if (codes.length > 2) nota.push('Meer dan twee luchthavencodes gevonden (' + codes.join(', ') + '); de eerste twee zijn gebruikt.');
-  const dd = plakDatums(tekst, ref, nota); if (dd[0]) out.heenDatum = dd[0]; if (dd[1]) out.terugDatum = dd[1];
+  const dd = plakDatums(tekst, ref, nota);
+  nota.splice(0, nota.length, ...nota.filter(x => !x.startsWith('Meer dan twee datums')));
+  /* alle datums in de tekst (ook de zoekperiode bovenaan de resultaten): kies het paar waarvan het verblijf bij uw eisen past */
+  const pass = (a, b) => { const n = diffD(b, a); return n >= 1 && (eis.min == null || n >= eis.min) && (eis.max == null || n <= eis.max) && (!eis.van || a >= eis.van) && (!eis.tot || a <= eis.tot); };
+  let paar = null; for (let i = 0; i < dd.length && !paar; i++) for (let j = i + 1; j < dd.length && !paar; j++) if (pass(dd[i], dd[j])) paar = [dd[i], dd[j]];
+  if (paar) { out.heenDatum = paar[0]; out.terugDatum = paar[1]; if (dd.length > 2) nota.push(`${dd.length} datums in de tekst; gekozen is het paar waarvan het verblijf (${diffD(paar[1], paar[0])} nachten) bij uw eisen past. Controleer dit.`); }
+  else if (dd.length === 1) out.heenDatum = dd[0];
+  else if (dd.length) { nota.push(`Geen paar datums gevonden met een verblijf van ${eis.min ?? '?'} tot ${eis.max ?? '?'} nachten binnen uw zoekperiode (gevonden: ${dd.map(dFmt).join(', ')}). De datums zijn daarom niet overgenomen: vul ze zelf in.`); }
   const tijden = plakTijden(tekst), tk = ['heenVertrek', 'heenAankomst', 'terugVertrek', 'terugAankomst']; tijden.slice(0, 4).forEach((x, i) => out[tk[i]] = x);
   if (tijden.length && tijden.length < 4) nota.push(`Slechts ${tijden.length} tijd(en) gevonden; de rest vult u zelf in.`);
   const pr = plakPrijs(tekst); if (pr) { out.prijs = pr.bedrag; out.prijsValuta = pr.valuta; }
@@ -1877,7 +1884,7 @@ A.dagNav = b => { dagSel += +b.dataset.d; rerender(); scrollTo(0, 0); };
 A.plakLees = b => {
   const soort = b.dataset.s, t = T(), pk = plak[soort]; pk.tekst = $(soort === 'vlucht' ? '#plakVlucht' : '#plakAuto').value; const v = t.vlucht;
   const ref = v.exactVan || (v.maandVan ? v.maandVan + '-01' : '') || t.reis.vertrek || '';
-  pk.res = soort === 'vlucht' ? leesVlucht(pk.tekst, ref) : leesAuto(pk.tekst, t.reis.vertrek || ref, t.reis.valuta); rerender();
+  pk.res = soort === 'vlucht' ? leesVlucht(pk.tekst, ref, { min: num(v.dagenMin), max: num(v.dagenMax), van: roamZoek(t).vroegste, tot: roamZoek(t).laatste }) : leesAuto(pk.tekst, t.reis.vertrek || ref, t.reis.valuta); rerender();
 };
 A.plakNeem = b => {
   const soort = b.dataset.s, t = T(), pk = plak[soort]; if (!pk.res) return; const f = pk.res.velden, doel = t[soort];

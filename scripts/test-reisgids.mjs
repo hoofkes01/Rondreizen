@@ -252,10 +252,17 @@ const pl2 = await page.evaluate(() => __rr.leesVlucht('Prijs 2,345 USD, 12 maart
 check('plakken: bedrag met duizendtal, datum zonder jaar gebruikt zoekjaar; niet-herkende velden blijven leeg', pl2.prijs === 2345 && pl2.prijsValuta === 'USD' && pl2.heenDatum === '2027-03-12' && !pl2.prijsPer && !pl2.van);
 check('plakken: lege tekst vult niets behalve de bron', JSON.stringify(await page.evaluate(() => Object.keys(__rr.leesVlucht('hallo', '').velden))) === '["bron"]');
 await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+await page.evaluate(() => { const v = __rr.T().vlucht; v.dagenMin = 20; v.dagenMax = 25; v.exactVan = '2027-03-01'; v.exactTot = '2027-05-31'; __rr.opslaan(); }); await page.reload();
 await page.fill('#plakVlucht', 'AMS DFW 12 Mar 2027 10:00 18:00 Return 02 Apr 2027 12:00 06:00 $1,500 total'); await page.click('[data-a=plakLees][data-s=vlucht]');
 check('plakken: voorbeeld toont wat is gevonden voordat er iets wordt ingevuld', (await page.locator('[data-a=plakNeem][data-s=vlucht]').count()) === 1 && !(await page.evaluate(() => __rr.T().vlucht.heenDatum === '2027-03-12')));
 await page.evaluate(() => { window.__bevVoor = JSON.stringify(__rr.T().bevestigd); }); await page.click('[data-a=plakNeem][data-s=vlucht]');
 { const dbg = await page.evaluate(() => JSON.stringify([__rr.T().vlucht, __rr.T().bevestigd])); check('plakken: Neem over vult stap 2, bevestigt niets', await page.evaluate(() => { const v = __rr.T().vlucht; return v.van === 'AMS' && v.naar === 'DFW' && v.heenDatum === '2027-03-12' && v.prijs === 1500 && v.prijsPer === 'totaal' && JSON.stringify(__rr.T().bevestigd) === window.__bevVoor; }), dbg.slice(0, 300)); }
+
+console.log('Plakken: juiste datums kiezen, niet de zoekperiode');
+const dz = await page.evaluate(() => __rr.leesVlucht('Search: 01 Apr 2027 - 29 May 2027\nFRA 08:00 DFW 11:00 Mon 12 Apr 2027  Return 05 May 2027 DFW 16:00 FRA 08:00 \u20ac900', '2027-04-01', { min: 22, max: 27, van: '2027-04-01', tot: '2027-05-29' }));
+check('plakken: zoekperiode bovenaan wordt overgeslagen; paar met 23 nachten gekozen', dz.velden.heenDatum === '2027-04-12' && dz.velden.terugDatum === '2027-05-05' && dz.nota.some(x => /bij uw eisen past/.test(x)), JSON.stringify(dz));
+const dn = await page.evaluate(() => __rr.leesVlucht('01 Apr 2027 till 29 May 2027', '2027-04-01', { min: 22, max: 27, van: '2027-04-01', tot: '2027-05-29' }));
+check('plakken: past geen enkel paar bij uw eisen, dan worden de datums niet overgenomen en volgt een melding', dn.velden.heenDatum === undefined && dn.velden.terugDatum === undefined && dn.nota.some(x => /niet overgenomen/.test(x)), JSON.stringify(dn));
 
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
