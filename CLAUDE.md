@@ -15,10 +15,10 @@ Zes planningsstappen: 1 Vlucht → 2 Auto → 3 Reis → 4 Verblijf → 5 Reisgi
 de volgende stap blijft tot dan vergrendeld. Nooit automatisch doorgaan. Onderweg, Dagboek, Kosten, Reisboek en Gegevens zijn altijd open.
 1. **Vlucht:** zoekcriteria voor Get-Roam (meerdere vertrek- en aankomstluchthavens, periode, min/max dagen); luchthavens binnen een
    straal komen uit de eigen lijst in de app (LUCHTHAVENS). De gekozen vlucht bepaalt de reisdata; de auto-tijden volgen de vluchttijden.
-2. **Auto:** eerst advies huurauto versus trein/bus; intake (klasse, versnelling, kilometers, brandstofbeleid, kinderzitjes, grens,
+2. **Auto:** eerst advies huurauto versus trein/bus; de huurperiode (plaats, datum, tijd) volgt automatisch uit de goedgekeurde vlucht en wordt niet gevraagd (alleen als de gebruiker afwijkt); intake (klasse, versnelling, kilometers, brandstofbeleid, kinderzitjes, grens,
    volledige verzekering) en DiscoverCars-zoekprofiel. Full Coverage van DiscoverCars is een vergoedingspolis (eerst zelf betalen).
 3. **Reis**, 4. **Verblijf:** hotelcriteria (max € 100; uitzondering tot € 150 alleen na bevestiging per plaats; Booking ≥ 8, Google ≥ 4;
-   ≥ 25 reviews per bron; ≤ 10% slecht; ontbijt, parkeren, wifi, eigen badkamer, goede wijk; veiligheid altijd een eis), patroon van
+   ≥ 25 reviews per bron; ≤ 10% slecht; gratis annuleerbaar (verplicht, met uiterste datum); ontbijt, parkeren, wifi, eigen badkamer, goede wijk; veiligheid altijd een eis), patroon van
    1/2/3/4 nachten per plaats, routevoorstel met max km per dag, per verblijf 3 hotelopties; de gebruiker bevestigt er één. Na bevestiging
    staan adres en foto bij het verblijf, op de dagpagina en in het reisboek.
 5. **Reisgids**, 6. **Route**, dagpagina's, dagboek met foto's, kosten, reisboek. Elk blad en elk reisboekonderdeel is apart af te drukken.
