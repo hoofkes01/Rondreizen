@@ -264,6 +264,13 @@ check('plakken: zoekperiode bovenaan wordt overgeslagen; paar met 23 nachten gek
 const dn = await page.evaluate(() => __rr.leesVlucht('01 Apr 2027 till 29 May 2027', '2027-04-01', { min: 22, max: 27, van: '2027-04-01', tot: '2027-05-29' }));
 check('plakken: past geen enkel paar bij uw eisen, dan worden de datums niet overgenomen en volgt een melding', dn.velden.heenDatum === undefined && dn.velden.terugDatum === undefined && dn.nota.some(x => /niet overgenomen/.test(x)), JSON.stringify(dn));
 
+console.log('Periode heenvlucht en periode terugvlucht');
+const pz = await page.evaluate(() => { const t = __rr.T(), v = t.vlucht, o = { ...v }; Object.assign(v, { exactVan: '2027-03-01', exactTot: '2027-03-31', terugVan: '2027-03-25', terugTot: '2027-04-30', dagenMin: null, dagenMax: null }); const z = __rr.roamZoek(t); const r = { min: z.dagenMin, max: z.dagenMax, af: z.afgeleid }; Object.assign(v, { dagenMin: 22, dagenMax: 25 }); const z2 = __rr.roamZoek(t); r.min2 = z2.dagenMin; r.max2 = z2.dagenMax; Object.assign(v, o); return r; });
+check('terugperiode geeft het verblijf: kortste = vroegste terug min laatste heen, langste = laatste terug min vroegste heen', pz.min === 1 && pz.max === 60 && pz.af === true, JSON.stringify(pz));
+check('eigen minimum en maximum voor het verblijf gaan voor de afgeleide waarden', pz.min2 === 22 && pz.max2 === 25);
+const pt = await page.evaluate(() => __rr.leesVlucht('12 Mar 2027 ... 02 Apr 2027 ... 20 Apr 2027', '2027-03-01', { min: 1, max: 60, van: '2027-03-01', tot: '2027-03-31', tVan: '2027-04-10', tTot: '2027-04-30' }).velden);
+check('plakken: terugvlucht moet in de terugperiode vallen (02 apr valt erbuiten, 20 apr niet)', pt.heenDatum === '2027-03-12' && pt.terugDatum === '2027-04-20', JSON.stringify(pt));
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));
@@ -332,11 +339,11 @@ check('latere stappen zijn vergrendeld zolang stap 1 niet is bevestigd', (await 
 check('vergrendelde tabbladen zijn zichtbaar gemarkeerd (2 stappen en 5 onderdelen van de reisgids)', (await page.locator('#tabs button.slot').count()) === 7);
 for (const x of ['ams', 'DUS', 'FRA', 'BRU']) { await page.fill('#in_zoekVan', x); await page.click('[data-a=luchthavenToe][data-f=zoekVan]'); }
 for (const x of ['DEN', 'COS']) { await page.fill('#in_zoekNaar', x); await page.click('[data-a=luchthavenToe][data-f=zoekNaar]'); }
-await page.fill('#f_vlucht_maandVan', '2027-03'); await page.fill('#f_vlucht_maandTot', '2027-05');
+await page.fill('#f_vlucht_exactVan', '2027-03-01'); await page.fill('#f_vlucht_exactTot', '2027-05-31');
 await page.fill('#f_vlucht_dagenMin', '21'); await page.fill('#f_vlucht_dagenMax', '25');
 const roam = await page.textContent('[data-calc=roam]');
 check('zoekopdracht toont meerdere vertrek- en aankomstluchthavens (hoofdletters)', roam.includes('AMS, DUS, FRA, BRU') && roam.includes('DEN, COS'), roam.slice(0, 200));
-check('zoekperiode: eerste dag van beginmaand en laatste dag van eindmaand', roam.includes('2027-03-01') && roam.includes('2027-05-31'));
+check('periode heenvlucht: vroegste en laatste dag', roam.includes('2027-03-01') && roam.includes('2027-05-31'));
 check('aantal dagen min en max in de zoekopdracht', /min[\s\S]*21[\s\S]*max[\s\S]*25/.test(roam));
 check('link naar Get-Roam flexible search aanwezig', (await page.getAttribute('[data-calc=roam] a.knop', 'href')) === 'https://get-roam.com/flexible-search');
 check('zonder gekozen vlucht: geen reisdata', (await page.textContent('[data-calc=reisdatums]')).includes('Nog geen reisdata'));
