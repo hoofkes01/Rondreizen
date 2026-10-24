@@ -296,7 +296,7 @@ const hr = await page.evaluate(() => {
 check('een lus Dallas → Austin → San Antonio → Houston → Dallas is een rondreis (geen herhaling)', hr.lus === 0, JSON.stringify(hr));
 check('Dallas → Austin → Waco (Waco ligt langs de weg naar Austin) wordt als dezelfde weg gemeld', hr.heenTerug >= 1, JSON.stringify(hr));
 check('heen en terug langs dezelfde plaats wordt gemeld', hr.uitEnTerug >= 1, JSON.stringify(hr));
-await page.evaluate(() => { location.hash = 'verblijf'; }); await page.reload();
+await page.evaluate(() => { location.hash = 'rondreis'; }); await page.reload();
 await page.click('[data-a=add][data-p="gids.perse"]');
 await page.fill('[data-b="gids.perse.0.naam"]', 'Alamo'); await page.fill('[data-b="gids.perse.0.plaats"]', 'San Antonio');
 await page.waitForTimeout(300);
@@ -342,6 +342,32 @@ for (const [h, verwacht] of [['vlucht', ['https://www.kiwi.com/en/', 'https://ge
   const l = await page.evaluate(() => [...document.querySelectorAll('a[target=_blank]')].map(a => a.href));
   check(`tabblad ${h}: rechtstreekse links bovenaan`, verwacht.every(u => l.includes(u)), l.join(' ').slice(0, 200));
 }
+
+console.log('Plaatsen plakken in stap 3');
+await page.evaluate(() => { location.hash = 'rondreis'; }); await page.reload();
+await page.evaluate(() => { document.querySelectorAll('details.sub').forEach(d => d.open = true); });
+await page.evaluate(() => { const t = __rr.T(); t.stops = []; __rr.opslaan(); }); await page.reload();
+await page.evaluate(() => { document.querySelectorAll('details.sub').forEach(d => d.open = true); });
+await page.fill('#plakStops', 'Dallas; 1\nAustin; 2\nSan Antonio - 2\nNew Orleans: 3 nachten\nDallas; 2\nHouston');
+await page.click('[data-a=stopsPlakken]'); await page.waitForTimeout(300);
+const ps = await page.evaluate(() => __rr.T().stops.map(x => x.plaats + ':' + x.nachten).join(','));
+check('plaatsen plakken: volgorde blijft, dubbele plaats (begin en eind) mag, zonder nachten wordt het 2', ps === 'Dallas:1,Austin:2,San Antonio:2,New Orleans:3,Dallas:2,Houston:2', ps);
+await page.evaluate(() => { const t = __rr.T(); t.stops = []; __rr.opslaan(); });
+
+console.log('Rondreis beoordelen: afstand per dag, daarna bevestigen');
+const dt = await page.evaluate(() => {
+  const g = (plaats, lat, lon, n) => ({ plaats, nachten: n, geo: { lat, lon, plaats } });
+  const dal = { plaats: 'Dallas', lat: 32.78, lon: -96.8 };
+  const t = { route: { start: dal, eind: null, wegfactor: 1.3, snelheid: 75 }, gids: { maxKm: 400, maxUren: 6 }, reis: { vertrek: '' }, stops: [g('Dallas', 32.78, -96.8, 1), g('Austin', 30.27, -97.74, 2), g('San Antonio', 29.42, -98.49, 2), g('Houston', 29.76, -95.37, 2), g('Galveston', 29.30, -94.80, 2), g('Lafayette', 30.22, -92.02, 1), g('New Orleans', 29.95, -90.07, 3), g('Jackson', 32.30, -90.18, 1), g('Memphis', 35.15, -90.05, 3), g('Little Rock', 34.75, -92.29, 1), g('Hot Springs', 34.50, -93.06, 2), g('Shreveport', 32.53, -93.75, 1), g('Dallas', 32.78, -96.8, 2)] };
+  const d = __rr.dagTabelRijen(t); const boven = d.rijen.filter(r => r.status === 'boven').map(r => r.dag + ':' + Math.round(r.rit.km));
+  return { dagen: d.rijen.length, tot: Math.round(d.totKm), boven, dag2: d.rijen[1].rit && Math.round(d.rijen[1].rit.km), eersteRit: d.rijen[0].rit };
+});
+check('dag-voor-dag: 23 nachten = 24 dagen, ongeveer 3.440 km, dag 15 (Jackson → Memphis, 412 km) boven de limiet van 400', dt.dagen === 24 && dt.tot > 3380 && dt.tot < 3500 && dt.boven.join() === '15:412' && dt.dag2 === 381 && (!dt.eersteRit || dt.eersteRit.km === 0), JSON.stringify(dt));
+await page.evaluate(() => { const t = __rr.T(); t.rondreisOk = false; __rr.opslaan(); location.hash = 'rondreis'; }); await page.reload();
+check('tabblad Rondreis is open (zonder bevestigde stappen) en toont de dag-voor-dag-tabel en de bevestigknop', await page.locator('[data-calc=dagTabel]').count() === 1 && await page.locator('[data-a=rondreisBevestig]').count() === 1);
+await page.evaluate(() => { location.hash = 'verblijf'; }); await page.reload();
+check('bij 3 Hotels staat "Bevestig eerst de rondreis" zolang de rondreis niet is bevestigd', /Bevestig eerst de rondreis/.test(await page.textContent('#app')));
+await page.evaluate(() => { __rr.T().rondreisOk = true; __rr.opslaan(); });
 
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
@@ -486,6 +512,7 @@ check('de interactieve reisgids is nog dicht zolang de hotels niet zijn bevestig
 console.log('Stap 4: hotelcriteria, patroon 2/3/4 nachten, rondreisvoorstel, 3 hotels per verblijf');
 const crit = await page.evaluate(() => __rr.T().hotels.crit);
 check('standaardcriteria: max 100, uitzondering 150, Booking 8, Google 4, 25 reviews, 10% slecht, ontbijt/parkeren/wifi/badkamer/wijk ja', crit.maxPrijs === 100 && crit.maxUitz === 150 && crit.minBooking === 8 && crit.minGoogle === 4 && crit.minReviews === 25 && crit.maxNegPct === 10 && ['ontbijt', 'parkeren', 'wifi', 'badkamer', 'wijk'].every(k => crit[k] === 'ja'), JSON.stringify(crit));
+await page.click('[data-t=rondreis]');
 await page.fill('#f_route_n2', '1'); await page.fill('#f_route_n3', '1'); await page.fill('#f_route_n4', '1');
 let pc = await page.textContent('[data-calc=patroonCheck]');
 check('patroon 1x2+1x3+1x4 = 9 nachten tegen 23: verschil en uitleg', /9 nachten/.test(pc) && /verschil \+14/.test(pc) && /niet precies te maken/.test(pc), pc.slice(0, 300));
@@ -515,10 +542,10 @@ const nieuweVolgorde = await page.evaluate(() => __rr.T().stops.map(x => x.plaat
 const verwacht = await page.evaluate(() => __rr.voorstelVolgorde(__rr.T()).order.map(x => x.plaats));
 check('voorgestelde volgorde is overgenomen', nieuweVolgorde.join() === verwacht.join(), nieuweVolgorde.join());
 await page.fill('input[data-b="stops.0.nachten"]', String(await page.evaluate(() => __rr.T().stops[0].nachten - 1)));
-await page.click('[data-a=stopsNaarDagen]'); await page.waitForTimeout(300);
+await page.click('[data-a=rondreisBevestig]'); await page.click('[data-t=verblijf]'); await page.click('[data-a=stopsNaarDagen]'); await page.waitForTimeout(300);
 check('verdeling die niet klopt maakt geen dagen aan', await page.evaluate(() => __rr.T().dagen.length === 0), await page.textContent('#melding'));
-await page.fill('input[data-b="stops.0.nachten"]', String(await page.evaluate(() => __rr.T().stops[0].nachten + 1)));
-await page.click('[data-a=stopsNaarDagen]'); await page.waitForTimeout(500);
+await page.click('[data-t=rondreis]'); await page.fill('input[data-b="stops.0.nachten"]', String(await page.evaluate(() => __rr.T().stops[0].nachten + 1)));
+await page.click('[data-t=verblijf]'); await page.click('[data-a=stopsNaarDagen]'); await page.waitForTimeout(500);
 const dg = await page.evaluate(() => { const t = __rr.T(); const sl = t.hotels.lijst; return { n: t.dagen.length, eerste: [t.dagen[0].datum, t.dagen[0].type], laatste: [t.dagen.at(-1).datum, t.dagen.at(-1).type], stays: sl.length, opties: sl.every(h => h.opties.length === 3), aaneen: sl.every((h, i) => i === 0 ? h.van === '2027-04-03' : h.van === sl[i - 1].tot) && sl.at(-1).tot === '2027-04-26', rijdagKm: t.dagen.filter(d => d.type === 'rijdag').every(d => d.km > 0 && d.uren > 0), geschat: t.dagen.some(d => d.kmGeschat), tz: t.dagen.every(d => d.tz) }; });
 check('24 dagen van 3 t/m 26 april, 7 verblijven aaneengesloten met elk 3 hotelopties', dg.n === 24 && dg.eerste.join() === '2027-04-03,aankomst' && dg.laatste.join() === '2027-04-26,vertrek' && dg.stays === 7 && dg.opties && dg.aaneen, JSON.stringify(dg));
 check('rijdagen krijgen geschatte km en rijtijd; tijdzones uit de locaties', dg.rijdagKm && dg.geschat && dg.tz, JSON.stringify(dg));
