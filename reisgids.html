@@ -1549,6 +1549,14 @@ function syncDatums(t) {
 }
 const codes = txt => String(txt || '').split(/[,;\n]+/).map(x => x.trim()).filter(Boolean).map(x => /^[a-z]{3}$/i.test(x) ? x.toUpperCase() : x);
 const maandEinde = m => { const [y, mo] = m.split('-').map(Number); return iso(new Date(Date.UTC(y, mo, 0))); };
+/* Get-Roam heeft een gewoon HTML-formulier (POST naar /flexible-search). De velden komen uit hun eigen pagina en script (flexible_search.js);
+   de app verstuurt ze in een nieuw tabblad, zodat de zoekopdracht al is ingevuld. Niet getest tegen de echte site vanuit de bouwomgeving. */
+function roamFormulier(z) {
+  const f = { search_type: 'specific_destinations', fly_from: z.van.join(','), fly_to: z.naar.join(','), date_option: 'range', date_from: z.vroegste, date_to: z.laatste, nights_in_dst_from: z.dagenMin ?? '', nights_in_dst_to: z.dagenMax ?? '', adults: Math.min(9, Math.max(1, z.adults || 1)) };
+  const adv = {}; if (z.maxPrijs != null) adv.price_to = z.maxPrijs; if (z.maxStops !== '' && z.maxStops != null) adv.max_stopovers = z.maxStops; if (z.maxUren != null) adv.max_fly_duration = z.maxUren;
+  if (Object.keys(adv).length) Object.assign(f, { advanced_filters: 'yes' }, adv);
+  return Object.fromEntries(Object.entries(f).filter(([, x]) => x !== '' && x != null));
+}
 function roamZoek(t) {
   const v = t.vlucht;
   const vroegste = okD(v.exactVan) ? v.exactVan : (/^\d{4}-\d{2}$/.test(v.maandVan || '') ? v.maandVan + '-01' : '');
@@ -1679,7 +1687,7 @@ const CALC = {
     const w = a.verzekeringKeuze === 'volledig' && a.volledigIncl !== 'ja' ? '<div class="banner">Vergelijk alleen aanbiedingen mét volledige verzekering, of tel die erbij op, en zet “Bevat de gekozen prijs de volledige verzekering?” op ja zodra dat klopt.</div>' : '';
     const ctl = [`Verzekering: ${a.verzekeringKeuze === 'volledig' ? 'volledige dekking inbegrepen? Hoogte van de borg en het maximum van de vergoeding' : 'hoogte van het eigen risico'}`, `Brandstofbeleid: ${br ? br[0] : 'controleren'}`, `Kilometers: ${kmTekst(a)}${a.kmType === 'beperkt' ? ' (let op de prijs per extra km)' : ''}`, `Kinderzitjes: ${a.zitjes === 'ja' ? `${a.zitjesAantal || '?'} zitje(s) inbegrepen of kosten? Past het zitje bij leeftijd en gewicht?` : a.zitjes === 'nee' ? 'niet nodig' : 'nog bepalen'}`, `Grensoverschrijding: ${a.grens === 'ja' ? `toegestaan naar ${a.grensLanden || '(landen invullen)'}? Toeslag? Geldt de verzekering daar?` : 'niet nodig'}`, `Versnelling: ${a.versnelling}`, a.tweede ? 'Tweede bestuurder: kosten en voorwaarden' : null, zelfde ? null : 'Eenrichtingstoeslag (andere inleverlocatie)', a.creditcard ? 'Borg: creditcard op naam van de hoofdbestuurder, voldoende limiet' : 'Borg: welke betaalkaart is nodig? Is er een creditcard op naam van de bestuurder?', 'Ophalen: in de terminal of met pendelbus? Openingstijden van de balie op uw ophaal- en inlevertijd', 'Leeftijdstoeslag en minimumleeftijd voor de bestuurder', 'Totaalprijs inclusief alle verplichte kosten en belastingen'].filter(Boolean);
     return `<h4 style="margin:0 0 6px">Ophalen en inleveren</h4>${tab('Veld op DiscoverCars', loc)}<h4 style="margin:12px 0 6px">Zoekprofiel (filters en eisen)</h4>${tab('Wat u zoekt (Engels, benaderend)', prof)}
-      <div class="rij"><a class="knop" target="_blank" rel="noopener" href="https://www.discovercars.com/">Open DiscoverCars ↗</a><button class="prim" data-a="kopieOpen" data-v="${esc(alles)}" data-u="https://www.discovercars.com/">Kopieer alles en open DiscoverCars</button><button data-a="kopie" data-v="${esc(alles)}">Kopieer het hele zoekprofiel</button>${reis ? `<button data-a="kopie" data-v="${esc(reis)}">Kopieer reisschema (voor “Search by flight”)</button>` : ''}</div>
+      <div class="rij"><button class="prim" data-a="openNaast" data-u="https://www.discovercars.com/" data-n="discovercars">DiscoverCars naast deze app openen ↗</button><button data-a="kopieOpen" data-v="${esc(alles)}" data-u="https://www.discovercars.com/" data-n="discovercars">Kopieer alles en open DiscoverCars</button><a class="knop" target="discovercars" rel="noopener" href="https://www.discovercars.com/">Open DiscoverCars ↗</a><button data-a="kopie" data-v="${esc(alles)}">Kopieer het hele zoekprofiel</button>${reis ? `<button data-a="kopie" data-v="${esc(reis)}">Kopieer reisschema (voor “Search by flight”)</button>` : ''}</div>
       <p class="noot">Zoekgegevens kunnen niet automatisch worden doorgegeven (geen bekende link-opbouw). De Engelse benamen zijn benaderend: ik heb de resultatenpagina van DiscoverCars niet kunnen bekijken, dus filters kunnen anders heten. “Search by flight” op de homepage is niet door mij getest; controleer altijd het zoekformulier.</p>${verz}${w}
       <h4 style="margin:12px 0 6px">Controleer bij elk aanbod</h4><ul>${ctl.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
   },
@@ -1694,7 +1702,9 @@ const CALC = {
     if (t.reis.kind > 0) w.push(`Get-Roam kent alleen volwassenen: de ${t.reis.kind} kind(eren) staan niet in de zoekopdracht; controleer de prijs voor het hele gezelschap bij de boeking.`);
     return `<b>Zoekopdracht voor Get-Roam</b>${ontbr.length ? `<div class="banner">Nog in te vullen: ${ontbr.join(', ')}.</div>` : ''}${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}
       <table class="rtab"><thead><tr><th>Veld in Get-Roam</th><th>Waarde</th><th></th></tr></thead><tbody>${rij.map(r => `<tr><td data-l="Veld">${esc(r[0])}</td><td data-l="Waarde">${r[1] === '' ? '<span class="noot">—</span>' : '<b>' + esc(r[1]) + '</b>'}</td><td>${r[1] === '' ? '' : `<button class="klein" data-a="kopie" data-v="${esc(r[1])}">Kopieer</button>`}</td></tr>`).join('')}</tbody></table>
-      <div class="rij"><a class="knop" target="_blank" rel="noopener" href="${ROAM}">Open Get-Roam flexible search ↗</a><button class="prim" data-a="kopieOpen" data-v="${esc(alles)}" data-u="${ROAM}">Kopieer alles en open Get-Roam</button><button data-a="kopie" data-v="${esc(alles)}">Kopieer alle velden</button></div>
+      <div class="rij"><button class="prim" data-a="roamPost" style="font-size:1.05rem;padding:10px 18px">Zoek in Get-Roam met deze gegevens ↗</button></div>
+      <p class="noot">Eén klik opent Get-Roam in een eigen tabblad met de zoekopdracht al ingevuld en gestart (opnieuw klikken gebruikt hetzelfde tabblad). Controleer daar de ingevulde velden. Lukt dit niet, dan hieronder de handmatige weg:</p>
+      <div class="rij"><button data-a="openNaast" data-u="${ROAM}" data-n="roam">Get-Roam naast deze app openen ↗</button><a class="knop" target="roam" rel="noopener" href="${ROAM}">Open Get-Roam flexible search ↗</a><button data-a="kopieOpen" data-v="${esc(alles)}" data-u="${ROAM}" data-n="roam">Kopieer alles en open Get-Roam</button><button data-a="kopie" data-v="${esc(alles)}">Kopieer alle velden</button></div>
       <p class="noot">Get-Roam toont prijzen in dollars en heeft geen bagagefilter. Vul na het zoeken de goedkoopste uitkomst hieronder in bij stap 2.</p>`;
   },
   vluchtCheck: () => {
@@ -1847,7 +1857,21 @@ A.luchthavensVullen = () => {
   const n = voegToe('zoekNaar', r.lijst.map(x => x.code)); opslaan(); rerender(); melding(`${n} luchthaven(s) toegevoegd binnen ${num(v.straal) || 500} km van ${r.voorkeur[1]}.`);
 };
 A.vasteVertrek = () => { voegToe('zoekVan', ['FRA', 'DUS', 'AMS', 'BRU']); opslaan(); rerender(); };
-A.kopieOpen = async b => { window.open(b.dataset.u, '_blank', 'noopener'); await A.kopie(b); };
+A.roamPost = () => {
+  const z = roamZoek(T()), veld = roamFormulier(z);
+  if (!z.van.length || !z.naar.length || !z.vroegste || !z.laatste || z.dagenMin == null || z.dagenMax == null) return melding('Vul eerst vertrek- en aankomstluchthavens, de zoekperiode en het aantal dagen in.', true);
+  const fm = document.createElement('form'); fm.method = 'POST'; fm.action = ROAM; fm.target = 'roam'; fm.style.display = 'none';
+  Object.entries(veld).forEach(([n, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; fm.appendChild(i); });
+  document.body.appendChild(fm); fm.submit(); fm.remove(); melding('Get-Roam is geopend met uw zoekopdracht. Staat het formulier daar leeg, gebruik dan “Kopieer alles”.');
+};
+A.kopieOpen = async b => { window.open(b.dataset.u, b.dataset.n || '_blank', 'noopener'); await A.kopie(b); };
+/* eigen venster op de rechterhelft van het scherm: de app blijft links zichtbaar, kopiëren en plakken is dan één klik */
+A.openNaast = b => {
+  const bk = screen.availWidth || 1200, h = screen.availHeight || 800, br = Math.round(bk / 2), l = (screen.availLeft || 0) + bk - br, tp = screen.availTop || 0;
+  const w = window.open(b.dataset.u, b.dataset.n || '_blank', `popup=yes,width=${br},height=${h},left=${l},top=${tp}`);
+  if (!w) return melding('Het tweede venster is geblokkeerd. Sta pop-ups toe voor deze pagina, of gebruik de gewone knop.', true);
+  melding('Geopend rechts op het scherm. Zet deze app links (Windows: Windows-toets + pijl links) en kopieer de velden één voor één.');
+};
 A.notitiesWeg = () => { delete T().importNotities; opslaan(); rerender(); };
 A.dagNav = b => { dagSel += +b.dataset.d; rerender(); scrollTo(0, 0); };
 A.plakLees = b => {
@@ -2123,7 +2147,7 @@ tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => { });
-window.__rr = { fotoGet, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { fotoGet, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>

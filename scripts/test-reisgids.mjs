@@ -293,6 +293,22 @@ check('knop opent het tabblad Te regelen, met visum, stekkertype en valuta', awa
 check('Te regelen staat altijd open, ook zonder bevestigde stappen', await page.evaluate(() => { const t = __rr.T(); return !document.querySelector('nav.tabs button[data-t=regelen]').classList.contains('slot'); }));
 check('oudere reizen krijgen de taken voor verloopstekkers en valuta erbij', await page.evaluate(() => { const t = __rr.T(); return t.voorbereiding.some(x => /tekker/i.test(x.tekst)) && t.voorbereiding.some(x => /pinpas/i.test(x.tekst)); }));
 
+console.log('Get-Roam met één klik vooringevuld');
+const roamForm = await page.evaluate(() => __rr.roamFormulier({ van: ['FRA', 'AMS'], naar: ['DFW', 'DAL'], vroegste: '2027-03-01', laatste: '2027-05-31', dagenMin: 22, dagenMax: 25, adults: 2, maxPrijs: null, maxStops: '1', maxUren: 14 }));
+check('Get-Roam-formulier: velden zoals hun eigen formulier (fly_from, fly_to, date_from, nights, adults, filters)', roamForm.fly_from === 'FRA,AMS' && roamForm.fly_to === 'DFW,DAL' && roamForm.date_from === '2027-03-01' && roamForm.date_to === '2027-05-31' && roamForm.nights_in_dst_from === 22 && roamForm.nights_in_dst_to === 25 && roamForm.adults === 2 && roamForm.search_type === 'specific_destinations' && roamForm.date_option === 'range' && roamForm.advanced_filters === 'yes' && roamForm.max_stopovers === '1' && roamForm.max_fly_duration === 14 && roamForm.price_to === undefined, JSON.stringify(roamForm));
+{ let post = null; ctx.on('request', r => { if (r.method() === 'POST' && r.url().startsWith('https://get-roam.com/flexible-search')) post = r.postData(); });
+  await page.evaluate(() => { location.hash = 'vlucht'; }); await page.reload();
+  await page.evaluate(() => { const v = __rr.T().vlucht; v.zoekVan = 'FRA, AMS'; v.zoekNaar = 'DFW'; v.exactVan = '2027-03-01'; v.exactTot = '2027-05-31'; v.dagenMin = 22; v.dagenMax = 25; __rr.opslaan(); }); await page.reload();
+  await page.click('[data-calc=roam] [data-a=roamPost]'); await page.waitForTimeout(800);
+  check('knop verstuurt de zoekopdracht als formulier naar Get-Roam', !!post && /fly_from=FRA%2CAMS/.test(post) && /fly_to=DFW/.test(post) && /date_from=2027-03-01/.test(post) && /nights_in_dst_to=25/.test(post), String(post).slice(0, 200));
+  for (const pg of ctx.pages()) if (pg !== page) await pg.close(); }
+
+console.log('Naast elkaar werken met DiscoverCars');
+await page.evaluate(() => { location.hash = 'auto'; }); await page.reload();
+{ const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=dcZoek] [data-a=openNaast]')]);
+  await pop.waitForLoadState().catch(() => { });
+  check('DiscoverCars opent in een eigen venster naast de app (geen tracking-parameter)', pop.url() === 'https://www.discovercars.com/', pop.url()); await pop.close(); }
+
 console.log('Meer reizen en verwijderen');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
 promptAntwoord = 'Tweede reis';
