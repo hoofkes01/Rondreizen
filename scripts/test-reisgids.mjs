@@ -158,7 +158,7 @@ for (const [k, kop] of Object.entries(koppen)) {
   await page.emulateMedia({ media: 'print' }); const f = join(dir, k + '.pdf'); await page.pdf({ path: f, format: 'A4', printBackground: true }); await page.emulateMedia({ media: 'screen' });
   await page.evaluate(() => window.__stop());
   const tx = pdfTekst(f);
-  check(`blad "${k}" apart als PDF (${pdfPaginas(f)} p.)${tx ? '' : ' [geen pdftotext: tekst niet gecontroleerd]'}`, pdfPaginas(f) >= 1 && (!tx || (tx.includes(kop) && !tx.includes('Vluchtplanner') && !/Ik bevestig stap/.test(tx))), tx ? tx.slice(0, 120) : '');
+  check(`blad "${k}" apart als PDF (${pdfPaginas(f)} p.)${tx ? '' : ' [geen pdftotext: tekst niet gecontroleerd]'}`, pdfPaginas(f) >= 1 && (!tx || (tx.includes(kop) && !tx.includes('Rondreis reisgids') && !/Ik bevestig stap/.test(tx))), tx ? tx.slice(0, 120) : '');
 }
 const vt = pdfTekst(join(dir, 'vlucht.pdf'));
 if (vt) check('ingevulde velden staan als tekst in de PDF van een blad (luchthaven AMS, Lissabon)', /AMS/.test(vt) && /LIS/.test(vt) && !/<input/.test(vt));

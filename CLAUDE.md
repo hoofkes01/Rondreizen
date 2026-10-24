@@ -1,5 +1,7 @@
 # Rondreisplanner – afspraken
 
+LET OP (bijgewerkt op verzoek van de gebruiker): vluchten zoeken gebeurt in **Get-Roam** (https://get-roam.com/flexible-search) en autohuur in **DiscoverCars** (https://www.discovercars.com/), beide via de reisgids-app (reisgids.html). Skyscanner is vervangen. De Skyscanner-onderdelen hieronder (index.html, intake.html, scripts/zoek.mjs, scripts/plan.mjs, "Vaste zoekregels" en de ijking) zijn vervallen en alleen bewaard als naslag; start ze niet meer op. De luchthavenlijst uit index.html wordt nog gebruikt door scripts/intake-naar-reisgids.mjs.
+
 WERKWIJZE (leidend): lees eerst OVERDRACHT.md. Eén stap tegelijk; na elke stap STOP, korte melding (max 10 regels) en wacht op
 de bevindingen van de gebruiker. Zuinig met tokens: lees geen hele bestanden, gebruik grep/head, laat scripts de pagina's uitlezen.
 Zoekscripts draaien: delegeer aan de sub-agent `zoeker` (Haiku, .claude/agents/zoeker.md). Bouwen, uitleesfunctie aanpassen,

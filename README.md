@@ -1,5 +1,7 @@
 # Rondreisplanner
 
+> Vluchten zoeken gebeurt nu in Get-Roam en autohuur in DiscoverCars, via `reisgids.html`. De Skyscanner-planner hieronder is vervallen en alleen bewaard als naslag.
+
 `index.html` is de planner (open in de browser). De scripts in `scripts/` zoeken op Skyscanner via een
 zichtbare Chrome op je eigen pc. Afspraken, regels en werkwijze staan in `CLAUDE.md`.
 

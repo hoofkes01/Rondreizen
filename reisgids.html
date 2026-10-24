@@ -117,7 +117,7 @@
 <header class="top"><div class="in">
   <div class="kop">
     <h1>Rondreis reisgids</h1>
-    <div class="rij" style="margin:0"><select id="reisKeuze" aria-label="Kies reis"></select><a class="knop" href="index.html">Vluchtplanner</a></div>
+    <div class="rij" style="margin:0"><select id="reisKeuze" aria-label="Kies reis"></select><a class="knop" target="_blank" rel="noopener" href="https://get-roam.com/flexible-search">Get-Roam ↗</a><a class="knop" target="_blank" rel="noopener" href="https://www.discovercars.com/">DiscoverCars ↗</a></div>
   </div>
   <nav class="tabs" id="tabs" aria-label="Onderdelen"></nav>
 </div></header>
@@ -266,7 +266,7 @@ function nieuweReis(naam) {
 const standaardExtra = () => ['Reisverzekering', 'Visum / inreisautorisatie (ESTA e.d.)', 'Mobiele data / eSIM', 'Lokale transfers en overige kosten'].map(p => ({ id: uid(), post: p, bedrag: null, type: 'schatting', bron: '', datum: '' }));
 const OFF = { reisadvies: 'https://www.nederlandwereldwijd.nl/reisadvies', lcr: 'https://lcr.nl', plug: 'https://www.worldstandards.eu/electricity/plugs-and-sockets/', wmo: 'https://severe.worldweather.wmo.int/', meteoalarm: 'https://meteoalarm.org', nws: 'https://www.weather.gov' };
 function standaardVoorbereiding() {
-  const t = [['Paspoort/reisdocument: geldigheid en vrije pagina’s controleren', 180, OFF.reisadvies], ['Visum, ESTA of andere inreisautorisatie via de officiële overheidssite controleren en aanvragen', 90, OFF.reisadvies], ['Vlucht zoeken en boeken (vluchtplanner/Get-Roam)', 150, 'index.html'], ['Reisverzekering regelen', 90, ''], ['Inentingen en gezondheidsadvies controleren', 60, OFF.lcr], ['Hotels boeken (populaire data en feestdagen eerst)', 120, ''], ['Huurauto: verzekering, tweede bestuurder, ophaal-/inlevertijden controleren', 90, ''], ['Attracties en tijdsloten reserveren', 45, ''], ['Restaurants en feestdagdiners reserveren indien relevant', 30, ''], ['Rijbewijs, internationaal rijbewijs en creditcardlimieten/buitenlandgebruik controleren', 30, ''], ['Mobiele data/eSIM regelen', 14, ''], ['Vervoer van/naar de luchthaven regelen', 14, ''], ['Offline kaarten en belangrijke documenten opslaan; reisboek printen of exporteren', 3, ''], ['Laatste controle van vluchten, weer, wegen en openingstijden', 1, '']];
+  const t = [['Paspoort/reisdocument: geldigheid en vrije pagina’s controleren', 180, OFF.reisadvies], ['Visum, ESTA of andere inreisautorisatie via de officiële overheidssite controleren en aanvragen', 90, OFF.reisadvies], ['Vlucht zoeken en boeken (Get-Roam)', 150, 'https://get-roam.com/flexible-search'], ['Reisverzekering regelen', 90, ''], ['Inentingen en gezondheidsadvies controleren', 60, OFF.lcr], ['Hotels boeken (populaire data en feestdagen eerst)', 120, ''], ['Huurauto zoeken en boeken (DiscoverCars): verzekering, tweede bestuurder, ophaal-/inlevertijden controleren', 90, 'https://www.discovercars.com/'], ['Attracties en tijdsloten reserveren', 45, ''], ['Restaurants en feestdagdiners reserveren indien relevant', 30, ''], ['Rijbewijs, internationaal rijbewijs en creditcardlimieten/buitenlandgebruik controleren', 30, ''], ['Mobiele data/eSIM regelen', 14, ''], ['Vervoer van/naar de luchthaven regelen', 14, ''], ['Offline kaarten en belangrijke documenten opslaan; reisboek printen of exporteren', 3, ''], ['Laatste controle van vluchten, weer, wegen en openingstijden', 1, '']];
   return t.map(([tekst, dagen, link]) => ({ id: uid(), tekst, dagenVoor: dagen, link, klaar: false, kosten: null, notitie: '' }));
 }
 function standaardInfo() {
@@ -592,7 +592,7 @@ VIEWS.reis = () => {
 
 VIEWS.vlucht = () => {
   const t = T(), v = t.vlucht;
-  let h = sectie('1 Vlucht: eerst de goedkoopste vlucht vinden', `Begin altijd hier. U geeft de zoekcriteria op, zoekt in <a target="_blank" rel="noopener" href="${ROAM}">Get-Roam</a> en vult hieronder de goedkoopste uitkomst in. De data van die vlucht worden de data van de rondreis; daarna volgen de autohuur en het aantal nachten. <a href="index.html">Andere vluchtplanner (Skyscanner)</a>.`,
+  let h = sectie('1 Vlucht: eerst de goedkoopste vlucht vinden', `Begin altijd hier. U geeft de zoekcriteria op, zoekt in <a target="_blank" rel="noopener" href="${ROAM}">Get-Roam</a> en vult hieronder de goedkoopste uitkomst in. De data van die vlucht worden de data van de rondreis; daarna volgen de autohuur en het aantal nachten.`,
     `<div class="grid">${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}</div>${v.nodig ? '' : '<p class="noot">Zonder vlucht vult u de reisdata in op tab 3.</p>'}`);
   if (!v.nodig) return h + kBox('Vlucht');
   h += sectie('Stap 1: zoekcriteria', 'Dezelfde velden als op de Get-Roam-pagina “flexible search”. De app kan ze niet automatisch in Get-Roam invullen (er is geen bekende link-opbouw); kopieer ze met de knoppen.',
