@@ -31,6 +31,8 @@ const bijna = (a, b) => Math.abs(a - b) < 0.01;
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const ctx = await browser.newContext({ viewport: { width: 1100, height: 900 }, acceptDownloads: true });
 const page = await ctx.newPage();
+const hosts = new Set(); page.on('request', r => { try { hosts.add(new URL(r.url()).host); } catch { } });
+await ctx.route('https://get-roam.com/**', r => r.fulfill({ body: '<p>Get-Roam</p>', contentType: 'text/html' })); await ctx.route('https://www.discovercars.com/**', r => r.fulfill({ body: '<p>DiscoverCars</p>', contentType: 'text/html' }));
 let dialoogTekst = '', promptAntwoord = 'Test';
 page.on('dialog', d => { dialoogTekst = d.message(); d.type() === 'prompt' ? d.accept(promptAntwoord) : d.accept(); });
 const bevestig = async k => { dialoogTekst = ''; await page.click(`[data-a=bevestig][data-s=${k}]`); await page.waitForTimeout(150); };
@@ -173,6 +175,24 @@ for (const [id, wel, niet] of [['route', 'Route in één oogopslag', 'Kostenover
   check(`reisboek-onderdeel "${id}" apart als PDF`, pdfPaginas(f) >= 1 && pdfPaginas(f) <= 2 && (!tx || (tx.includes(wel) && !tx.includes(niet))), (tx || '').slice(0, 100));
 }
 check('na het afdrukken is het volledige reisboek weer zichtbaar', await page.evaluate(() => !document.querySelector('#boekUit').classList.contains('deelprint') && !document.querySelector('#printBlad')));
+console.log('Reisverslag (na afloop): dagboek en foto\u2019s tot een compleet verhaal');
+await page.evaluate(() => { __rr.T().dagen[0].dagboek.hoogtepunt = 'Zonsondergang aan de rivier'; __rr.T().dagen[0].dagboek.favorieten = 'Pastelaria in de oude stad'; __rr.opslaan(); });
+await page.evaluate(() => { location.hash = 'boek'; }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
+await page.selectOption('#f_boek_modus', 'verslag');
+await page.fill('#f_verslag_titel', 'Onze reis door Portugal'); await page.fill('#f_verslag_voorwoord', 'Dit is het verhaal van onze reis.\n\nWat een avontuur.'); await page.fill('#f_verslag_nawoord', 'Tot de volgende keer.');
+await page.selectOption('#f_verslag_omslag', { index: 1 }); await page.waitForTimeout(500);
+const vtxt = await page.textContent('#boekUit');
+for (const s of ['REISVERSLAG', 'Onze reis door Portugal', 'Voorwoord', 'Dit is het verhaal', 'De reis in cijfers', 'De route', 'Hoogtepunten en favorieten', 'Zonsondergang aan de rivier', 'Pastelaria', 'Mooie eerste dag in de stad.', 'Eerste foto', 'Wat het kostte', 'Nawoord', 'Tot de volgende keer']) check(`reisverslag bevat "${s}"`, vtxt.includes(s));
+check('reisverslag bevat geen planningsonderdelen (voorbereiding, hotelbeoordeling, bronnen)', !/Hotelbeoordeling|Voorbereiding|Bronnen, peildata/.test(vtxt));
+check('omslagfoto en dagfoto staan erin', (await page.locator('#boekUit img').count()) === 2 && await page.evaluate(() => document.querySelector('#boekUit').classList.contains('verslag')));
+const dlV = page.waitForEvent('download'); await page.click('[data-a=boekHTML]'); const dv = readFileSync(await (await dlV).path(), 'utf8');
+check('verslag als één HTML-bestand: foto\u2019s ingebed, werkt zonder app', /REISVERSLAG/.test(dv) && /data:image\/jpeg;base64/.test(dv) && /class="boek verslag"/.test(dv) && !/<script/.test(dv));
+for (const [id, wel] of [['dag1', 'Zonsondergang'], ['voorwoord', 'Dit is het verhaal'], ['cijfers', 'De reis in cijfers']]) {
+  await page.evaluate(x => { window.__stop = __rr.kiesBoekDeel(x); }, id); await page.emulateMedia({ media: 'print' });
+  const f = join(dir, 'verslag-' + id + '.pdf'); await page.pdf({ path: f, format: 'A4', printBackground: true }); await page.emulateMedia({ media: 'screen' }); await page.evaluate(() => window.__stop());
+  const tx = pdfTekst(f); check(`verslag-onderdeel "${id}" apart als PDF`, pdfPaginas(f) >= 1 && pdfPaginas(f) <= 2 && (!tx || (tx.includes(wel) && !tx.includes('Nawoord'))), (tx || '').slice(0, 80));
+}
+await page.selectOption('#f_boek_modus', 'gids');
 const [dl] = await Promise.all([page.waitForEvent('download'), page.evaluate(() => { location.hash = 'data'; }).then(() => page.reload()).then(() => page.click('[data-a=export][data-f="1"]'))]);
 const backup = JSON.parse(readFileSync(await dl.path(), 'utf8'));
 check('back-up bevat reis en foto', Object.keys(backup.reizen).length === 1 && Object.keys(backup.fotos).length === 1);
@@ -419,16 +439,20 @@ await page.click('[data-a=vasteVertrek]');
 check('vaste vertrekpunten worden toegevoegd zonder de rest te wissen', (await page.evaluate(() => __rr.T().vlucht.zoekVan)) === 'AMS, FRA, DUS, ZZZ, BRU');
 check('zoekopdracht voor Get-Roam toont alle vertrekluchthavens', /AMS, FRA, DUS, ZZZ, BRU/.test(await page.textContent('[data-calc=roam]')));
 
-console.log('Intake (uit het oude intakeformulier) omzetten en inlezen');
-const fx = join(mkdtempSync(join(tmpdir(), 'rr-intake-')), 'intake.json'), uitf = join(dirname(fx), 'uit.json');
+console.log('Oude intake.json direct in de app inlezen (zonder Claude)');
+const fx = join(mkdtempSync(join(tmpdir(), 'rr-intake-')), 'intake.json');
 writeFileSync(fx, JSON.stringify({ reis: { naam: 'Rondreis VS', plaats: 'Dallas', periodeVan: '2027-03-01', periodeTot: '2027-06-01', duurMin: 22, duurMax: 25, personen: 2 }, vlucht: { straal1: 500, maxUren: 15, maxOverstappen: 1, maaltijden: true, openJaw: 'nee' }, reiskosten: { liters: 30, literprijs: 2.5, parkeren: 200 }, auto: { klasse: 'intermediate', km: true, brandstof: true, verzekering: true, automaat: true, afleveren: 'zelfde' }, hotels: { prijsDoel: 100, prijsRuimte: 35, minWaardering: 8, minGoogle: 4, ontbijt: true, badkamer: true, wifi: true, parkeerHotel: true, maxKmPerVerplaatsing: 400, maxRijuren: 6 }, overig: { interesses: 'Historie, musea, casino, strand, muziek, bar (50+)', rustdag: true } }));
-const uitTekst = execFileSync('node', [join(hier, 'intake-naar-reisgids.mjs'), fx, uitf], { encoding: 'utf8' });
-check('script noemt de luchthavens binnen 500 km van Dallas en waarschuwt over afwijkende prijsruimte', /DFW/.test(uitTekst) && /LET OP: Uw intake had 35%/.test(uitTekst), uitTekst.slice(0, 200));
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
-await page.setInputFiles('input[type=file][data-ch=importeer]', uitf); await page.waitForTimeout(500);
-const im = await page.evaluate(() => { const t = __rr.T(); return { n: t.naam, bev: Object.keys(t.bevestigd).length, van: t.vlucht.zoekVan, naar: t.vlucht.zoekNaar, d: [t.vlucht.exactVan, t.vlucht.exactTot, t.vlucht.dagenMin, t.vlucht.dagenMax], km: [t.gids.maxKm, t.gids.maxUren], uitz: t.hotels.crit.maxUitz, ints: t.gids.interesses.join() }; });
-check('geïmporteerde reis: zoekcriteria, hotelgrenzen en interesses uit de intake, geen enkele stap bevestigd', im.n === 'Rondreis VS' && im.bev === 0 && im.van === 'FRA, DUS, AMS, BRU' && /DFW/.test(im.naar) && im.d.join() === '2027-03-01,2027-06-01,22,25' && im.km.join() === '400,6' && im.uitz === 150 && /stad/.test(im.ints) && /musea/.test(im.ints), JSON.stringify(im));
-check('na het inlezen is alleen stap 1 toegankelijk', (await page.locator('#tabs button.slot').count()) === 5);
+await page.setInputFiles('input[type=file][data-ch=importeer]', fx); await page.waitForTimeout(500);
+const im = await page.evaluate(() => { const t = __rr.T(); return { n: t.naam, bev: Object.keys(t.bevestigd).length, van: t.vlucht.zoekVan, naar: t.vlucht.zoekNaar, d: [t.vlucht.exactVan, t.vlucht.exactTot, t.vlucht.dagenMin, t.vlucht.dagenMax], km: [t.gids.maxKm, t.gids.maxUren], uitz: t.hotels.crit.maxUitz, ints: t.gids.interesses.join(), noot: (t.importNotities || []).join(' ') }; });
+check('app leest de intake zelf in: zoekcriteria, hotelgrenzen en interesses, geen enkele stap bevestigd', im.n === 'Rondreis VS' && im.bev === 0 && im.van === 'FRA, DUS, AMS, BRU' && /DFW/.test(im.naar) && /DAL/.test(im.naar) && im.d.join() === '2027-03-01,2027-06-01,22,25' && im.km.join() === '400,6' && im.uitz === 150 && /stad/.test(im.ints) && /musea/.test(im.ints), JSON.stringify(im));
+check('afwijking van de intake wordt gemeld (35% prijsruimte)', /35%/.test(im.noot));
+check('na het inlezen staat u in stap 1 en zijn de andere stappen nog dicht', (await page.textContent('#tabs .act')).includes('1 Vlucht') && (await page.locator('#tabs button.slot').count()) === 5);
+check('zoekopdracht voor Get-Roam is meteen klaar', /DFW/.test(await page.textContent('[data-calc=roam]')) && /22/.test(await page.textContent('[data-calc=roam]')));
+const [pop] = await Promise.all([page.waitForEvent('popup'), page.click('[data-calc=roam] [data-a=kopieOpen]')]);
+check('één klik kopieert de zoekopdracht en opent Get-Roam', pop.url().startsWith('https://get-roam.com/flexible-search') && /Gekopieerd/.test(await page.textContent('#melding')), pop.url()); await pop.close();
+await page.click('[data-t=start]');
+check('startpagina toont de volgende stap en leidt er direct naartoe', /Volgende stap/.test(await page.textContent('#app')) && await (async () => { await page.click('.card:has(h2:has-text("Volgende stap")) [data-a=tab]'); return (await page.textContent('#tabs .act')).includes('1 Vlucht'); })());
 
 console.log('Luchthavens binnen een straal (eigen lijst in de app)');
 await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
@@ -444,6 +468,8 @@ check('vaste vertrekpunten FRA, DUS, AMS, BRU', (await page.evaluate(() => __rr.
 await page.fill('#f_vlucht_zoekPlaats', 'Plaats Bestaat Niet');
 check('onbekende plaats: duidelijke melding, geen gok', /Geen luchthaven gevonden/.test(await page.textContent('[data-calc=luchthavensStraal]')));
 check('oude Skyscanner-onderdelen zijn verdwenen en index.html verwijst door', !existsSync(join(hier, 'lib.mjs')) && !existsSync(join(hier, '..', 'intake.html')) && /reisgids\.html/.test(readFileSync(join(hier, '..', 'index.html'), 'utf8')));
+const vreemd = [...hosts].filter(h => h && !/(^|\.)open-meteo\.com$|^api\.frankfurter\.dev$/.test(h));
+check('de app maakt alleen verzoeken aan Open-Meteo en Frankfurter (op verzoek); nooit aan Claude of een server van ons', vreemd.length === 0, vreemd.join(','));
 check('geen scriptfouten in de console', consoleFouten.length === 0, consoleFouten.join(' | '));
 await browser.close();
 console.log(`\n${ok} geslaagd, ${fouten} mislukt`);

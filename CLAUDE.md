@@ -1,6 +1,6 @@
 # Rondreisplanner – afspraken
 
-De hele planner is één app: `reisgids.html` (geen build, gegevens alleen in de browser). Vluchten zoeken gebeurt in **Get-Roam**
+De hele planner is één app: `reisgids.html` (geen build, geen server, geen Claude nodig; gegevens alleen in de browser). De gebruiker vult de intake in de app zelf in (of leest een oude intake.json in via Start → "Back-up of intake inlezen"); de app gaat daarna direct stap voor stap verder. Vluchten zoeken gebeurt in **Get-Roam**
 (https://get-roam.com/flexible-search), autohuur in **DiscoverCars** (https://www.discovercars.com/), hotels alleen bij **Booking.com,
 Agoda.com of de hotelwebsite zelf**. De app zoekt zelf niets: zij zet de zoekgegevens klaar (kopieerknoppen) en legt de keuzes vast.
 Skyscanner en de bijbehorende scripts zijn verwijderd (zie de git-geschiedenis als naslag).
@@ -21,7 +21,7 @@ de volgende stap blijft tot dan vergrendeld. Nooit automatisch doorgaan. Onderwe
    ≥ 25 reviews per bron; ≤ 10% slecht; gratis annuleerbaar (verplicht, met uiterste datum); ontbijt, parkeren, wifi, eigen badkamer, goede wijk; veiligheid altijd een eis), patroon van
    1/2/3/4 nachten per plaats, routevoorstel met max km per dag, per verblijf 3 hotelopties; de gebruiker bevestigt er één. Na bevestiging
    staan adres en foto bij het verblijf, op de dagpagina en in het reisboek.
-5. **Reisgids**, 6. **Route**, dagpagina's, dagboek met foto's, kosten, reisboek. Elk blad en elk reisboekonderdeel is apart af te drukken.
+5. **Reisgids**, 6. **Route**, dagpagina's, dagboek met foto's (per dag meerdere foto's met onderschrift, hoogtepunt, tekst), kosten. Uitvoer: tab "Reisboek en verslag": de reisgids (plan) of het reisverslag (verhaal na afloop, met omslagfoto, voorwoord, cijfers, hoogtepunten, per dag tekst en foto's). Elk blad en elk onderdeel is apart af te drukken of als PDF op te slaan.
 
 ## Vaste voorkeuren vluchten (gelden voor de keuze in Get-Roam)
 - Altijd 2 volwassenen, per persoon 1 koffer van 23 kg (Get-Roam kan daar niet op filteren: controleren bij de boeking).
@@ -31,7 +31,6 @@ de volgende stap blijft tot dan vergrendeld. Nooit automatisch doorgaan. Onderwe
 
 ## Bestanden
 - reisgids.html: de app. sw.js: offline-schil. index.html: doorverwijzing naar reisgids.html.
-- scripts/intake-naar-reisgids.mjs: zet een intake.json om naar een reis voor de app (`npm run intake -- intake.json`); uitvoer in reizen/ (gitignored).
 - scripts/test-reisgids.mjs: browsertest (`npm test`; Playwright; zet `CHROMIUM=<pad naar chrome>` als de standaardbrowser ontbreekt).
 - docs/databronnen.md: bronnenregister. docs/*.md: wensen per onderdeel (lees alleen het onderdeel waar je aan werkt):
   vluchten.md, autohuur.md, hotels.md, reisgids.md.

@@ -16,7 +16,7 @@ Open Claude Code op je pc, in een lege map, en plak deze ene zin:
 
 ## Gebruiken
 - Open `reisgids.html` in de browser (dubbelklik, of via GitHub Pages). Maak regelmatig een back-up (tab Gegevens).
-- Een ingevulde `intake.json` omzetten: `node scripts/intake-naar-reisgids.mjs intake.json`; daarna in de app "Back-up inlezen".
+- De intake vult de gebruiker in de app zelf in. Een oude `intake.json` leest de app ook direct in (Start → "Back-up of intake inlezen"). Claude is daarvoor niet nodig.
 
 ## Testen (voor Claude)
 `npm i`, dan `npm test` (Playwright, zet `CHROMIUM=<pad naar chrome>` als er geen browser is). Verwacht: alle controles geslaagd.
