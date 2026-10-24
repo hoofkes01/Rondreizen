@@ -121,6 +121,10 @@
   }
   td, th, .noot, .box, p, li, label, summary, .kpi { overflow-wrap:anywhere; }
   @media (max-width:640px) {
+    header.top { position:static; }
+    header.top .in { padding:6px 12px; }
+    nav.tabs { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; scrollbar-width:thin; }
+    nav.tabs button { flex:0 0 auto; white-space:nowrap; }
     .boek table { display:block; overflow-x:auto; }
     table.rtab thead { display:none; }
     table.rtab tr { display:block; border:1px solid var(--lijn); border-radius:8px; margin-bottom:8px; padding:6px; }
@@ -897,7 +901,7 @@ VIEWS.vlucht = () => {
   let h = sectie('1 Vlucht: eerst de goedkoopste vlucht vinden', `Begin altijd hier. U geeft de zoekcriteria op, zoekt in <a target="_blank" rel="noopener" href="${ROAM}">Get-Roam</a> en vult hieronder de goedkoopste uitkomst in. De data van die vlucht worden de data van de rondreis; daarna volgen de autohuur en het aantal nachten.`,
     `<div class="grid">${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}</div>${v.nodig ? '' : '<p class="noot">Zonder vlucht vult u hieronder de reisdata in.</p>'}`);
   if (!v.nodig) return h + sectie('Reisdata zonder vlucht', '', `<div class="grid">${fld('reis.vertrek', 'Eerste reisdag', 'd', { r: 1 })}${fld('reis.terug', 'Laatste reisdag', 'd', { r: 1 })}${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 0, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1 })}</div>`) + kBox('Vlucht');
-  h += sectie('Stap 1: zoekcriteria', 'Dezelfde velden als op de Get-Roam-pagina “flexible search”. De app kan ze niet automatisch in Get-Roam invullen (er is geen bekende link-opbouw); kopieer ze met de knoppen.',
+  h += sectie('Stap 1: zoekcriteria', 'Vul hieronder alles in. Onderaan kopieert één knop uw zoekopdracht en opent Get-Roam; met de bladwijzer “Roam invullen” staat daar alles ingevuld.',
     `<h3 style="margin-top:0">Van waar en naar waar?</h3><datalist id="lhLijst">${LUCHTHAVENS.map(l => `<option value="${l[0]} – ${esc(l[1])}">`).join('')}</datalist>
     ${lhBlok('zoekVan', 'Vertrekluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u vandaan wilt vertrekken. Get-Roam zoekt ze allemaal tegelijk.')}${lhBlok('zoekNaar', 'Aankomstluchthavens (één of meer)', 'Voeg elke luchthaven toe waar u wilt aankomen. Typ de code (bijv. DFW) of een plaats (bijv. Dallas).')}
     <details class="sub" ${String(v.zoekPlaats || '').trim() ? 'open' : ''}><summary>Luchthavens in de buurt van een plaats toevoegen</summary><div class="grid" style="margin-top:8px">${fld('vlucht.zoekPlaats', 'Plaats of luchthaven', 't', { ph: 'bijv. Dallas' })}${fld('vlucht.straal', 'Binnen hoeveel km (hemelsbreed)', 'n', { min: 0 })}</div><div class="rij"><button data-a="luchthavensVullen">Voeg die luchthavens toe aan de aankomstluchthavens</button></div><div class="box" data-calc="luchthavensStraal"></div></details>
@@ -1716,9 +1720,12 @@ const CALC = {
     const klaar = !ontbr.length;
     const uitleg = z.dagenMin != null && z.dagenMax != null ? `<p class="noot">Get-Roam krijgt: vertrek van ${z.vroegste ? dFmt(z.vroegste) : '?'} tot ${z.laatste ? dFmt(z.laatste) : '?'}, verblijf ${z.dagenMin} tot ${z.dagenMax} dagen.${z.afgeleid && z.terugVan && z.terugTot ? ' Get-Roam kent geen terugperiode; het verblijf is daaruit afgeleid. Bij het invullen van de gekozen vlucht controleert de app of de terugvlucht echt in uw terugperiode valt. Wilt u scherper zoeken, vul dan bij “Verblijf” zelf een minimum en maximum in.' : ''}</p>` : '';
     return `<b>Zoekopdracht voor Get-Roam</b>${ontbr.length ? `<div class="banner">Nog in te vullen: ${ontbr.join(', ')}.</div>` : ''}${w.map(x => `<div class="banner">${esc(x)}</div>`).join('')}
-      ${uitleg}<div class="rij"><button class="prim" data-a="roamPost" style="font-size:1.1rem;padding:12px 22px" ${klaar ? '' : 'aria-disabled="true"'}>Zoek in Get-Roam met deze gegevens ↗</button></div>
-      <p class="noot">Eén klik opent Get-Roam in een eigen tabblad met alles al ingevuld en gestart. Controleer daar even de velden. Get-Roam toont prijzen in dollars en heeft geen bagagefilter. Vul na het zoeken de goedkoopste uitkomst hieronder in bij stap 2.</p>
-      <details class="sub"><summary>Lukt dat niet? Zo vult u het zelf in</summary>
+      ${uitleg}<div class="rij"><button class="prim" data-a="roamKopieer" style="font-size:1.1rem;padding:12px 22px" ${klaar ? '' : 'aria-disabled="true"'}>Open Get-Roam met mijn zoekopdracht ↗</button></div>
+      <p class="noot">Get-Roam laat niet toe dat een andere site zijn formulier verstuurt (beveiliging). Daarom werkt dit in twee korte stappen: <b>1.</b> deze knop kopieert uw zoekopdracht en opent Get-Roam; <b>2.</b> u klikt daar op de bladwijzer “Roam invullen”, die alles invult. Daarna klikt u zelf op Search. Get-Roam toont prijzen in dollars en heeft geen bagagefilter.</p>
+      <details class="sub" ${localStorage.getItem('rr_roam_bw') ? '' : 'open'}><summary>Eenmalig instellen: de bladwijzer “Roam invullen” (computer)</summary>
+      <p class="noot">Doe dit één keer. Maak de bladwijzerbalk zichtbaar (Chrome: Ctrl+Shift+B) en <b>sleep onderstaande knop</b> erheen. Daarna hoeft u niets meer te doen: de bladwijzer leest elke keer de nieuwste zoekopdracht. Een klik op de knop hier doet niets. Op een telefoon werkt dit niet goed: gebruik daar de kopieerlijst hieronder.</p>
+      <div class="rij"><a class="knop" href="${ROAM_BLADWIJZER}" draggable="true" onclick="alert('Sleep deze knop naar uw bladwijzerbalk. Klik er niet hier op.');return false">⭐ Roam invullen</a><button class="klein" data-a="roamBwKlaar">Ik heb de bladwijzer gemaakt</button></div></details>
+      <details class="sub"><summary>Telefoon of lukt het niet? Zo vult u het zelf in</summary>
       <table class="rtab"><thead><tr><th>Veld in Get-Roam</th><th>Waarde</th><th></th></tr></thead><tbody>${rij.map(r => `<tr><td data-l="Veld">${esc(r[0])}</td><td data-l="Waarde">${r[1] === '' ? '<span class="noot">—</span>' : '<b>' + esc(r[1]) + '</b>'}</td><td>${r[1] === '' ? '' : `<button class="klein" data-a="kopie" data-v="${esc(r[1])}">Kopieer</button>`}</td></tr>`).join('')}</tbody></table>
       <div class="rij"><button data-a="openNaast" data-u="${ROAM}" data-n="roam">Get-Roam naast deze app openen ↗</button><a class="knop" target="roam" rel="noopener" href="${ROAM}">Open Get-Roam flexible search ↗</a><button data-a="kopieOpen" data-v="${esc(alles)}" data-u="${ROAM}" data-n="roam">Kopieer alles en open Get-Roam</button><button data-a="kopie" data-v="${esc(alles)}">Kopieer alle velden</button></div></details>`;
   },
@@ -1874,13 +1881,35 @@ A.luchthavensVullen = () => {
   const n = voegToe('zoekNaar', r.lijst.map(x => x.code)); opslaan(); rerender(); melding(`${n} luchthaven(s) toegevoegd binnen ${num(v.straal) || 500} km van ${r.voorkeur[1]}.`);
 };
 A.vasteVertrek = () => { voegToe('zoekVan', ['FRA', 'DUS', 'AMS', 'BRU']); opslaan(); rerender(); };
-A.roamPost = () => {
+/* Get-Roam beveiligt zijn formulier met een CSRF-token: de app kan het dus niet zelf versturen. Daarom een bladwijzer (bookmarklet) die ín de Get-Roam-pagina
+   het formulier invult, met het token van uw eigen sessie. De functie moet zelfstandig blijven (geen verwijzingen naar de rest van de app). */
+function roamVuller() {
+  (async () => {
+    let t = ''; try { t = await navigator.clipboard.readText(); } catch (e) { }
+    if (!/ROAM:\{/.test(t)) t = prompt('Plak hier de zoekopdracht uit de reisgids (Ctrl+V) en klik OK:', '') || '';
+    const m = t.match(/ROAM:(\{[\s\S]*\})/); let d = null; try { d = m && JSON.parse(m[1]); } catch (e) { }
+    if (!d) return alert('Geen zoekopdracht gevonden. Klik eerst in de reisgids op “Open Get-Roam met mijn zoekopdracht”.');
+    const $ = id => document.getElementById(id), melding = [];
+    const klik = (sel, naam) => { const e = document.querySelector(sel); if (e) { if (!e.checked) e.click(); } else melding.push(naam); };
+    const zet = (id, v) => { const e = $(id); if (!e) { melding.push(id); return; } e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); };
+    klik('input[name=search_type][value=specific_destinations]', 'zoeksoort'); klik('input[name=date_option][value=range]', 'datumkeuze');
+    const codes = (id, lijst) => { const e = $(id); if (!e) { melding.push(id); return; } const c = e.multiDestinationController; if (c && c.setCodes) { try { c.setCodes(lijst.split(','), true, {}); } catch (x) { } } if (e.value !== lijst) e.value = lijst; };
+    codes('fly_from_codes', d.fly_from); codes('fly_to_destinations', d.fly_to);
+    zet('date_from', d.date_from); zet('date_to', d.date_to); zet('nights_in_dst_from', d.nights_in_dst_from); zet('nights_in_dst_to', d.nights_in_dst_to); zet('adults', d.adults);
+    if (d.advanced_filters) { klik('input[name=advanced_filters][value=yes]', 'extra filters'); if (d.price_to) zet('price_to', d.price_to); if (d.max_stopovers !== undefined) zet('max_stopovers', d.max_stopovers); if (d.max_fly_duration) zet('max_fly_duration', d.max_fly_duration); }
+    alert('Ingevuld: ' + d.fly_from + ' naar ' + d.fly_to + ', vertrek ' + d.date_from + ' t/m ' + d.date_to + ', verblijf ' + d.nights_in_dst_from + '-' + d.nights_in_dst_to + ' nachten.' + (melding.length ? '\n\nLet op, deze onderdelen vond ik niet op de pagina: ' + melding.join(', ') + '. Vul die zelf in.' : '') + '\n\nControleer de velden en klik op Search.');
+  })();
+}
+const ROAM_BLADWIJZER = 'javascript:' + encodeURIComponent('(' + roamVuller.toString() + ')()');
+A.roamKopieer = async () => {
   const z = roamZoek(T()), veld = roamFormulier(z);
-  if (!z.van.length || !z.naar.length || !z.vroegste || !z.laatste || z.dagenMin == null || z.dagenMax == null) return melding('Vul eerst vertrek- en aankomstluchthavens, de zoekperiode en het aantal dagen in.', true);
-  const fm = document.createElement('form'); fm.method = 'POST'; fm.action = ROAM; fm.target = 'roam'; fm.style.display = 'none';
-  Object.entries(veld).forEach(([n, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; fm.appendChild(i); });
-  document.body.appendChild(fm); fm.submit(); fm.remove(); melding('Get-Roam is geopend met uw zoekopdracht. Staat het formulier daar leeg, gebruik dan “Kopieer alles”.');
+  if (!z.van.length || !z.naar.length || !z.vroegste || !z.laatste || z.dagenMin == null || z.dagenMax == null) return melding('Vul eerst vertrek- en aankomstluchthavens, de periode van de heenvlucht en het verblijf of de terugperiode in.', true);
+  const tekst = 'ROAM:' + JSON.stringify(veld);
+  try { await navigator.clipboard.writeText(tekst); } catch { const a = document.createElement('textarea'); a.value = tekst; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch { } a.remove(); }
+  window.open(ROAM, 'roam', 'noopener');
+  melding('Zoekopdracht gekopieerd en Get-Roam geopend. Klik daar op uw bladwijzer “Roam invullen”.');
 };
+A.roamBwKlaar = () => { try { localStorage.setItem('rr_roam_bw', '1'); } catch { } rerender(); };
 A.kopieOpen = async b => { window.open(b.dataset.u, b.dataset.n || '_blank', 'noopener'); await A.kopie(b); };
 /* eigen venster op de rechterhelft van het scherm: de app blijft links zichtbaar, kopiëren en plakken is dan één klik */
 A.openNaast = b => {
@@ -2126,6 +2155,7 @@ function render() {
   $('#reisKeuze').hidden = !Object.keys(DB.reizen).length;
   if (t && vergrendeld(tab) && !toegang(t, tab)) { const h = huidigeStap(t); melding(`Bevestig eerst stap ${STAPPEN.indexOf(h) + 1} (${STAPNAAM[h]}) voordat u verder gaat.`, true); tab = h; }
   $('#tabs').innerHTML = TABS.map(([k, n]) => { const stap = vergrendeld(k) && t, slot = stap && !toegang(t, k), ok = STAPPEN.includes(k) && t && stapOk(t, k); return `<button data-t="${k}" class="${k === tab ? 'act' : ''}${slot ? ' slot' : ''}${ok ? ' klaar' : ''}" ${k === tab ? 'aria-current="page"' : ''} ${slot ? 'aria-disabled="true" title="Eerst de vorige stap bevestigen"' : ''}>${slot ? '🔒 ' : ok ? '✔ ' : ''}${n}</button>`; }).join('');
+  { const act = $('#tabs button.act'); if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest', inline: 'center' }); }
   if (!t && tab !== 'start') tab = 'start';
   let pre = '';
   if (t && toegang(t, 'dag') && tab !== 'boek') pre += herinneringBanner(t);
@@ -2163,10 +2193,10 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 e'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 g'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
-window.__rr = { fotoGet, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { fotoGet, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>
