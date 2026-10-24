@@ -332,6 +332,17 @@ check('Expedia-link: luchthaven, data en tijden uit de vlucht', exl.a.url === 'h
 check('Expedia-link: andere inleverluchthaven wordt meegegeven; zonder tijd geen link met uitleg', /DiffDropLoc=1/.test(exl.b.url) && /DropLoc=AUS/.test(exl.b.url) && exl.c.url === '' && /Vul eerst/.test(exl.c.reden), exl.b.url);
 check('bij de autohuur staat de Expedia-knop vooraan en DiscoverCars apart met uitleg', await page.locator('[data-calc=dcZoek] h4:has-text("Expedia")').count() >= 0);
 
+console.log('Rechtstreekse links naar de zoeksites');
+const sl = await page.evaluate(() => { const u = h => { const r = {}; for (const a of document.querySelectorAll('a[target=_blank]')) r[a.href] = a.target + '|' + a.rel; return r; }; return Object.keys(u()); });
+await page.evaluate(() => { location.hash = 'start'; }); await page.reload();
+const startLinks = await page.evaluate(() => [...document.querySelectorAll('a[target=_blank]')].map(a => a.href));
+check('startpagina: gewone links naar Kiwi, Skyscanner, Get-Roam, DiscoverCars, Expedia, Booking.com en Agoda', ['https://www.kiwi.com/en/', 'https://www.skyscanner.nl/', 'https://get-roam.com/flexible-search', 'https://www.discovercars.com/?utm_source=chatgpt.com', 'https://www.expedia.com/Cars', 'https://www.booking.com/', 'https://www.agoda.com/'].every(u => startLinks.includes(u)), startLinks.join(' '));
+for (const [h, verwacht] of [['vlucht', ['https://www.kiwi.com/en/', 'https://get-roam.com/flexible-search']], ['auto', ['https://www.discovercars.com/?utm_source=chatgpt.com', 'https://www.expedia.com/Cars']], ['verblijf', ['https://www.booking.com/', 'https://www.agoda.com/']]]) {
+  await page.evaluate(x => { location.hash = x; }, h); await page.reload();
+  const l = await page.evaluate(() => [...document.querySelectorAll('a[target=_blank]')].map(a => a.href));
+  check(`tabblad ${h}: rechtstreekse links bovenaan`, verwacht.every(u => l.includes(u)), l.join(' ').slice(0, 200));
+}
+
 console.log('Huurauto plakken en screenshots bewaren');
 const au1 = await page.evaluate(() => __rr.leesAuto('Hertz\nPick-up: Dallas Fort Worth Airport 12 Mar 2027 14:30\nDrop-off: Dallas Fort Worth Airport 02 Apr 2027 10:00\nIntermediate automatic, unlimited mileage, Full to full. Full Coverage. Total price \u20ac1.890 Deposit \u20ac500 Excess \u20ac0 https://www.discovercars.com/x', '2027-03-01', 'EUR').velden);
 check('auto plakken: verhuurder, plaatsen, data, tijden', au1.verhuurder === 'Hertz' && /Dallas Fort Worth Airport/.test(au1.ophaalPlaats) && au1.ophaalDatum === '2027-03-12' && au1.inleverDatum === '2027-04-02' && au1.ophaalTijd === '14:30' && au1.inleverTijd === '10:00', JSON.stringify(au1));

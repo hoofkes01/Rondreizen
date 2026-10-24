@@ -907,6 +907,7 @@ VIEWS.start = () => {
   h += `<section class="card"><h2>Voortgang intake</h2><table class="rtab"><thead><tr><th>Onderdeel</th><th>Ingevuld</th><th>Nog te doen</th><th></th></tr></thead><tbody>` +
     S.map(s => { const tabNaam = CHKTAB[s.naam], bev = STAPCHK[tabNaam] ? stapOk(t, tabNaam) : null; return `<tr><td data-l="Onderdeel"><b>${s.naam}</b></td><td data-l="Ingevuld">${s.klaar}/${s.totaal} ${badge(s.ontbreekt.length ? 'l' : 'g', s.ontbreekt.length ? 'onvolledig' : 'compleet')} ${bev === null ? '' : badge(bev ? 'g' : 'n', bev ? 'door u bevestigd' : 'nog te bevestigen')}</td><td data-l="Nog te doen" class="noot">${s.ontbreekt.length ? 'Ontbreekt: ' + s.ontbreekt.map(esc).join(', ') + '. Dit onderdeel is daardoor minder nauwkeurig.' : '—'}</td><td><button class="klein" data-a="tab" data-t="${tabNaam}">Open</button></td></tr>`; }).join('') + `</tbody></table></section>`;
   h += `<section class="card"><h2>Aandachtspunten</h2>${W.length ? W.map(([k, m]) => `<div class="banner ${k === 'fout' ? 'fout' : ''}">${esc(m)}</div>`).join('') : '<p class="noot">Geen aandachtspunten gevonden op basis van de ingevulde gegevens. Dat is geen garantie: controleer weer, wegen en officiële waarschuwingen zelf.</p>'}</section>`;
+  h += `<section class="card"><h2>Rechtstreeks naar de zoeksites</h2><p class="noot">Gewone links, zonder invullen. Handig als een ingevulde knop niet werkt.</p>${siteLinks(['kiwi', 'sky', 'roam'], 'Vluchten')}${siteLinks(['dc', 'exp'], 'Autohuur')}${siteLinks(['booking', 'agoda'], 'Hotels')}</section>`;
   h += `<section class="card"><h2>Vandaag onderweg?</h2><p class="noot">Open de dagpagina van de huidige reisdag met lokale tijd, route, programma, weer en afvinklijst.</p><div class="rij"><button class="prim" data-a="vandaag">Naar dagpagina van vandaag</button></div></section>`;
   return h;
 };
@@ -919,7 +920,7 @@ function lhBlok(veld, titel, uitleg) {
 VIEWS.vlucht = () => {
   const t = T(), v = t.vlucht;
   let h = sectie('1 Vlucht: eerst de goedkoopste vlucht vinden', `Begin altijd hier. U geeft de zoekcriteria op, zoekt in <a target="_blank" rel="noopener" href="${ROAM}">Get-Roam</a> en vult hieronder de goedkoopste uitkomst in. De data van die vlucht worden de data van de rondreis; daarna volgen de autohuur en het aantal nachten.`,
-    `<div class="grid">${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}</div>${v.nodig ? '' : '<p class="noot">Zonder vlucht vult u hieronder de reisdata in.</p>'}`);
+    `${siteLinks(['kiwi', 'sky', 'roam'])}<div class="grid">${fld('vlucht.nodig', 'Ik heb een vlucht nodig', 'c', { r: 1 })}</div>${v.nodig ? '' : '<p class="noot">Zonder vlucht vult u hieronder de reisdata in.</p>'}`);
   if (!v.nodig) return h + sectie('Reisdata zonder vlucht', '', `<div class="grid">${fld('reis.vertrek', 'Eerste reisdag', 'd', { r: 1 })}${fld('reis.terug', 'Laatste reisdag', 'd', { r: 1 })}${fld('reis.volw', 'Aantal volwassenen', 'n', { min: 0, r: 1 })}${fld('reis.kind', 'Aantal kinderen', 'n', { min: 0, r: 1 })}</div>`) + kBox('Vlucht');
   h += sectie('Stap 1: zoekcriteria', 'Vul hieronder alles in. Onderaan kopieert één knop uw zoekopdracht en opent Get-Roam; met de bladwijzer “Roam invullen” staat daar alles ingevuld.',
     `<h3 style="margin-top:0">Van waar en naar waar?</h3><datalist id="lhLijst">${LUCHTHAVENS.map(l => `<option value="${l[0]} – ${esc(l[1])}">`).join('')}</datalist>
@@ -966,7 +967,10 @@ VIEWS.vlucht = () => {
   return h;
 };
 
-const nachtenSectie = () => sectie('2 Autohuur', 'De data komen uit de gekozen vlucht. De verdeling van de nachten over de plaatsen en de hotels volgen in stap 3.', `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>`);
+/* Gewone, rechtstreekse links naar de zoeksites (geen invulling, geen kopiëren): altijd te gebruiken als de ingevulde link niet werkt */
+const SITES = { roam: ['Get-Roam', 'https://get-roam.com/flexible-search'], kiwi: ['Kiwi.com', 'https://www.kiwi.com/en/'], sky: ['Skyscanner', 'https://www.skyscanner.nl/'], dc: ['DiscoverCars', 'https://www.discovercars.com/?utm_source=chatgpt.com'], exp: ['Expedia autohuur', 'https://www.expedia.com/Cars'], booking: ['Booking.com', 'https://www.booking.com/'], agoda: ['Agoda.com', 'https://www.agoda.com/'] };
+const siteLinks = (sl, titel = 'Rechtstreeks naar de site (zonder invullen)') => `<div class="rij" style="margin-top:6px"><span class="noot" style="flex:0 0 100%">${titel}:</span>${sl.map(k => `<a class="knop klein" target="_blank" rel="noopener" href="${SITES[k][1]}">${SITES[k][0]} ↗</a>`).join('')}</div>`;
+const nachtenSectie = () => sectie('2 Autohuur', 'De data komen uit de gekozen vlucht. De verdeling van de nachten over de plaatsen en de hotels volgen in stap 3.', `<div class="box" style="margin-top:0" data-calc="reisdatums"></div>${siteLinks(['dc', 'exp'])}`);
 
 const autoSectie = () => {
   const t = T(), au = t.auto, eenrichting = au.ophaalPlaats && au.inleverPlaats && au.ophaalPlaats.trim().toLowerCase() !== au.inleverPlaats.trim().toLowerCase();
@@ -1053,7 +1057,7 @@ function hotelBrief(t, i) {
 VIEWS.verblijf = () => {
   const t = T(), c = t.hotels.crit;
   let h = sectie('3 Hotels: criteria', 'De data staan vast (uit de vlucht). Stel hier in waaraan een hotel moet voldoen. Veiligheid is altijd een eis; een hotel met aandachtspunten of onvoldoende veiligheidsinformatie wordt niet stilzwijgend goedgekeurd.',
-    `<div class="grid">
+    `${siteLinks(['booking', 'agoda'])}<div class="grid">
       ${persVeld('hotels.personen', t, 'Gebruikt voor ontbijtkosten.')}${fld('hotels.crit.kamers', 'Aantal kamers', 'n', { min: 1 })}
       ${fld('hotels.crit.maxPrijs', `Maximumprijs per kamer per nacht, alles inbegrepen (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('hotels.crit.maxUitz', `Absoluut maximum bij uitzondering (${esc(t.reis.valuta)})`, 'n', { min: 0, h: 'Alleen na uw bevestiging per plaats.' })}
       ${fld('hotels.crit.minBooking', 'Minimale Booking.com-score (van 10)', 'n', { min: 0 })}${fld('hotels.crit.minGoogle', 'Minimale Google-score (van 5)', 'n', { min: 0 })}
@@ -2327,7 +2331,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 u'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 v'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
