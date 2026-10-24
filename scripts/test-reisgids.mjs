@@ -373,7 +373,7 @@ check('te lang verblijf wordt gemeld', /langer dan uw maximum/.test(await page.t
 await page.fill('#f_vlucht_terugDatum', '2027-04-26');
 await page.fill('#f_vlucht_heenAankomst', '23:30'); await page.fill('#f_vlucht_terugVertrek', '06:00');
 const at = await page.evaluate(() => { const a = __rr.T().auto; return [a.ophaalDatum, a.ophaalTijd, a.inleverDatum, a.inleverTijd]; });
-check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00 - 180 min = 03:00', at.join() === '2027-04-04,00:30,2027-04-26,03:00', at.join());
+check('ophalen = aankomst 23:30 + 60 min = 00:30 volgende dag; inleveren = 06:00 - 60 min = 05:00', at.join() === '2027-04-04,00:30,2027-04-26,05:00', at.join());
 await bevestig('vlucht');
 check('bevestigen met ontbrekende gegevens vraagt eerst toestemming en noemt wat ontbreekt', /ontbreekt nog/.test(dialoogTekst) && /prijs/.test(dialoogTekst), dialoogTekst);
 check('na uw bevestiging opent stap 2 en is stap 1 gemarkeerd', (await page.textContent('#tabs .act')).includes('2 Auto') && (await page.textContent('#tabs')).includes('✔ 1 Vlucht'));
@@ -386,6 +386,7 @@ check('voorlopig-melding zolang de vlucht niet als geboekt staat', /nog niet als
 const dc = await page.textContent('[data-calc=dcZoek]');
 check('DiscoverCars-velden: locatie, datum/tijd en zelfde plek terug', dc.includes('Sun, Apr 4, 2027') && dc.includes('00:30') && dc.includes('Denver') && /Return car in same location[\s\S]*ja/.test(dc), dc.slice(0, 300));
 check('standaard volledige verzekering gewenst, met uitleg over vergoedingspolis en borg', /Volledige verzekering gewenst/.test(dc) && /vergoedingspolis/.test(dc) && /borg blijft/.test(dc));
+check('bij 1 uur marge vóór vertrek waarschuwt de app dat dat krap is', /krap/.test(await page.textContent('[data-calc=autoTijden]')));
 check('link naar DiscoverCars zonder tracking-parameter', (await page.getAttribute('[data-calc=dcZoek] a.knop', 'href')) === 'https://www.discovercars.com/');
 await page.check('#f_auto_afwijkend');
 await page.fill('#f_auto_ophaalTijd', '12:00');

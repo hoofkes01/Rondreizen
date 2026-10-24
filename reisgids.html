@@ -503,7 +503,7 @@ const STAPCHK = { vlucht: 'Vlucht', auto: 'Auto', verblijf: 'Verblijf' };
 const CHKTAB = { Vlucht: 'vlucht', Reis: 'vlucht', Auto: 'auto', Verblijf: 'verblijf', Reisgids: 'gids', Voorbereiding: 'regelen', Route: 'route' };
 const alleBevestigd = () => Object.fromEntries(STAPPEN.map(k => [k, { ok: true, op: new Date().toISOString(), gewijzigd: false }]));
 /* reizen van vóór de stappen-flow blijven volledig toegankelijk */
-function migreer(t) { if (!('bevestigd' in t)) t.bevestigd = alleBevestigd(); vul(t); { const v = t.vlucht; if (!v.exactVan && /^\d{4}-\d{2}$/.test(v.maandVan || '')) v.exactVan = v.maandVan + '-01'; if (!v.exactTot && /^\d{4}-\d{2}$/.test(v.maandTot || '')) v.exactTot = maandEinde(v.maandTot); } { const nieuweTaken = standaardVoorbereiding().filter(x => /tekker|valuta/i.test(x.tekst)); nieuweTaken.forEach(n => { const sleutel = /tekker/i.test(n.tekst) ? /tekker|adapter/i : /valuta|pinpas/i; if (!t.voorbereiding.some(x => sleutel.test(x.tekst))) t.voorbereiding.push(n); }); } (t.hotels.lijst || []).forEach(h => { if (!h.opties) h.opties = [nieuwHotel(), nieuwHotel(), nieuwHotel()]; for (const k of ['wifi', 'badkamer', 'wijk']) if (!h[k]) h[k] = 'onbekend'; if (h.gekozen === undefined) h.gekozen = null; }); return t; }
+function migreer(t) { if (!('bevestigd' in t)) t.bevestigd = alleBevestigd(); vul(t); if (t.auto && t.auto.bufferInlever === 180 && !t.auto.bufferV2) { t.auto.bufferInlever = 60; t.auto.bufferV2 = true; } { const v = t.vlucht; if (!v.exactVan && /^\d{4}-\d{2}$/.test(v.maandVan || '')) v.exactVan = v.maandVan + '-01'; if (!v.exactTot && /^\d{4}-\d{2}$/.test(v.maandTot || '')) v.exactTot = maandEinde(v.maandTot); } { const nieuweTaken = standaardVoorbereiding().filter(x => /tekker|valuta/i.test(x.tekst)); nieuweTaken.forEach(n => { const sleutel = /tekker/i.test(n.tekst) ? /tekker|adapter/i : /valuta|pinpas/i; if (!t.voorbereiding.some(x => sleutel.test(x.tekst))) t.voorbereiding.push(n); }); } (t.hotels.lijst || []).forEach(h => { if (!h.opties) h.opties = [nieuwHotel(), nieuwHotel(), nieuwHotel()]; for (const k of ['wifi', 'badkamer', 'wijk']) if (!h[k]) h[k] = 'onbekend'; if (h.gekozen === undefined) h.gekozen = null; }); return t; }
 const stapOk = (t, k) => !!(t.bevestigd[k] && t.bevestigd[k].ok);
 const toegang = (t, k) => { const i = STAPPEN.indexOf(k); if (i >= 0) return i === 0 || STAPPEN.slice(0, i).every(x => stapOk(t, x)); return !GIDSTABS.includes(k) || STAPPEN.every(x => stapOk(t, x)); };
 const huidigeStap = t => STAPPEN.find(k => !stapOk(t, k)) || STAPPEN[STAPPEN.length - 1];
@@ -563,7 +563,7 @@ function nieuweReis(naam) {
       prijs: null, prijsValuta: 'EUR', prijsPer: '', koers: null, koersDatum: '', prijsType: 'schatting', bron: 'Get-Roam', prijsDatum: '', status: 'idee', ref: '', link: '', liters: 30, literprijs: 2.45, literprijsDatum: '', parkeren: 200, extra: null, notitie: '' },
     auto: { nodig: true, vervoer: '', afwijkend: false, personen: null, land: '', verhuurder: '', klasse: 'intermediate', versnelling: 'automaat', koffers: 2, ophaalPlaats: '', ophaalDatum: '', ophaalTijd: '', inleverPlaats: '', inleverDatum: '', inleverTijd: '', bagage: '',
       kmType: 'onbeperkt', kmLimiet: null, kmPer: 'dag', kmExtra: null, zitjes: '', zitjesAantal: null, zitjesKosten: null, grens: 'nee', grensLanden: '', grensToeslag: null, grensOk: false, eenrichtingToeslag: null, creditcard: false,
-      verzekeringKeuze: voorkeurVerz(), volledigIncl: '', leeftijd: null, bufferOphaal: 60, bufferInlever: 180, verzekering: '', eigenRisico: null, borg: null, tweede: false, tweedeKosten: null, extraVerz: null, brandstofBeleid: 'vol-vol', brandstofSoort: 'benzine', verbruik: null, eenheidsprijs: null, eenheidsprijsDatum: '', ovWens: '', ovKosten: null, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', notitie: '' },
+      verzekeringKeuze: voorkeurVerz(), volledigIncl: '', leeftijd: null, bufferOphaal: 60, bufferInlever: 60, verzekering: '', eigenRisico: null, borg: null, tweede: false, tweedeKosten: null, extraVerz: null, brandstofBeleid: 'vol-vol', brandstofSoort: 'benzine', verbruik: null, eenheidsprijs: null, eenheidsprijsDatum: '', ovWens: '', ovKosten: null, prijs: null, prijsType: 'schatting', bron: '', prijsDatum: '', status: 'idee', ref: '', link: '', notitie: '' },
     hotels: { personen: null, crit: { maxPrijs: 100, maxUitz: 150, minBooking: 8, minGoogle: 4, minReviews: 25, maxNegPct: 10, ontbijt: 'ja', parkeren: 'ja', wifi: 'ja', badkamer: 'ja', wijk: 'ja', maxAfstand: null, annuleren: 'voorkeur', kamers: 1, bedden: '', ligging: '', wensen: '', def: REVDEF }, lijst: [] },
     route: { wegfactor: 1.3, snelheid: 75, start: null, eind: null, n1: null, n2: null, n3: null, n4: null },
     gids: { interesses: [], maxKm: null, maxUren: null, vertrektijd: '09:00', uiterstAankomst: '18:00', pauze: '', minTijd: '', maxWissels: null, minNachten: null, rustdagen: '', eten: '', uitgaan: '', muziek: '', cultuur: '', sport: '', winkelen: '', extra: '' },
@@ -966,7 +966,7 @@ const autoSectie = () => {
     ${au.afwijkend ? `<div class="grid">
       ${fld('auto.ophaalPlaats', 'Ophaallocatie', 't', { r: 1 })}${fld('auto.ophaalDatum', 'Ophaaldatum', 'd')}${fld('auto.ophaalTijd', 'Ophaaltijd (lokaal)', 'h')}
       ${fld('auto.inleverPlaats', 'Inleverlocatie', 't', { r: 1 })}${fld('auto.inleverDatum', 'Inleverdatum', 'd')}${fld('auto.inleverTijd', 'Inlevertijd (lokaal)', 'h')}
-      ${fld('auto.bufferOphaal', 'Ophalen: minuten na aankomst vlucht', 'n', { min: 0, h: 'Voorstel 60 (bagage, douane).' })}${fld('auto.bufferInlever', 'Inleveren: minuten vóór vertrek terugvlucht', 'n', { min: 0, h: 'Voorstel 180.' })}
+      ${fld('auto.bufferOphaal', 'Ophalen: minuten na aankomst vlucht', 'n', { min: 0, h: 'Voorstel 60 (bagage, douane).' })}${fld('auto.bufferInlever', 'Inleveren: minuten vóór vertrek terugvlucht', 'n', { min: 0, h: 'Standaard 60 (uw keuze). Dat is krap, zie de melding bij de huurperiode.' })}
     </div>` : ''}
     ${eenrichting ? `<div class="grid">${fld('auto.eenrichtingToeslag', `Eenrichtingstoeslag (${esc(t.reis.valuta)})`, 'n', { min: 0, h: 'Andere inleverlocatie. Leeg = onbekend, 0 = geen toeslag.' })}</div>` : ''}
     <h3>Auto zoeken bij DiscoverCars</h3><div class="box" style="margin-top:0" data-calc="dcZoek"></div>
@@ -1557,7 +1557,7 @@ function syncDatums(t) {
   let od = start, ot = '', id = eind, it = '';
   const aan = tMin(start, v.heenAankomst), vert = tMin(eind, v.terugVertrek);
   if (aan != null) [od, ot] = minNaarDT(aan + (num(au.bufferOphaal) ?? 60));
-  if (vert != null) [id, it] = minNaarDT(vert - (num(au.bufferInlever) ?? 180));
+  if (vert != null) [id, it] = minNaarDT(vert - (num(au.bufferInlever) ?? 60));
   const volg = (key, nieuw, vorig, alt) => { if (nieuw && (!au[key] || au[key] === vorig || (alt && au[key] === alt))) au[key] = nieuw; };
   volg('ophaalDatum', od, p.od); volg('ophaalTijd', ot, p.ot); volg('inleverDatum', id, p.id); volg('inleverTijd', it, p.it);
   const tv = v.terugVan || v.naar;
@@ -1673,6 +1673,7 @@ const CALC = {
     const t = T(), a = t.auto, v = t.vlucht; if (!a.nodig) return 'Geen huurauto: geen ophaal- en inlevertijd nodig.';
     const pk = tMin(a.ophaalDatum, a.ophaalTijd), dr = tMin(a.inleverDatum, a.inleverTijd), w = [];
     if (v.nodig && (!v.heenAankomst || !v.terugVertrek)) w.push('Vul bij de vlucht de aankomsttijd heen en de vertrektijd terug in (lokale tijd); dan worden de tijden hieronder automatisch ingevuld.');
+    if ((num(a.bufferInlever) ?? 60) < 120) w.push(`Let op: de auto wordt ${num(a.bufferInlever) ?? 60} minuten vóór vertrek van de terugvlucht ingeleverd (uw keuze). Dat is krap: bagage afgeven sluit bij veel maatschappijen 45 tot 60 minuten voor vertrek en de verhuurder heeft vaak nog een shuttle naar de terminal nodig. Controleer de sluitingstijd van uw maatschappij en de ligging van het inleverpunt.`);
     if (v.nodig && !['geboekt', 'betaald'].includes(v.status)) w.push('Voorlopig: de vlucht staat nog niet als geboekt. Zet de status op “geboekt” zodra u bevestigd hebt; boek de auto pas daarna.');
     const rij = (kop, d, tm, pl) => `<div><b>${kop}:</b> ${okD(d) ? wd(d) + ' ' + dFmt(d) : '—'} om ${esc(tm || '—')} (lokale tijd${pl ? ', ' + esc(pl) : ''})</div>`;
     let uit = rij('Ophalen', a.ophaalDatum, a.ophaalTijd, a.ophaalPlaats) + rij('Inleveren', a.inleverDatum, a.inleverTijd, a.inleverPlaats);
@@ -1682,7 +1683,7 @@ const CALC = {
       else uit += `<div><b>Huurperiode:</b> ${NF1.format(u)} uur = ${Math.ceil(u / 24)} dag(en) van 24 uur. <span class="noot">Verhuurders rekenen vaak per begonnen 24 uur; later inleveren dan de ophaaltijd kan een extra dag kosten. Controleer dit in het aanbod.</span></div>`;
     }
     [['ophalen', a.ophaalTijd], ['inleveren', a.inleverTijd]].forEach(([k, tm]) => { if (/^\d{2}:\d{2}$/.test(tm || '') && (tm < '07:00' || tm >= '22:00')) w.push(`Tijd van ${k} (${tm}) ligt buiten gebruikelijke kantooruren: controleer de openingstijden van het verhuurkantoor.`); });
-    if (v.nodig && v.heenAankomst) uit += `<div class="noot">Regel: ophalen = aankomst vlucht + ${num(a.bufferOphaal) ?? 60} min; inleveren = vertrek terugvlucht − ${num(a.bufferInlever) ?? 180} min. Wilt u afwijken, vink dan hierboven “afwijken” aan.</div>`;
+    if (v.nodig && v.heenAankomst) uit += `<div class="noot">Regel: ophalen = aankomst vlucht + ${num(a.bufferOphaal) ?? 60} min; inleveren = vertrek terugvlucht − ${num(a.bufferInlever) ?? 60} min. Wilt u afwijken, vink dan hierboven “afwijken” aan.</div>`;
     return uit + w.map(x => `<div class="banner">${esc(x)}</div>`).join('');
   },
   autoLand: () => {
@@ -2218,7 +2219,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '24-10-2026 k'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '24-10-2026 l'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, roamVuller, ROAM_BLADWIJZER, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
