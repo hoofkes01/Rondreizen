@@ -383,8 +383,15 @@ check('auto plakken: Neem over vult de gekozen huurauto', await page.evaluate(()
 await page.setInputFiles('input[data-ch=bewijsToe]', { name: 'keuze.png', mimeType: 'image/png', buffer: maakPng(16, 16) });
 await page.waitForSelector('img[data-foto][alt=screenshot]');
 check('screenshot bij de auto bewaard (op dit apparaat) en zichtbaar', await page.evaluate(() => __rr.T().bewijs.length === 1 && __rr.T().bewijs[0].voor === 'auto'));
+await page.route('https://cdn.jsdelivr.net/npm/tesseract.js@*/**', r => r.fulfill({ contentType: 'application/javascript', body: "window.Tesseract = { recognize: async () => ({ data: { text: 'Avis Pick-up: Dallas 12 Mar 2027 10:00 Drop-off: Dallas 02 Apr 2027 09:00 SUV Total \\u20ac1.700' } }) };" }));
+await page.setInputFiles('input[data-ch=ocrToe][data-s=auto]', { name: 'scherm.png', mimeType: 'image/png', buffer: maakPng(16, 16) });
+await page.waitForSelector('[data-a=plakNeem][data-s=auto]');
+check('screenshot lezen (auto): tekst staat in het vak en het voorbeeld toont de prijs, nog niets ingevuld', (await page.inputValue('#plakAuto')).includes('Avis') && /1\.?700/.test(await page.textContent('#view, main, body')) && await page.evaluate(() => __rr.T().auto.prijs === 1500));
+check('screenshot lezen: plaatje is ook bewaard bij de stap', await page.evaluate(() => __rr.T().bewijs.length === 2 && __rr.T().bewijs[1].voor === 'auto'));
+await page.click('[data-a=plakNeem][data-s=auto]');
+check('screenshot lezen: Neem over vult de nieuwe prijs', await page.evaluate(() => __rr.T().auto.prijs === 1700));
 await page.evaluate(() => { __rr.T().boek.modus = 'gids'; __rr.T().boek.refs = true; __rr.T().boek.foto = true; __rr.opslaan(); location.hash = 'boek'; }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
-check('screenshot staat in het reisboek bij "boekingsnummers opnemen"', await page.locator('#boekUit [data-sec=bewijzen] img').count() === 1, await page.evaluate(() => JSON.stringify([__rr.T().boek, __rr.T().bewijs, document.querySelectorAll('#boekUit [data-sec]').length])));
+check('screenshot staat in het reisboek bij "boekingsnummers opnemen"', await page.locator('#boekUit [data-sec=bewijzen] img').count() === 2, await page.evaluate(() => JSON.stringify([__rr.T().boek, __rr.T().bewijs, document.querySelectorAll('#boekUit [data-sec]').length])));
 await page.evaluate(() => { __rr.T().boek.refs = false; __rr.opslaan(); }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
 check('zonder die keuze blijft het screenshot uit het reisboek', await page.locator('#boekUit [data-sec=bewijzen]').count() === 0);
 
@@ -697,7 +704,7 @@ check('vaste vertrekpunten FRA, DUS, AMS, BRU', (await page.evaluate(() => __rr.
 await page.fill('#f_vlucht_zoekPlaats', 'Plaats Bestaat Niet');
 check('onbekende plaats: duidelijke melding, geen gok', /Geen luchthaven gevonden/.test(await page.textContent('[data-calc=luchthavensStraal]')));
 check('oude Skyscanner-onderdelen zijn verdwenen en index.html verwijst door', !existsSync(join(hier, 'lib.mjs')) && !existsSync(join(hier, '..', 'intake.html')) && /reisgids\.html/.test(readFileSync(join(hier, '..', 'index.html'), 'utf8')));
-const vreemd = [...hosts].filter(h => h && !/(^|\.)open-meteo\.com$|^api\.frankfurter\.dev$/.test(h));
+const vreemd = [...hosts].filter(h => h && !/(^|\.)open-meteo\.com$|^api\.frankfurter\.dev$|^cdn\.jsdelivr\.net$/.test(h));
 check('de app maakt alleen verzoeken aan Open-Meteo en Frankfurter (op verzoek); nooit aan Claude of een server van ons', vreemd.length === 0, vreemd.join(','));
 check('geen scriptfouten in de console', consoleFouten.length === 0, consoleFouten.join(' | '));
 await browser.close();

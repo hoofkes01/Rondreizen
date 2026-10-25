@@ -1431,12 +1431,12 @@ function plakVoorbeeld(soort, res) {
 }
 function plakBlok(soort) {
   const pk = plak[soort], vl = soort === 'vlucht', idn = vl ? 'plakVlucht' : 'plakAuto';
-  return `<h3>Sneller: plak de gegevens van uw keuze</h3><p class="noot">Kopieer op ${vl ? 'Kiwi.com, Skyscanner of Get-Roam' : 'DiscoverCars of Expedia'} de tekst van uw gekozen ${vl ? 'vlucht' : 'huurauto'} (selecteren, kopiëren) en plak die hier. De app laat eerst zien wat ze gevonden heeft. Pas na “Neem over” worden de velden gevuld; controleer ze daarna. De lezer is niet getest op echte ${vl ? 'Get-Roam' : 'DiscoverCars'}-tekst: wat niet herkend wordt, vult u zelf in.</p>
-    <textarea id="${idn}" rows="6" placeholder="Plak hier de tekst">${esc(pk.tekst)}</textarea><div class="rij"><button data-a="plakLees" data-s="${soort}">Lees de tekst</button>${pk.res ? `<button class="prim" data-a="plakNeem" data-s="${soort}">Neem over</button>` : ''}</div>${pk.res ? plakVoorbeeld(soort, pk.res) : ''}`;
+  return `<h3>Sneller: plak de gegevens van uw keuze</h3><p class="noot">Kopieer op ${vl ? 'Kiwi.com, Skyscanner of Get-Roam' : 'DiscoverCars of Expedia'} de tekst van uw gekozen ${vl ? 'vlucht' : 'huurauto'} (selecteren, kopiëren) en plak die hier. De app laat eerst zien wat ze gevonden heeft. Pas na “Neem over” worden de velden gevuld; controleer ze daarna. De lezer is niet getest op echte ${vl ? 'Kiwi/Get-Roam' : 'DiscoverCars'}-tekst: wat niet herkend wordt, vult u zelf in. Liever een screenshot? Kies “lees een screenshot”: de app leest de tekst uit het plaatje (Engelse tekst; internet nodig, de eerste keer even wachten), zet die in het vak en bewaart het plaatje bij uw stap. Controleer de uitkomst altijd: bedragen en tijden kunnen verkeerd gelezen zijn.</p>
+    <textarea id="${idn}" rows="6" placeholder="Plak hier de tekst">${esc(pk.tekst)}</textarea><div class="rij"><button data-a="plakLees" data-s="${soort}">Lees de tekst</button><label class="knop" style="margin:0">📷 Of: lees een screenshot<input type="file" accept="image/*" data-ch="ocrToe" data-s="${soort}" hidden></label>${pk.res ? `<button class="prim" data-a="plakNeem" data-s="${soort}">Neem over</button>` : ''}</div>${pk.res ? plakVoorbeeld(soort, pk.res) : ''}`;
 }
 function bewijsBlok(voor) {
   const L = (T().bewijs || []).map((b, i) => [b, i]).filter(([b]) => b.voor === voor);
-  return `<h3>Schermafbeelding van uw keuze bewaren</h3><p class="noot">Zet een screenshot van het gekozen aanbod bij deze stap. Het blijft alleen op dit apparaat, staat in de back-up en komt in het reisboek als u “boekings- en polisnummers opnemen” aanzet. De app leest de tekst in een plaatje niet uit: gebruik het plakvak hierboven om velden te laten vullen.</p>
+  return `<h3>Schermafbeelding van uw keuze bewaren</h3><p class="noot">Zet een screenshot van het gekozen aanbod bij deze stap. Het blijft alleen op dit apparaat, staat in de back-up en komt in het reisboek als u “boekings- en polisnummers opnemen” aanzet. Wilt u dat de app de tekst uit een plaatje leest, gebruik dan “lees een screenshot” bij het plakvak hierboven.</p>
     <div class="rij" style="margin-top:0"><label class="knop" style="margin:0">🖼 Screenshot toevoegen<input type="file" accept="image/*" multiple data-ch="bewijsToe" data-v="${voor}" hidden></label></div>
     <div class="fotos">${L.map(([b, i]) => `<div class="foto"><img data-foto="${b.id}" alt="screenshot"><input type="text" placeholder="Onderschrift" data-b="bewijs.${i}.cap" value="${esc(b.cap)}"><div class="rij" style="margin-top:4px"><button class="klein gevaar" data-a="bewijsDel" data-i="${i}">Verwijderen</button></div></div>`).join('')}</div>`;
 }
@@ -2062,6 +2062,26 @@ A.bewijsToe = async el => {
   for (const f of [...el.files]) { try { const bl = await verklein(f, 1800); const id = uid(); await fotoPut(id, bl); t.bewijs.push({ id, voor: el.dataset.v, cap: '' }); n++; } catch { fout++; } }
   el.value = ''; opslaan(); rerender(); melding(`${n} screenshot(s) bewaard${fout ? `, ${fout} niet gelukt` : ''}.`, !!fout);
 };
+let tessLoad;
+function laadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  return tessLoad = tessLoad || new Promise((ok, nee) => {
+    const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+    sc.onload = () => window.Tesseract ? ok(window.Tesseract) : nee(new Error('leesprogramma ontbreekt'));
+    sc.onerror = () => { tessLoad = null; nee(new Error('geen verbinding met het leesprogramma')); }; document.head.appendChild(sc);
+  });
+}
+A.ocrToe = async el => {
+  const soort = el.dataset.s, f = el.files[0], t = T(); if (!f) return;
+  melding('Screenshot wordt gelezen… Eerste keer kan dit een minuut duren (het leesprogramma wordt gedownload).');
+  try {
+    const TS = await laadTesseract(), bl = await verklein(f, 2000), r = await TS.recognize(bl, 'eng'), tekst = String((r && r.data && r.data.text) || '').trim();
+    t.bewijs = t.bewijs || []; const id = uid(); await fotoPut(id, bl); t.bewijs.push({ id, voor: soort, cap: '' });
+    if (!tekst) { el.value = ''; opslaan(); rerender(); return melding('Er is geen tekst in het plaatje gevonden. Het plaatje is wel bewaard; plak de tekst of vul zelf in.', true); }
+    plak[soort].tekst = tekst; el.value = ''; opslaan(); rerender(); A.plakLees({ dataset: { s: soort } });
+    melding('Tekst gelezen. Controleer hieronder wat de app gevonden heeft voordat u “Neem over” kiest.');
+  } catch (e) { el.value = ''; melding('Het lezen van het screenshot lukte niet (' + (e && e.message || 'onbekend') + '). Controleer uw internet, of plak de tekst zelf.', true); }
+};
 A.bewijsDel = async b => { if (!confirm('Screenshot definitief verwijderen?')) return; const [x] = T().bewijs.splice(+b.dataset.i, 1); await fotoDel(x.id).catch(() => { }); opslaan(); rerender(); };
 A.maakVerslag = () => {
   const t = T(), leeg = t.dagen.filter(x => !(x.dagboek.tekst || x.dagboek.werkelijk || x.dagboek.hoogtepunt || x.dagboek.fotos.length)).length;
@@ -2318,7 +2338,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '25-10-2026 c'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '25-10-2026 d'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, dagTabelRijen, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
