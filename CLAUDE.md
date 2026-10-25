@@ -34,6 +34,9 @@ Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft t
 - Vliegtijd maximaal 14 uur per enkele reis, rechtstreeks heeft voorkeur; overstap alleen als het totaal minstens € 200 goedkoper is.
 - Reiskosten naar de luchthaven: 30 liter benzine + € 200 parkeren, alleen in de kostenraming.
 
+## PC-zoekmodus
+Op de pc kan Claude Code (met Chrome-koppeling) de zoektochten uitvoeren: de app exporteert `zoekopdracht.json` en leest `resultaten.json` in (`pcZoekopdracht`, `pcToepas`, `pcBlok`). Handleiding en bestandsformaat: docs/pc-zoeken.md. De Chrome-stappen zijn nog niet getest; de app doet zelf nog steeds niets automatisch. Skyscanner dient daar als zoekbron op de pc.
+
 ## Bestanden
 - reisgids.html: de app. sw.js + manifest.webmanifest + icoon*: offline en installeerbaar op het beginscherm (alleen via https, bijv. GitHub Pages). index.html: doorverwijzing.
 - scripts/test-reisgids.mjs: browsertest (`npm test`; Playwright; zet `CHROMIUM=<pad naar chrome>` als de standaardbrowser ontbreekt).
