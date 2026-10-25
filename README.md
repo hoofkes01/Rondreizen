@@ -4,7 +4,8 @@ Open `reisgids.html` in de browser. Plan een rondreis in zes stappen (vlucht, au
 dagpagina's onderweg, houd een dagboek met foto's bij en print of bewaar het reisboek als PDF. Alles wat u invult blijft in uw eigen
 browser; maak regelmatig een back-up (tab Gegevens). De app werkt zelfstandig: geen account, server of Claude nodig. Na afloop maakt u van het dagboek en de foto's een reisverslag (tab Reisboek en verslag).
 
-- Vluchten zoekt u in Get-Roam, auto's in DiscoverCars, hotels bij Booking.com, Agoda.com of de hotelwebsite; de app zet de zoekgegevens klaar.
+- Vluchten zoekt u in Kiwi.com (Skyscanner en Get-Roam ter controle), auto's in Expedia of DiscoverCars, hotels bij Booking.com, Agoda.com of de hotelwebsite; de app zet de zoekgegevens klaar.
+- Op de pc kan Claude Code die zoektochten in Chrome uitvoeren (commando `/zoek`, zie `docs/pc-zoeken.md`); de app exporteert `zoekopdracht.json` en leest `resultaten.json` in.
 - Bronnen en voorwaarden: `docs/databronnen.md`. Afspraken: `CLAUDE.md`.
 
 ## Testen

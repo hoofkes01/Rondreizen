@@ -952,7 +952,7 @@ VIEWS.vlucht = () => {
       ${fld('vlucht.maxStops', 'Maximaal aantal overstappen per richting', 's', { opts: [['', 'geen voorkeur'], ['0', 'alleen rechtstreeks'], ['1', 'max. 1'], ['2', 'max. 2']] })}${fld('vlucht.maxUren', 'Maximale vliegtijd (uren)', 'n', { min: 0 })}${fld('vlucht.maxPrijsUsd', 'Maximumprijs (in $, zoals Get-Roam vraagt)', 'n', { min: 0 })}
       ${fld('vlucht.bagage', 'Bagage-eis', 't', { h: 'Stel dit zelf in bij Kiwi.com (Bags → Checked baggage) en controleer het bij de boeking.' })}
     </div><div class="box" data-calc="roam"></div>`);
-  h += sectie('Stap 2a: uw gekozen vlucht overnemen', 'Plak de tekst van de vlucht of bewaar een screenshot; vul daarna stap 2 aan of controleer hem.', plakBlok('vlucht') + bewijsBlok('vlucht'));
+  h += sectie('Stap 2a: uw gekozen vlucht overnemen', 'Plak de tekst van de vlucht of bewaar een screenshot; vul daarna stap 2 aan of controleer hem.', pcBlok('vlucht') + plakBlok('vlucht') + bewijsBlok('vlucht'));
   h += sectie('Stap 2: uw gekozen vlucht invullen', 'Vul de gekozen vlucht in. Tijden zijn de lokale tijd van de luchthaven. Alleen wat u hier invult wordt gebruikt; de app haalt geen vluchtprijzen op.',
     `<div class="grid">
       ${fld('vlucht.maatschappij', 'Maatschappij', 't')}${fld('vlucht.stops', 'Overstappen (heen / terug)', 't', { ph: 'bijv. 1 / 0' })}
@@ -1019,7 +1019,7 @@ const autoSectie = () => {
       ${fld('auto.verbruik', 'Verbruik per 100 km (liter of kWh)', 'n', { min: 0 })}${fld('auto.eenheidsprijs', `Prijs per liter/kWh (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('auto.eenheidsprijsDatum', 'Prijs gecontroleerd op', 'd')}
       ${fld('auto.ovWens', 'Openbaar vervoer / taxi / veerboot (wensen)', 'a', { w: 1, rows: 2 })}${fld('auto.ovKosten', 'Kosten OV/taxi/veerboot', 'n', { min: 0 })}
     </div><div class="box" data-calc="vervoerVergelijk"></div>
-    ${plakBlok('auto')}${bewijsBlok('auto')}
+    ${pcBlok('auto')}${plakBlok('auto')}${bewijsBlok('auto')}
     <h3>Gekozen huurauto</h3><div class="grid">
       ${fld('auto.verhuurder', 'Verhuurder', 't')}${fld('auto.prijs', `Totale huurprijs (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('auto.prijsType', 'Soort prijs', 's', { opts: PRIJSTYPE })}${fld('auto.prijsDatum', 'Prijs gecontroleerd op', 'd')}${fld('auto.bron', 'Bron', 't')}${fld('auto.extraVerz', 'Extra verzekering (optioneel)', 'n', { min: 0 })}
       ${fld('auto.status', 'Boekingsstatus', 's', { opts: STATUS })}${fld('auto.ref', 'Reserveringsnummer (optioneel)', 't')}${fld('auto.link', 'Link', 'u')}
@@ -1107,7 +1107,7 @@ VIEWS.rondreis = () => {
 VIEWS.verblijf = () => {
   const t = T(), c = t.hotels.crit;
   let h = (t.rondreisOk ? `<section class="card"><h2>Verblijven aanmaken</h2><p class="noot">De rondreis is bevestigd. Maak hier de verblijven (met data) aan uit de plaatsen en nachten; daarna zoekt u per verblijf hotels.</p><div class="rij"><button class="prim" data-a="stopsNaarDagen">Maak dagen en verblijven aan uit de rondreis</button><button data-a="tab" data-t="rondreis">Naar de rondreis</button></div></section>` : `<section class="card"><div class="banner"><b>Bevestig eerst de rondreis.</b> U beoordeelt eerst de route en de afstand per dag; daarna start het hotelzoekdeel. <button class="klein" data-a="tab" data-t="rondreis">Naar de rondreis</button></div></section>`) + sectie('3 Hotels: criteria', 'De data staan vast (uit de vlucht). Stel hier in waaraan een hotel moet voldoen. Veiligheid is altijd een eis; een hotel met aandachtspunten of onvoldoende veiligheidsinformatie wordt niet stilzwijgend goedgekeurd.',
-    `${siteLinks(['booking', 'agoda'])}<div class="grid">
+    `${siteLinks(['booking', 'agoda'])}${pcBlok('hotels')}<div class="grid">
       ${persVeld('hotels.personen', t, 'Gebruikt voor ontbijtkosten.')}${fld('hotels.crit.kamers', 'Aantal kamers', 'n', { min: 1 })}
       ${fld('hotels.crit.maxPrijs', `Maximumprijs per kamer per nacht, alles inbegrepen (${esc(t.reis.valuta)})`, 'n', { min: 0 })}${fld('hotels.crit.maxUitz', `Absoluut maximum bij uitzondering (${esc(t.reis.valuta)})`, 'n', { min: 0, h: 'Alleen na uw bevestiging per plaats.' })}
       ${fld('hotels.crit.minBooking', 'Minimale Booking.com-score (van 10)', 'n', { min: 0 })}${fld('hotels.crit.minGoogle', 'Minimale Google-score (van 5)', 'n', { min: 0 })}
@@ -1340,7 +1340,6 @@ function leesBedrag(x) {
   else if (p >= 0 && /\.\d{3}$/.test(x)) x = x.replace(/\./g, '');
   const n = parseFloat(x); return isNaN(n) ? null : Math.round(n);
 }
-const plakGetal = (m, i = 1) => m ? leesBedrag(m[i]) : null;
 function plakDatums(tekst, ref, nota) {
   const jr = (ref && /^\d{4}/.test(ref)) ? +ref.slice(0, 4) : null, pad = n => String(n).padStart(2, '0'), dat = [];
   const ymd = (y, m, d) => (m >= 1 && m <= 12 && d >= 1 && d <= 31) ? `${y}-${pad(m)}-${pad(d)}` : null, voeg = (idx, d) => { if (d) dat.push([idx, d]); };
@@ -1428,6 +1427,67 @@ function plakWaarde(soort, k, x) {
 function plakVoorbeeld(soort, res) {
   const nm = PLAKNAMEN[soort], k = Object.keys(nm), g = k.filter(x => res.velden[x] != null && res.velden[x] !== ''), n = k.filter(x => !g.includes(x));
   return `<div class="box"><b>Gevonden (${g.length}):</b><table class="rtab"><tbody>${g.map(x => `<tr><td>${nm[x]}</td><td>${esc(plakWaarde(soort, x, res.velden[x]))}</td></tr>`).join('') || '<tr><td>Niets herkend. Vul de velden zelf in.</td></tr>'}</tbody></table>${n.length ? `<p class="noot">Niet gevonden: ${n.map(x => nm[x]).join(', ')}.</p>` : ''}${res.nota.map(x => `<div class="banner">${esc(x)}</div>`).join('')}</div>`;
+}
+/* ====================== PC-zoekmodus: zoekopdracht uitvoeren door Claude op de pc, resultaten terug in de app ====================== */
+const PC_NUM = ['prijsB', 'prijsA', 'prijsH', 'ontbijtPp', 'parkeerPerNacht', 'belasting', 'gScore', 'gN', 'gNeg', 'bScore', 'bN', 'bNeg', 'afstandCentrum'];
+const PC_HOTELVELDEN = ['naam', 'adres', 'tel', 'site', 'prijsB', 'linkB', 'prijsA', 'linkA', 'prijsH', 'prijsType', 'prijsDatum', 'ontbijt', 'ontbijtPp', 'parkeren', 'parkeerPerNacht', 'belasting', 'wifi', 'badkamer', 'annulerenGratis', 'annuleerTot', 'annuleren', 'afstandCentrum', 'wijk', 'veilig', 'veiligNotitie', 'gScore', 'gN', 'gNeg', 'gLink', 'bScore', 'bN', 'bNeg', 'bLink', 'revDatum', 'ligging', 'notitie', 'bron'];
+function pcZoekopdracht(t) {
+  const z = roamZoek(t), v = t.vlucht, a = t.auto, c = t.hotels.crit, k = kiwiLink(t), ac = autoLink(t);
+  const hoofd = z.van.includes('FRA') ? 'FRA' : (z.van[0] || ''), rest = z.van.filter(c => c !== hoofd), fase2 = okD(v.heenDatum) && okD(v.terugDatum) && rest.length > 0;
+  const kmTxt = a.kmType === 'beperkt' ? `beperkt${num(a.kmLimiet) != null ? ', ' + num(a.kmLimiet) + ' km per ' + (a.kmPer || 'dag') : ''}` : 'onbeperkt';
+  return {
+    soort: 'rondreisplanner-zoekopdracht', versie: 1, gemaakt: new Date().toISOString(), reis: t.naam, valuta: t.reis.valuta || 'EUR',
+    reizigers: { volwassenen: t.reis.volw || 2, kinderen: t.reis.kind || 0, kinderLeeftijden: t.reis.kindLeeftijden || '' },
+    vlucht: {
+      nodig: v.nodig !== false, fase: fase2 ? 2 : 1, vertrekluchthavens: [hoofd], vergelijkVanaf: fase2 ? { vertrekluchthavens: rest, heenDatum: v.heenDatum, terugDatum: v.terugDatum, aankomst: v.naar || z.naar[0] || '' } : null, aankomstluchthavens: z.naar, heenvluchtVan: z.vroegste, heenvluchtTot: z.laatste, terugvluchtVan: z.terugVan, terugvluchtTot: z.terugTot,
+      verblijfMinDagen: z.dagenMin, verblijfMaxDagen: z.dagenMax, maxVliegurenPerRichting: z.maxUren, maxOverstappen: z.maxStops === '' || z.maxStops == null ? null : num(z.maxStops), maxPrijsUsd: z.maxPrijs,
+      bagage: '1 ruimbagage van 23 kg per persoon, inbegrepen in de prijs', rechtstreeksHeeftVoorkeur: true, overstapAlleenAlsMinstensGoedkoper: 200, geenZelfOverstap: true,
+      startlinks: { kiwi: k.url || '', kiwiOntbreekt: k.mis || null }
+    },
+    auto: {
+      nodig: a.nodig !== false, ophalen: { plaats: a.ophaalPlaats || '', datum: a.ophaalDatum || '', tijd: a.ophaalTijd || '' }, inleveren: { plaats: a.inleverPlaats || '', datum: a.inleverDatum || '', tijd: a.inleverTijd || '' },
+      klasse: a.klasse || '', versnelling: a.versnelling || '', kilometers: kmTxt, brandstofbeleid: a.brandstofBeleid || '', kinderzitjes: a.zitjes || '', grensoverschrijding: a.grens || 'nee', grensLanden: a.grensLanden || '',
+      verzekering: a.verzekeringKeuze || '', koffers: a.koffers || null,
+      startlinks: { expedia: ac.url || '', discovercars: 'https://www.discovercars.com/?utm_source=chatgpt.com' }
+    },
+    hotelCriteria: { maxPrijsPerNacht: num(c.maxPrijs), uitzonderingTot: num(c.maxUitz), minBooking: num(c.minBooking), minGoogle: num(c.minGoogle), minReviewsPerBron: num(c.minReviews), maxNegatiefPct: num(c.maxNegPct), ontbijt: c.ontbijt, parkeren: c.parkeren, wifi: c.wifi, eigenBadkamer: c.badkamer, goedeWijk: c.wijk, gratisAnnuleren: c.annuleren, kamers: c.kamers || 1, veiligheid: 'altijd een eis' },
+    hotels: t.hotels.lijst.map((h, i) => ({ index: i, plaats: h.plaats, van: h.van, tot: h.tot, nachten: nachten(h), kamers: h.kamers || c.kamers || 1, alBevestigd: !!h.bevestigd, startlinkBooking: h.plaats && okD(h.van) && okD(h.tot) ? bookingLink(t, h) : '' }))
+  };
+}
+function pcOpt(soort, o) {
+  const toe = soort === 'vlucht' ? Object.keys(PLAKNAMEN.vlucht) : Object.keys(PLAKNAMEN.auto), r = {};
+  for (const k of [...toe, 'opmerking', 'reistijdHeen', 'reistijdTerug']) { const x = o && o[k]; if (x == null || x === '' || typeof x === 'object') continue; r[k] = (k === 'prijs' || /(Limiet|Extra|Kosten)$|^kmLimiet$/.test(k)) && num(x) != null ? num(x) : (typeof x === 'string' ? x.slice(0, 300) : x); }
+  return r;
+}
+function pcToepas(t, j) {
+  if (!j || j.soort !== 'rondreisplanner-resultaten') throw new Error('dit is geen resultatenbestand van de pc-zoektocht');
+  const meld = [], nu = vandaagIn(); t.pcOpties = t.pcOpties || {};
+  for (const s of ['vlucht', 'auto']) if (j[s] && Array.isArray(j[s].opties)) {
+    t.pcOpties[s] = j[s].opties.slice(0, 12).map(o => pcOpt(s, o)).filter(o => Object.keys(o).length);
+    t.pcOpties[s + 'Info'] = { gemaakt: j.gemaakt || '', notitie: String(j[s].notitie || '').slice(0, 600) };
+    meld.push(`${t.pcOpties[s].length} ${s === 'vlucht' ? 'vluchtopties' : 'autoaanbiedingen'}`);
+  }
+  let nh = 0;
+  for (const r of Array.isArray(j.hotels) ? j.hotels : []) {
+    const pl = String(r.plaats || '').trim().toLowerCase();
+    const st = t.hotels.lijst.find(h => String(h.plaats || '').trim().toLowerCase() === pl && (!r.van || h.van === r.van)) || t.hotels.lijst.find(h => String(h.plaats || '').trim().toLowerCase() === pl);
+    if (!st) { meld.push(`geen verblijf “${r.plaats}” gevonden`); continue; }
+    (Array.isArray(r.opties) ? r.opties : []).slice(0, 3).forEach((o, k) => {
+      const doel = st.opties[k]; if (!doel || (st.bevestigd && st.gekozen === k)) return;
+      for (const f of PC_HOTELVELDEN) { const x = o[f]; if (x == null || x === '' || typeof x === 'object') continue; doel[f] = PC_NUM.includes(f) ? (num(x) != null ? num(x) : doel[f]) : String(x).slice(0, 400); }
+      if (!doel.prijsDatum) doel.prijsDatum = nu; if (!doel.bron) doel.bron = 'Booking.com'; if (!o.prijsType) doel.prijsType = 'exact'; if (!doel.revDatum && (doel.bScore != null || doel.gScore != null)) doel.revDatum = nu;
+      nh++;
+    });
+  }
+  if (nh) meld.push(`${nh} hotelopties`);
+  return meld;
+}
+function pcBlok(voor) {
+  const t = T(), L = (t.pcOpties || {})[voor] || [], inf = (t.pcOpties || {})[voor + 'Info'] || {};
+  const kol = voor === 'vlucht' ? [['maatschappij', 'Maatschappij'], ['van', 'Van'], ['naar', 'Naar'], ['heenDatum', 'Heen'], ['terugDatum', 'Terug'], ['stops', 'Overst.'], ['reistijdHeen', 'Reistijd heen'], ['prijs', 'Prijs']] : [['verhuurder', 'Verhuurder'], ['klasse', 'Klasse'], ['kmType', 'Km'], ['verzekeringKeuze', 'Verz.'], ['prijs', 'Prijs']];
+  const tab = L.length ? `<div class="tw"><table class="rtab"><thead><tr>${kol.map(([, n]) => `<th>${n}</th>`).join('')}<th></th></tr></thead><tbody>${L.map((o, i) => `<tr>${kol.map(([k]) => `<td>${esc(k === 'prijs' && o[k] != null ? mny(o[k]) : (/Datum$/.test(k) ? dFmt(o[k]) : o[k] == null ? '' : String(o[k])))}</td>`).join('')}<td><button class="klein" data-a="pcKies" data-s="${voor}" data-i="${i}">Kies</button>${o.link ? ` <a target="_blank" rel="noopener" href="${esc(o.link)}">link</a>` : ''}</td></tr>${o.opmerking ? `<tr><td colspan="${kol.length + 1}" class="noot">${esc(o.opmerking)}</td></tr>` : ''}`).join('')}</tbody></table></div>${inf.notitie ? `<p class="noot">${esc(inf.notitie)}</p>` : ''}<p class="noot">Gemaakt ${esc(inf.gemaakt ? dFmt(inf.gemaakt.slice(0, 10)) : '(datum onbekend)')} door de pc-zoektocht. Prijzen kunnen veranderd zijn: controleer op de bron voor u boekt. “Kies” zet de keuze eerst in het voorbeeld hieronder.</p>` : (voor === 'hotels' ? '<p class="noot">Hotelresultaten komen direct in de opties A, B en C van het verblijf; u bevestigt daar zelf één hotel.</p>' : '<p class="noot">Nog geen resultaten van de pc-zoektocht ingelezen.</p>');
+  return `<h3>Automatisch zoeken op de pc (Claude via Chrome)</h3><p class="noot">Maakt uw zoekcriteria klaar voor Claude op de pc. Claude zoekt dan in Chrome, schrijft de uitkomst in een resultatenbestand, en u leest dat hier in. U kiest en bevestigt zelf. Uitleg: docs/pc-zoeken.md.</p>
+    <div class="rij"><button data-a="pcExport">1. Zoekopdracht downloaden (zoekopdracht.json)</button><label class="knop" style="margin:0">2. Resultaten inlezen (resultaten.json)<input type="file" accept="application/json,.json" data-ch="pcImport" hidden></label></div>${tab}`;
 }
 function plakBlok(soort) {
   const pk = plak[soort], vl = soort === 'vlucht', idn = vl ? 'plakVlucht' : 'plakAuto';
@@ -2045,6 +2105,17 @@ A.openNaast = b => {
 };
 A.notitiesWeg = () => { delete T().importNotities; opslaan(); rerender(); };
 A.dagNav = b => { dagSel += +b.dataset.d; rerender(); scrollTo(0, 0); };
+A.pcExport = () => { const t = T(); download(new Blob([JSON.stringify(pcZoekopdracht(t), null, 2)], { type: 'application/json' }), 'zoekopdracht.json'); melding('zoekopdracht.json is gedownload. Zet het bestand in de map van de planner op de pc en vraag Claude daar te zoeken (zie docs/pc-zoeken.md).'); };
+A.pcImport = async el => {
+  const f = el.files[0]; if (!f) return;
+  try { const j = JSON.parse(await f.text()), m = pcToepas(T(), j); el.value = ''; opslaan(); rerender(); melding(m.length ? 'Ingelezen: ' + m.join(', ') + '. Controleer en kies zelf.' : 'Het bestand bevat geen opties die ik kan overnemen.', !m.length); }
+  catch (e) { el.value = ''; melding('Inlezen mislukt: ' + e.message, true); }
+};
+A.pcKies = b => {
+  const soort = b.dataset.s, o = ((T().pcOpties || {})[soort] || [])[+b.dataset.i]; if (!o) return;
+  const velden = {}, nm = PLAKNAMEN[soort]; Object.keys(nm).forEach(k => { if (o[k] != null && o[k] !== '') velden[k] = o[k]; });
+  plak[soort].res = { velden, nota: ['Dit komt uit de pc-zoektocht (' + (o.bron || 'bron onbekend') + '). Controleer prijs en voorwaarden op de bron.'] }; rerender(); melding('Keuze staat in het voorbeeld hieronder. Kies “Neem over” om de velden te vullen.');
+};
 A.plakLees = b => {
   const soort = b.dataset.s, t = T(), pk = plak[soort]; pk.tekst = $(soort === 'vlucht' ? '#plakVlucht' : '#plakAuto').value; const v = t.vlucht;
   const ref = v.exactVan || (v.maandVan ? v.maandVan + '-01' : '') || t.reis.vertrek || '';
@@ -2342,10 +2413,10 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '25-10-2026 e'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '25-10-2026 g'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
-window.__rr = { fotoGet, dagTabelRijen, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
+window.__rr = { pcZoekopdracht, pcToepas, nieuwVerblijf, fotoGet, dagTabelRijen, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
 </script>
 </body>
 </html>

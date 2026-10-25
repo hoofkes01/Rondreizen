@@ -390,6 +390,27 @@ check('screenshot lezen (auto): tekst staat in het vak en het voorbeeld toont de
 check('screenshot lezen: plaatje is ook bewaard bij de stap', await page.evaluate(() => __rr.T().bewijs.length === 3 && __rr.T().bewijs[2].voor === 'auto'));
 await page.click('[data-a=plakNeem][data-s=auto]');
 check('screenshot lezen: Neem over vult de nieuwe prijs', await page.evaluate(() => __rr.T().auto.prijs === 1700));
+console.log('PC-zoekmodus: zoekopdracht en resultaten');
+const pcz = await page.evaluate(() => { const t = __rr.T(); t.vlucht.zoekVan = 'AMS, BRU'; t.vlucht.zoekNaar = 'DFW'; t.vlucht.maxUren = 15; const c = JSON.parse(JSON.stringify(t)); c.vlucht.heenDatum = ''; c.vlucht.terugDatum = ''; return __rr.pcZoekopdracht(c); });
+check('zoekopdracht bevat vluchtcriteria, autocriteria en hotelcriteria', pcz.soort === 'rondreisplanner-zoekopdracht' && pcz.vlucht.vertrekluchthavens.join() === 'AMS' && pcz.vlucht.fase === 1 && pcz.vlucht.vergelijkVanaf === null && pcz.vlucht.maxVliegurenPerRichting === 15 && pcz.vlucht.overstapAlleenAlsMinstensGoedkoper === 200 && pcz.hotelCriteria.maxPrijsPerNacht === 100 && pcz.auto.startlinks.discovercars.includes('discovercars.com') && Array.isArray(pcz.hotels));
+const pcRes = { soort: 'rondreisplanner-resultaten', versie: 1, gemaakt: '2026-10-25T10:00:00Z',
+  vlucht: { notitie: 'Skyscanner, 25-10-2026', opties: [{ maatschappij: 'KLM', van: 'AMS', naar: 'DFW', heenDatum: '2027-03-05', terugDatum: '2027-03-28', stops: 0, prijs: 1525, prijsValuta: 'USD', prijsPer: 'pp', bron: 'Skyscanner', link: 'https://www.skyscanner.nl/x', reistijdHeen: '10:40', opmerking: 'rechtstreeks' }, { maatschappij: 'Lufthansa', van: 'FRA', naar: 'DFW', prijs: 1400, stops: 1 }] },
+  auto: { opties: [{ verhuurder: 'Hertz', ophaalPlaats: 'Dallas', ophaalDatum: '2027-03-05', inleverDatum: '2027-03-28', klasse: 'suv', prijs: 1234, bron: 'DiscoverCars', link: 'https://www.discovercars.com/x' }] },
+  hotels: [{ plaats: 'Austin', opties: [{ naam: 'Hotel Test', prijsB: 95, linkB: 'https://www.booking.com/h', bScore: 8.4, bN: 120, bNeg: 4, ontbijt: 'ja', parkeren: 'gratis', wifi: 'ja', badkamer: 'eigen', annulerenGratis: 'ja', annuleerTot: '2027-03-01' }] }, { plaats: 'Bestaat Niet', opties: [{ naam: 'X' }] }] };
+await page.evaluate(() => { const t = __rr.T(); const h = __rr.nieuwVerblijf(); h.plaats = 'Austin'; h.van = '2027-03-06'; h.tot = '2027-03-08'; t.hotels.lijst.push(h); __rr.opslaan(); });
+await page.reload();
+await page.setInputFiles('input[data-ch=pcImport]', { name: 'resultaten.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pcRes)) });
+await page.waitForSelector('[data-a=pcKies][data-s=auto]');
+const pcz2 = await page.evaluate(() => { const t = JSON.parse(JSON.stringify(__rr.T())); Object.assign(t.vlucht, { zoekVan: 'AMS, FRA, BRU, DUS', heenDatum: '2027-03-05', terugDatum: '2027-03-28', naar: 'DFW' }); return __rr.pcZoekopdracht(t); });
+check('zoekopdracht: eerst alleen Frankfurt; na gekozen data ook AMS, BRU en DUS op dezelfde data', pcz2.vlucht.fase === 2 && pcz2.vlucht.vertrekluchthavens.join() === 'FRA' && pcz2.vlucht.vergelijkVanaf.vertrekluchthavens.join() === 'AMS,BRU,DUS' && pcz2.vlucht.vergelijkVanaf.heenDatum === '2027-03-05' && pcz2.vlucht.vergelijkVanaf.aankomst === 'DFW');
+check('resultaten inlezen: vlucht-, auto- en hotelopties staan in de app', await page.evaluate(() => { const t = __rr.T(), o = t.hotels.lijst.find(h => h.plaats === 'Austin').opties[0]; return t.pcOpties.vlucht.length === 2 && t.pcOpties.auto.length === 1 && o.naam === 'Hotel Test' && o.prijsB === 95 && o.bScore === 8.4 && o.bron === 'Booking.com' && !!o.prijsDatum; }));
+check('resultaten inlezen: hotel wordt niet automatisch bevestigd', await page.evaluate(() => !__rr.T().hotels.lijst.find(h => h.plaats === 'Austin').bevestigd));
+check('resultaten inlezen: nog niets in de autovelden overgenomen', await page.evaluate(() => __rr.T().auto.verhuurder !== 'Hertz'));
+await page.click('[data-a=pcKies][data-s=auto][data-i="0"]');
+check('Kies zet de auto eerst in het voorbeeld', (await page.locator('[data-a=plakNeem][data-s=auto]').count()) === 1 && await page.evaluate(() => __rr.T().auto.verhuurder !== 'Hertz'));
+await page.click('[data-a=plakNeem][data-s=auto]');
+check('Neem over vult de gekozen auto uit de pc-zoektocht', await page.evaluate(() => __rr.T().auto.verhuurder === 'Hertz' && __rr.T().auto.prijs === 1234));
+check('verkeerd bestand wordt geweigerd met melding', await (async () => { await page.setInputFiles('input[data-ch=pcImport]', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"reizen":{}}') }); await page.waitForTimeout(300); return /geen resultatenbestand/.test(await page.textContent('#melding')); })());
 await page.evaluate(() => { __rr.T().boek.modus = 'gids'; __rr.T().boek.refs = true; __rr.T().boek.foto = true; __rr.opslaan(); location.hash = 'boek'; }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
 check('screenshot staat in het reisboek bij "boekingsnummers opnemen"', await page.locator('#boekUit [data-sec=bewijzen] img').count() === 3, await page.evaluate(() => JSON.stringify([__rr.T().boek, __rr.T().bewijs, document.querySelectorAll('#boekUit [data-sec]').length])));
 await page.evaluate(() => { __rr.T().boek.refs = false; __rr.opslaan(); }); await page.reload(); await page.waitForSelector('#boekUit .voorblad');
