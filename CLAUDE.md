@@ -35,7 +35,7 @@ Drie planningsstappen, elk door de gebruiker te bevestigen; de volgende blijft t
 - Reiskosten naar de luchthaven: 30 liter benzine + € 200 parkeren, alleen in de kostenraming.
 
 ## PC-zoekmodus
-Op de pc kan Claude Code (met Chrome-koppeling) de zoektochten uitvoeren: de app exporteert `zoekopdracht.json` en leest `resultaten.json` in (`pcZoekopdracht`, `pcToepas`, `pcBlok`). Handleiding en bestandsformaat: docs/pc-zoeken.md. De Chrome-stappen zijn nog niet getest; de app doet zelf nog steeds niets automatisch. Skyscanner dient daar als zoekbron op de pc.
+Op de pc kan Claude Code (met Chrome-koppeling) de zoektochten uitvoeren: de app exporteert `zoekopdracht.json` en leest `resultaten.json` in (`pcZoekopdracht`, `pcToepas`, `pcBlok`). Handleiding en bestandsformaat: docs/pc-zoeken.md. De Chrome-stappen zijn nog niet getest; de app doet zelf nog steeds niets automatisch. Skyscanner dient daar als zoekbron op de pc. Vlucht in twee fasen: eerst alleen Frankfurt (data zoeken), na de gekozen data dezelfde data vanaf AMS, BRU en DUS (`vergelijkVanaf`). Het zoekwerk draait op Haiku via de subagent `.claude/agents/zoeker.md` en het commando `/zoek` (`.claude/commands/zoek.md`).
 
 ## Bestanden
 - reisgids.html: de app. sw.js + manifest.webmanifest + icoon*: offline en installeerbaar op het beginscherm (alleen via https, bijv. GitHub Pages). index.html: doorverwijzing.

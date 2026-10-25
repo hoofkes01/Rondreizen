@@ -5,6 +5,9 @@ Dit bestand is de opdracht voor Claude Code op de pc (met de Chrome-koppeling aa
 duizendtalscheiding en zonder decimalen) vult de app in, downloadt `zoekopdracht.json`, en leest `resultaten.json` weer in. Claude kiest niets
 voor de gebruiker: Claude zoekt, vergelijkt en legt opties vast met bron, datum en link. De gebruiker beslist en bevestigt in de app.
 
+## Zuinig met tokens
+Het zoekwerk draait op de goedkope Haiku-zoeker (`.claude/agents/zoeker.md`, model haiku); het bestand `.claude/commands/zoek.md` maakt er het commando `/zoek vlucht`, `/zoek auto`, `/zoek hotels` of `/zoek alles` van. De hoofdsessie controleert het resultaat. Haiku is goedkoper maar minder zorgvuldig: de gebruiker blijft prijzen en voorwaarden zelf beoordelen, en de hoofdsessie leest het resultaat steekproefsgewijs na.
+
 ## Algemene regels
 - Verzin niets. Wat niet gelezen of geverifieerd is, laat u leeg of zet u in `opmerking`. Geen geschatte prijzen, scores of waarschuwingen.
 - Bij elke prijs: bron, datum (vandaag), link naar de plek waar de prijs staat. Noem of het de totaalprijs is, voor wie, en met welke voorwaarden.
@@ -15,7 +18,9 @@ voor de gebruiker: Claude zoekt, vergelijkt en legt opties vast met bron, datum 
 - Het resultaat per onderdeel mag ook gedeeltelijk zijn: schrijf wat u hebt en zeg wat ontbreekt.
 
 ## 1. Vlucht (`vlucht` in zoekopdracht.json)
-Doel: de goedkoopste vlucht die aan alle criteria voldoet.
+Doel: de goedkoopste vlucht die aan alle criteria voldoet. Om tokens te sparen gaat dit in twee fasen.
+- **Fase 1** (`fase`: 1): zoek de goedkoopste datums alleen vanaf Frankfurt (`vertrekluchthavens` bevat dan één luchthaven). De gebruiker kiest in de app de vlucht en daarmee de data.
+- **Fase 2** (`fase`: 2, `vergelijkVanaf` is gevuld): zoek op precies dezelfde heen- en terugdatum vanaf de luchthavens in `vergelijkVanaf.vertrekluchthavens` (Schiphol, Brussel, Düsseldorf) naar dezelfde bestemming. Geen datums verkennen. Zet de opties erbij met dezelfde criteria; vermeld in `opmerking` het prijsverschil met Frankfurt.
 1. Zoek in Skyscanner (https://www.skyscanner.nl) in Chrome. Kiwi.com (`vlucht.startlinks.kiwi`) is een tweede bron ter controle van dezelfde vlucht.
 2. Criteria: 2 volwassenen (`reizigers`), heen binnen `heenvluchtVan` tot `heenvluchtTot`, terug binnen `terugvluchtVan` tot `terugvluchtTot`
    (of verblijf `verblijfMinDagen` tot `verblijfMaxDagen`), alle `vertrekluchthavens` naar alle `aankomstluchthavens`, vliegtijd per richting maximaal

@@ -1340,7 +1340,6 @@ function leesBedrag(x) {
   else if (p >= 0 && /\.\d{3}$/.test(x)) x = x.replace(/\./g, '');
   const n = parseFloat(x); return isNaN(n) ? null : Math.round(n);
 }
-const plakGetal = (m, i = 1) => m ? leesBedrag(m[i]) : null;
 function plakDatums(tekst, ref, nota) {
   const jr = (ref && /^\d{4}/.test(ref)) ? +ref.slice(0, 4) : null, pad = n => String(n).padStart(2, '0'), dat = [];
   const ymd = (y, m, d) => (m >= 1 && m <= 12 && d >= 1 && d <= 31) ? `${y}-${pad(m)}-${pad(d)}` : null, voeg = (idx, d) => { if (d) dat.push([idx, d]); };
@@ -1434,12 +1433,13 @@ const PC_NUM = ['prijsB', 'prijsA', 'prijsH', 'ontbijtPp', 'parkeerPerNacht', 'b
 const PC_HOTELVELDEN = ['naam', 'adres', 'tel', 'site', 'prijsB', 'linkB', 'prijsA', 'linkA', 'prijsH', 'prijsType', 'prijsDatum', 'ontbijt', 'ontbijtPp', 'parkeren', 'parkeerPerNacht', 'belasting', 'wifi', 'badkamer', 'annulerenGratis', 'annuleerTot', 'annuleren', 'afstandCentrum', 'wijk', 'veilig', 'veiligNotitie', 'gScore', 'gN', 'gNeg', 'gLink', 'bScore', 'bN', 'bNeg', 'bLink', 'revDatum', 'ligging', 'notitie', 'bron'];
 function pcZoekopdracht(t) {
   const z = roamZoek(t), v = t.vlucht, a = t.auto, c = t.hotels.crit, k = kiwiLink(t), ac = autoLink(t);
+  const hoofd = z.van.includes('FRA') ? 'FRA' : (z.van[0] || ''), rest = z.van.filter(c => c !== hoofd), fase2 = okD(v.heenDatum) && okD(v.terugDatum) && rest.length > 0;
   const kmTxt = a.kmType === 'beperkt' ? `beperkt${num(a.kmLimiet) != null ? ', ' + num(a.kmLimiet) + ' km per ' + (a.kmPer || 'dag') : ''}` : 'onbeperkt';
   return {
     soort: 'rondreisplanner-zoekopdracht', versie: 1, gemaakt: new Date().toISOString(), reis: t.naam, valuta: t.reis.valuta || 'EUR',
     reizigers: { volwassenen: t.reis.volw || 2, kinderen: t.reis.kind || 0, kinderLeeftijden: t.reis.kindLeeftijden || '' },
     vlucht: {
-      nodig: v.nodig !== false, vertrekluchthavens: z.van, aankomstluchthavens: z.naar, heenvluchtVan: z.vroegste, heenvluchtTot: z.laatste, terugvluchtVan: z.terugVan, terugvluchtTot: z.terugTot,
+      nodig: v.nodig !== false, fase: fase2 ? 2 : 1, vertrekluchthavens: [hoofd], vergelijkVanaf: fase2 ? { vertrekluchthavens: rest, heenDatum: v.heenDatum, terugDatum: v.terugDatum, aankomst: v.naar || z.naar[0] || '' } : null, aankomstluchthavens: z.naar, heenvluchtVan: z.vroegste, heenvluchtTot: z.laatste, terugvluchtVan: z.terugVan, terugvluchtTot: z.terugTot,
       verblijfMinDagen: z.dagenMin, verblijfMaxDagen: z.dagenMax, maxVliegurenPerRichting: z.maxUren, maxOverstappen: z.maxStops === '' || z.maxStops == null ? null : num(z.maxStops), maxPrijsUsd: z.maxPrijs,
       bagage: '1 ruimbagage van 23 kg per persoon, inbegrepen in de prijs', rechtstreeksHeeftVoorkeur: true, overstapAlleenAlsMinstensGoedkoper: 200, geenZelfOverstap: true,
       startlinks: { kiwi: k.url || '', kiwiOntbreekt: k.mis || null }
@@ -2413,7 +2413,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '25-10-2026 f'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '25-10-2026 g'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { pcZoekopdracht, pcToepas, nieuwVerblijf, fotoGet, dagTabelRijen, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };

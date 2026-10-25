@@ -1,6 +1,6 @@
 # Overdracht (kort)
 
-Doel: één rondreisplanner in `reisgids.html`: vlucht (Get-Roam) → auto (DiscoverCars) → reisgegevens → hotels → reisgids → route,
+Doel: één rondreisplanner in `reisgids.html`: vlucht (Kiwi.com) → auto (Expedia/DiscoverCars) → reisgegevens → hotels → reisgids → route,
 met dagpagina's onderweg, dagboek met foto's, kosten en een printbaar reisboek. Alles blijft in de browser van de gebruiker.
 
 ## Allereerste opdracht (de gebruiker is een leek in techniek)
@@ -17,6 +17,9 @@ Open Claude Code op je pc, in een lege map, en plak deze ene zin:
 ## Gebruiken
 - Open `reisgids.html` in de browser (dubbelklik, of via GitHub Pages). Maak regelmatig een back-up (tab Gegevens).
 - De intake vult de gebruiker in de app zelf in. Een oude `intake.json` leest de app ook direct in (Start → "Back-up of intake inlezen"). Claude is daarvoor niet nodig.
+
+## Zoeken op de pc (voor Claude)
+De gebruiker downloadt in de app `zoekopdracht.json`. Voer die uit met `/zoek` (zoeker op Haiku) volgens docs/pc-zoeken.md; de uitkomst is `resultaten.json`, die de gebruiker in de app inleest. Vlucht: eerst alleen Frankfurt, na gekozen data dezelfde data vanaf AMS, BRU en DUS.
 
 ## Testen (voor Claude)
 `npm i`, dan `npm test` (Playwright, zet `CHROMIUM=<pad naar chrome>` als er geen browser is). Verwacht: alle controles geslaagd.
