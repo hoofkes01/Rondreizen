@@ -1648,8 +1648,8 @@ function roamFormulier(z) {
   return Object.fromEntries(Object.entries(f).filter(([, x]) => x !== '' && x != null));
 }
 /* Kiwi.com-zoeklink, vooringevuld met één tik. Kiwi gebruikt plaatsnamen (stad-staat-land), geen luchthavencodes. Alleen steden die op 24-10-2026 op de echte site zijn
-   gecontroleerd (of in Kiwi's eigen links voorkomen) staan hieronder; Brussel, Antwerpen, Luik, Charleroi en Luxemburg zijn niet gevonden (Kiwi herkent de gangbare schrijfwijze niet) en ontbreken dus. Eén onbekende naam laat Kiwi de hele zoekopdracht negeren. */
-const KIWI = { FRA: 'frankfurt-germany', DUS: 'dusseldorf-germany', AMS: 'amsterdam-netherlands', EIN: 'eindhoven-netherlands', RTM: 'rotterdam-netherlands', MST: 'maastricht-netherlands', CGN: 'cologne-germany', MUC: 'munich-germany', BER: 'berlin-germany', HAM: 'hamburg-germany',
+   gecontroleerd (of in Kiwi's eigen links voorkomen) staan hieronder; Brussel is gecontroleerd via een echte Kiwi-link van de gebruiker (brussels-city-of-brussels-belgium); Antwerpen, Luik, Charleroi en Luxemburg zijn niet gevonden (Kiwi herkent de gangbare schrijfwijze niet) en ontbreken dus. Eén onbekende naam laat Kiwi de hele zoekopdracht negeren. */
+const KIWI = { BRU: 'brussels-city-of-brussels-belgium', FRA: 'frankfurt-germany', DUS: 'dusseldorf-germany', AMS: 'amsterdam-netherlands', EIN: 'eindhoven-netherlands', RTM: 'rotterdam-netherlands', MST: 'maastricht-netherlands', CGN: 'cologne-germany', MUC: 'munich-germany', BER: 'berlin-germany', HAM: 'hamburg-germany',
   DFW: 'dallas-texas-united-states', DAL: 'dallas-texas-united-states', AUS: 'austin-texas-united-states', IAH: 'houston-texas-united-states', HOU: 'houston-texas-united-states', SAT: 'san-antonio-texas-united-states', OKC: 'oklahoma-city-oklahoma-united-states', TUL: 'tulsa-oklahoma-united-states', LIT: 'little-rock-arkansas-united-states', SHV: 'shreveport-louisiana-united-states', LBB: 'lubbock-texas-united-states', ELP: 'el-paso-texas-united-states', MSY: 'new-orleans-louisiana-united-states', ATL: 'atlanta-georgia-united-states',
   JFK: 'new-york-city-new-york-united-states', EWR: 'new-york-city-new-york-united-states', LAX: 'los-angeles-california-united-states', MCO: 'orlando-florida-united-states', ORD: 'chicago-illinois-united-states', SFO: 'san-francisco-california-united-states', MIA: 'miami-florida-united-states', IAD: 'washington-district-of-columbia-united-states', LAS: 'las-vegas-nevada-united-states', TPA: 'tampa-florida-united-states', FLL: 'fort-lauderdale-florida-united-states', LIS: 'lisbon-portugal' };
 function kiwiLink(t) {
@@ -2318,7 +2318,7 @@ laden();
 tab = (location.hash || '').slice(1); if (!VIEWS[tab]) tab = 'start';
 { const t0 = T(), i0 = t0 ? dagVandaag(t0) : -1; if (!location.hash && i0 >= 0 && toegang(t0, 'dag')) { tab = 'dag'; dagSel = i0; } } /* reis bezig: direct naar de dag van vandaag */
 render();
-const APP_VERSIE = '25-10-2026 b'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
+const APP_VERSIE = '25-10-2026 c'; /* verhogen bij elke wijziging: laat zien welke versie u echt gebruikt */
 $('#versie').textContent = 'versie ' + APP_VERSIE;
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => { });
 window.__rr = { fotoGet, dagTabelRijen, autoLink, controleVlucht, kiwiLink, bookingLink, routeHerhaling, overstapEis, roamFormulier, roamZoek, leesVlucht, leesAuto, verdeelFotos, dagVandaag, opslaan, luchthavensBijPlaats, aantalLuchthavens: LUCHTHAVENS.length, bereidPrint, kiesBoekDeel, herprijs, voorstelVolgorde, routeScore, routeLegs, hotelToets, prijsEff, kostenRegels, kostenSom, hotelOordeel, tzOffsetMin, tzWissel, DB: () => DB, T, demoReis, nieuweReis, blokken, dagBudget };
